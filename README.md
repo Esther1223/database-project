@@ -121,6 +121,21 @@ npx prettier --write .
 // 目前想到這些 待更新
 
 
+### laravel 大致架構
+
+#### 資料庫
+- database/migrations：資料庫的schema
+- database/seeders：初始資料
+- database/factories：生成假資料
+
+#### 後端
+- app/Model：資料庫的邏輯 (query的感覺)
+- app/Http/Controllers：後端邏輯
+
+#### 前端
+- routes/web.php：網址對應 Controller
+- resources/views：前端網頁
+
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
 <p align="center">
