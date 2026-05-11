@@ -112,8 +112,13 @@ http://127.0.0.1:8000
     - feat(login): 完成login功能
     - fix(user)：解決登入bug
 
-// 目前想到這些 待更新
+4. 前端commit前可以先跑 prettier 避免格式問題
+```bash
+npx prettier --write .  
+// . 可以改成檔案路徑 (. 表示全部檔案都掃一次)
+```
 
+// 目前想到這些 待更新
 
 
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
