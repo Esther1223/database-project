@@ -1,3 +1,121 @@
+# 環境安裝及local部署步驟
+
+## mac
+### 1. 安裝環境
+
+先安裝 Homebrew：
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+安裝 PHP、Composer、Node、MySQL：
+```bash
+brew update
+brew install php composer node mysql
+```
+
+確認版本：
+```bash
+php -v        //建議8.4
+composer -V   //2.xx (2開頭就行)
+node -v       // 我是v20.19.6
+npm -v        // 我是10.8.2
+mysql --version
+```
+
+### 2. 啟動mysql
+
+```bash
+brew services start mysql
+
+//登入
+mysql -u root 
+
+//建立資料庫
+CREATE DATABASE database_project CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+EXIT;
+
+```
+
+### 3. Clone 專案
+```bash
+git clone 你的GitHubRepo網址
+cd 專案資料夾
+```
+
+### 4. 安裝 Laravel 後端套件
+```bash
+composer install
+
+//如果遇到token問題：
+//到 https://github.com/settings/tokens
+//新增一個token (不用設定任何權限) 然後複製
+
+composer config --global github-oauth.github.com 你的GitHubToken
+composer install
+```
+
+### 5. 設定 .env
+```bash
+cp .env.example .env
+//打開 .env
+
+//改設定
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=database_project
+DB_USERNAME=root
+DB_PASSWORD=你的密碼
+```
+
+### 6. 產生 Laravel key
+```bash
+php artisan key:generate
+```
+
+### 7. 安裝前端套件
+```bash
+npm install
+```
+
+### 8. 建立資料表
+```bash
+php artisan migrate:fresh --seed //會重新把資料庫的資料洗掉變成預設的，但一開始用這個就行
+```
+
+### 9. 啟動專案
+```bash
+//開第一個終端機：
+php artisan serve
+
+//開第二個終端機：
+npm run dev
+
+//瀏覽器打開：
+http://127.0.0.1:8000
+```
+
+### github push & pull 使用方式??
+
+1. 每次要開始寫code前，一定記得先pull，確保更新到最新的
+2. 每次push上去前，可以先 fetch 確認沒有人 push 新的東西
+    - 如果沒有人push 就直接push上去吧
+    - 如果有：
+        ```bash
+        git stash
+        //把新的pull下來
+        git stash pop
+        //確認有沒有conflict，沒有就很幸運，有的話就會比較辛苦要解衝突，請小心不要直接覆蓋，不然就丟群組問之類的
+        ```
+3. commit message 可以好好命名，比較知道大家在幹麻，有個常用的格式 (type():message)，ex： 
+    - feat(login): 完成login功能
+    - fix(user)：解決登入bug
+
+// 目前想到這些 待更新
+
+
+
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
 <p align="center">
