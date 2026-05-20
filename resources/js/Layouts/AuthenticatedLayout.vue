@@ -32,8 +32,8 @@ const logout = async () => {
         <header class="border-b border-slate-200 bg-white/90 backdrop-blur">
             <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">database project</p>
-                    <h1 class="text-xl font-semibold">{{ title }}</h1>
+                    <p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">{{ title }}</p>
+                    <h1 class="text-xl font-semibold">校園教室預約系統</h1>
                 </div>
                 <button
                     type="button"

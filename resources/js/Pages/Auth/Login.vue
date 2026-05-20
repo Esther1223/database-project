@@ -34,7 +34,7 @@ const submit = async () => {
 <template>
     <Head title="Login" />
 
-    <GuestLayout title="登入系統">
+    <GuestLayout title="登入">
         <div class="max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
             <form class="mt-6 space-y-4" @submit.prevent="submit">
                 <div>
