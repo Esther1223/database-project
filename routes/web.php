@@ -14,8 +14,8 @@ Route::get('/dashboard', function () {
 
 Route::prefix('api')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/user', [AuthController::class, 'user']);
+    Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth');
+    Route::get('/user', [AuthController::class, 'user'])->middleware('auth');
 });
 
 require __DIR__.'/auth.php';

@@ -9,12 +9,14 @@ const form = reactive({
     password: '',
 });
 
+const errors = reactive({});
 const loading = ref(false);
 const error = ref('');
 
 const submit = async () => {
     loading.value = true;
     error.value = '';
+    Object.keys(errors).forEach(k => delete errors[k]);
 
     try {
         await axios.post('/api/login', {
@@ -24,7 +26,12 @@ const submit = async () => {
 
         window.location.href = '/dashboard';
     } catch (exception) {
-        error.value = exception.response?.data?.message || '登入失敗，請重試';
+        if (exception.response?.status === 422) {
+            const data = exception.response.data?.errors || {};
+            Object.assign(errors, data);
+        } else {
+            error.value = exception.response?.data?.message || '登入失敗，請重試';
+        }
     } finally {
         loading.value = false;
     }
@@ -46,6 +53,7 @@ const submit = async () => {
                         class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none ring-0 transition focus:border-slate-900"
                         placeholder="請輸入電子郵件"
                     >
+                    <p v-if="errors.email" class="mt-2 text-sm text-rose-700">{{ errors.email[0] }}</p>
                 </div>
 
                 <div>
@@ -57,6 +65,7 @@ const submit = async () => {
                         class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none ring-0 transition focus:border-slate-900"
                         placeholder="請輸入密碼"
                     >
+                    <p v-if="errors.password" class="mt-2 text-sm text-rose-700">{{ errors.password[0] }}</p>
                 </div>
 
                 <p v-if="error" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">

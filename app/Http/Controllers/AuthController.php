@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
@@ -12,13 +13,8 @@ class AuthController extends Controller
     /**
      * Handle login request
      */
-    public function login(Request $request)
+    public function login(LoginRequest $request)
     {
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
-
         $user = User::where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
@@ -34,6 +30,8 @@ class AuthController extends Controller
             'user' => $user,
         ]);
     }
+
+    // Registration endpoint removed — registration is disabled.
 
     /**
      * Handle logout request
