@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'affiliation'])]
+#[Fillable(['name', 'email', 'password', 'affiliation', 'is_active'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -62,7 +62,7 @@ class User extends Authenticatable
      */
     public function hasRole(string $role): bool
     {
-        return $this->roles()->where('name', $role)->exists();
+        return $this->roles()->where('role_type', $role)->exists();
     }
 
     /**
@@ -70,6 +70,14 @@ class User extends Authenticatable
      */
     public function isAdmin(): bool
     {
-        return $this->hasRole('admin');
+        return $this->hasRole('管理員');
+    }
+
+    /**
+     * Determine whether the account can sign in.
+     */
+    public function isActive(): bool
+    {
+        return (bool) ($this->is_active ?? true);
     }
 }

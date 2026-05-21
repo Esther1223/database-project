@@ -15,7 +15,7 @@ class AuthController extends Controller
      */
     public function login(LoginRequest $request)
     {
-        $user = User::where('email', $request->email)->first();
+        $user = User::with('roles')->where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json([
@@ -23,11 +23,17 @@ class AuthController extends Controller
             ], 401);
         }
 
+        if (!$user->isActive()) {
+            return response()->json([
+                'message' => '帳號已停用，請聯絡管理員',
+            ], 403);
+        }
+
         Auth::login($user);
 
         return response()->json([
             'message' => '登入成功',
-            'user' => $user,
+            'user' => $user->load('roles'),
         ]);
     }
 
@@ -54,7 +60,7 @@ class AuthController extends Controller
     public function user(Request $request)
     {
         if ($request->user()) {
-            return response()->json($request->user());
+            return response()->json($request->user()->load('roles'));
         }
 
         return response()->json(null, 401);

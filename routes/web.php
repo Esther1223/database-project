@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\AuthController;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
@@ -11,6 +12,15 @@ Route::get('/', function () {
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth'])->name('dashboard');
+
+Route::middleware(['auth', 'role:管理員'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
+    Route::post('/users', [AdminUserController::class, 'store'])->name('users.store');
+    Route::put('/users/{user}', [AdminUserController::class, 'update'])->name('users.update');
+    Route::delete('/users/{user}', [AdminUserController::class, 'destroy'])->name('users.destroy');
+    Route::patch('/users/{user}/status', [AdminUserController::class, 'updateStatus'])->name('users.status');
+    Route::put('/users/{user}/roles', [AdminUserController::class, 'updateRoles'])->name('users.roles');
+});
 
 Route::prefix('api')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
