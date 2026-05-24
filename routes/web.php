@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\AuthController;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\RoomSectionController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -38,5 +39,13 @@ Route::prefix('api')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth');
     Route::get('/user', [AuthController::class, 'user'])->middleware('auth');
 });
+
+Route::get('/rooms/{room}/available-sections', [RoomSectionController::class, 'getAvailable']);
+Route::get('/rooms/{room}/disabled-sections', [RoomSectionController::class, 'getDisabled']);
+
+Route::patch('/room-sections/{roomSection}/status', [RoomSectionController::class, 'updateAvailability']);
+Route::patch('/time-slots/{timeSlot}/status', [RoomSectionController::class, 'updateAdminDisable']);
+
+Route::post('/reservations', [RoomSectionController::class, 'store']);
 
 require __DIR__.'/auth.php';

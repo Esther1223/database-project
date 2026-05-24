@@ -9,6 +9,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Reservation;
 
 class RoomController extends Controller
 {
@@ -86,12 +88,49 @@ class RoomController extends Controller
     /**
      * Display the specified room.
      */
-    public function show(Room $room): Response
+    public function show(Request $request, Room $room): Response
     {
         $this->authorize('view', $room);
+        
+        $selectedDate = $request->query('date', now()->toDateString());
+        $userId = Auth::id(); 
 
+        $sections = $room->roomsections()
+            ->with('timeSlot')
+            ->where('date', $selectedDate)
+            ->orderBy('time_slot_id')
+            ->get();
+        $myReservations = Reservation::where('user_id', $userId)
+            ->where('room_id', $room->id)
+            ->whereDate('start_time', $selectedDate)
+            ->get();
+
+        $timeMap = [
+            'TS_0000' => '08:00:00', 'TS_0100' => '09:00:00',
+            'TS_0200' => '10:00:00', 'TS_0300' => '11:00:00',
+            'TS_0400' => '12:00:00', 'TS_0500' => '13:00:00',
+            'TS_0600' => '14:00:00', 'TS_0700' => '15:00:00',
+            'TS_0800' => '16:00:00', 'TS_0900' => '17:00:00',
+            'TS_1000' => '18:00:00', 'TS_1100' => '19:00:00',
+            'TS_1200' => '20:00:00',
+        ];
+
+        $sections->transform(function ($section) use ($myReservations, $timeMap) {
+            $pureDate = \Carbon\Carbon::parse($section->date)->format('Y-m-d');
+
+            $startTimeStr = $pureDate . ' ' . ($timeMap[$section->time_slot_id] ?? '00:00:00');
+
+            $myRes = $myReservations->firstWhere('start_time', $startTimeStr);
+
+            $section->my_reservation = $myRes ? $myRes->reservation_status : null;
+            
+            return $section;
+        });
+        
         return Inertia::render('Rooms/RoomDetailPage', [
             'room' => $this->roomPayload($room),
+            'sections' => $sections,
+            'currentDate' => $selectedDate,
         ]);
     }
 

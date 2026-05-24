@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class RoomSection extends Model
 {
@@ -17,13 +18,27 @@ class RoomSection extends Model
         'status',
     ];
 
+    protected $appends = [
+        'is_bookable'
+    ];
+
     protected function casts(): array
     {
         return [
-            'date' => 'date',
+            'date' => 'date:Y-m-d',
         ];
     }
 
+    protected function isBookable(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                $isSectionAvailable = $this->status === 'available';
+                $isTimeSlotEnabled = $this->timeSlot?->status !== 'disable';
+                return $isSectionAvailable && $isTimeSlotEnabled;
+            }
+        );
+    }
     /**
      * @return BelongsTo<Room, $this>
      */
