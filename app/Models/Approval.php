@@ -17,11 +17,22 @@ class Approval extends Model
         'decision_time',
     ];
 
-    protected function casts(): array
+    public const DECISION_APPROVED = 'approved';
+
+    public const DECISION_REJECTED = 'rejected';
+
+    protected $casts = [
+        'decision_time' => 'datetime',
+    ];
+
+    /**
+     * Convenience list of allowed decision values.
+     *
+     * @return string[]
+     */
+    public static function allowedDecisions(): array
     {
-        return [
-            'decision_time' => 'datetime',
-        ];
+        return [self::DECISION_APPROVED, self::DECISION_REJECTED];
     }
 
     /**
@@ -38,5 +49,15 @@ class Approval extends Model
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approver_id');
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->decision === self::DECISION_APPROVED;
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->decision === self::DECISION_REJECTED;
     }
 }

@@ -124,7 +124,7 @@ class DatabaseSeeder extends Seeder
             ),
         ]);
 
-        $reservation = Reservation::updateOrCreate(
+        $approvedReservation = Reservation::updateOrCreate(
             [
                 'user_id' => $users['教授']->id,
                 'room_id' => $rooms['A101 會議室']->id,
@@ -152,18 +152,36 @@ class DatabaseSeeder extends Seeder
             );
         }
 
-        Reservation::updateOrCreate(
+        $directReservation = Reservation::updateOrCreate(
             [
                 'user_id' => $users['學生']->id,
                 'room_id' => $rooms['B201 教室']->id,
                 'start_time' => '2026-05-13 13:00:00',
                 'end_time' => '2026-05-13 15:00:00',
             ],
-            ['reservation_status' => 'pending'],
+            ['reservation_status' => 'success'],
         );
 
+        RoomSection::where('room_id', $rooms['B201 教室']->id)
+            ->where('date', '2026-05-13')
+            ->whereIn('time_slot_id', ['13', '14'])
+            ->delete();
+
+        foreach (['13', '14'] as $timeSlotId) {
+            RoomSection::updateOrCreate(
+                [
+                    'room_id' => $rooms['B201 教室']->id,
+                    'date' => '2026-05-13',
+                    'time_slot_id' => $timeSlotId,
+                ],
+                [
+                    'status' => 'reserved',
+                ],
+            );
+        }
+
         Approval::updateOrCreate(
-            ['reservation_id' => $reservation->id],
+            ['reservation_id' => $approvedReservation->id],
             [
                 'approver_id' => $users['行政人員']->id,
                 'decision' => 'approved',
@@ -172,7 +190,7 @@ class DatabaseSeeder extends Seeder
         );
 
         Payment::updateOrCreate(
-            ['reservation_id' => $reservation->id],
+            ['reservation_id' => $approvedReservation->id],
             [
                 'amount' => 1000,
                 'payment_status' => 'paid',

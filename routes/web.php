@@ -1,12 +1,13 @@
 <?php
 
-use App\Http\Controllers\RoomController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ReservationController;
-use Inertia\Inertia;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\RoomController;
 use App\Http\Controllers\RoomSectionController;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -54,6 +55,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/reservations/my', [ReservationController::class, 'myReservations']);
     Route::get('/reservations/{reservation}', [ReservationController::class, 'show']);
     Route::patch('/reservations/{reservation}/cancel', [ReservationController::class, 'cancel']);
+});
+
+Route::middleware(['auth', 'role:管理員,行政人員,教授'])->prefix('approvals')->name('approvals.')->group(function () {
+    Route::get('/', [ApprovalController::class, 'index'])->name('index');
+    Route::get('/pending', [ApprovalController::class, 'pending'])->name('pending');
+    Route::get('/history', [ApprovalController::class, 'history'])->name('history');
+    Route::patch('/approve', [ApprovalController::class, 'approve'])->name('approve');
+    Route::patch('/reject', [ApprovalController::class, 'reject'])->name('reject');
 });
 
 require __DIR__.'/auth.php';

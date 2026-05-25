@@ -13,6 +13,9 @@ const currentUser = ref(null);
 const loggingOut = ref(false);
 
 const isAdmin = computed(() => currentUser.value?.roles?.some((role) => role.role_type === '管理員'));
+const canReviewApprovals = computed(() =>
+    currentUser.value?.roles?.some((role) => ['管理員', '行政人員', '教授'].includes(role.role_type))
+);
 
 const loadCurrentUser = async () => {
     try {
@@ -92,6 +95,13 @@ const logout = async () => {
                         class="flex items-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                     >
                         空間管理
+                    </a>
+                    <a
+                        v-if="canReviewApprovals"
+                        href="/approvals"
+                        class="flex items-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                    >
+                        審核管理
                     </a>
                     <a
                         href="/rooms"
