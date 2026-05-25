@@ -72,8 +72,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'affiliation' => ['required', 'string', 'max:255'],
-            'department_id' => ['nullable', 'integer', 'exists:departments,id'],
+            'department_id' => ['required', 'integer', 'exists:departments,id'],
             'password' => ['required', 'string', 'min:6'],
             'is_active' => ['sometimes', 'boolean'],
             'role_ids' => ['array'],
@@ -82,16 +81,15 @@ class UserController extends Controller
 
         $roleIds = array_map('intval', $validated['role_ids'] ?? []);
 
-        $departmentId = $validated['department_id']
-            ?? Department::where('name', $validated['affiliation'])->value('id');
+        $department = Department::find($validated['department_id']);
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'affiliation' => $validated['affiliation'],
+            'affiliation' => $department?->name ?? '未指定',
             'password' => Hash::make($validated['password']),
             'is_active' => $validated['is_active'] ?? true,
-            'department_id' => $departmentId,
+            'department_id' => $validated['department_id'],
         ]);
 
         $user->roles()->sync($roleIds);
@@ -110,8 +108,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'affiliation' => ['required', 'string', 'max:255'],
-            'department_id' => ['nullable', 'integer', 'exists:departments,id'],
+            'department_id' => ['required', 'integer', 'exists:departments,id'],
             'password' => ['nullable', 'string', 'min:6'],
             'is_active' => ['sometimes', 'boolean'],
             'role_ids' => ['array'],
@@ -143,14 +140,13 @@ class UserController extends Controller
             }
         }
 
-        $departmentId = $validated['department_id']
-            ?? Department::where('name', $validated['affiliation'])->value('id');
+        $department = Department::find($validated['department_id']);
 
         $payload = [
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'affiliation' => $validated['affiliation'],
-            'department_id' => $departmentId,
+            'affiliation' => $department?->name ?? '未指定',
+            'department_id' => $validated['department_id'],
         ];
 
         if (!empty($validated['password'] ?? null)) {

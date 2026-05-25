@@ -22,7 +22,6 @@ const props = defineProps({
 const userForm = reactive({
     name: "",
     email: "",
-    affiliation: "",
     department_id: "",
     password: "",
     is_active: true,
@@ -48,7 +47,6 @@ const filteredUsers = computed(() => {
         const haystack = [
             user.name,
             user.email,
-            user.affiliation,
             user.department_name,
             ...(user.roles || []).map((role) => role.role_type),
         ]
@@ -68,7 +66,6 @@ const clearErrors = (errors) => {
 const resetUserForm = () => {
     userForm.name = "";
     userForm.email = "";
-    userForm.affiliation = "";
     userForm.department_id = "";
     userForm.password = "";
     userForm.is_active = true;
@@ -88,7 +85,6 @@ const openUserForm = (user = null) => {
 
     userForm.name = user.name;
     userForm.email = user.email;
-    userForm.affiliation = user.affiliation;
     userForm.department_id = user.department_id ?? "";
     userForm.password = "";
     userForm.is_active = user.is_active;
@@ -109,8 +105,7 @@ const saveUser = async () => {
     const payload = {
         name: userForm.name,
         email: userForm.email,
-        affiliation: userForm.affiliation,
-        department_id: userForm.department_id || null,
+        department_id: userForm.department_id,
         is_active: userForm.is_active,
         role_ids: userForm.role_ids,
     };
@@ -435,36 +430,18 @@ const toggleStatus = async (user) => {
                             <div>
                                 <label
                                     class="mb-2 block text-sm font-medium text-slate-700"
-                                    for="affiliation"
-                                    >所屬單位</label
-                                >
-                                <input
-                                    id="affiliation"
-                                    v-model="userForm.affiliation"
-                                    type="text"
-                                    class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900"
-                                    placeholder="例如：資訊工程學系"
-                                />
-                                <p
-                                    v-if="userErrors.affiliation"
-                                    class="mt-2 text-sm text-rose-700"
-                                >
-                                    {{ userErrors.affiliation[0] }}
-                                </p>
-                            </div>
-
-                            <div>
-                                <label
-                                    class="mb-2 block text-sm font-medium text-slate-700"
                                     for="department"
-                                    >系所（可選）</label
+                                    >所屬單位</label
                                 >
                                 <select
                                     id="department"
                                     v-model="userForm.department_id"
+                                    required
                                     class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900"
                                 >
-                                    <option value="">未指定</option>
+                                    <option value="" disabled>
+                                        請選擇所屬單位（必填）
+                                    </option>
                                     <option
                                         v-for="department in departments"
                                         :key="department.id"
@@ -478,6 +455,9 @@ const toggleStatus = async (user) => {
                                     class="mt-2 text-sm text-rose-700"
                                 >
                                     {{ userErrors.department_id[0] }}
+                                </p>
+                                <p v-else class="mt-2 text-xs text-slate-500">
+                                    此欄位為必填，將作為使用者的所屬單位。
                                 </p>
                             </div>
 

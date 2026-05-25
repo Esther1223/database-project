@@ -109,6 +109,13 @@ const logout = async () => {
                     </a>
                     <a
                         v-if="isAdmin"
+                        href="/admin/departments"
+                        class="flex items-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                    >
+                        單位管理
+                    </a>
+                    <a
+                        v-if="isAdmin"
                         href="/admin/rooms"
                         class="flex items-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                     >
