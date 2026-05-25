@@ -13,12 +13,17 @@ const props = defineProps({
         type: Array,
         required: true,
     },
+    departments: {
+        type: Array,
+        required: true,
+    },
 });
 
 const userForm = reactive({
     name: '',
     email: '',
     affiliation: '',
+    department_id: '',
     password: '',
     is_active: true,
     role_ids: [],
@@ -40,7 +45,13 @@ const filteredUsers = computed(() => {
     }
 
     return props.users.filter((user) => {
-        const haystack = [user.name, user.email, user.affiliation, ...(user.roles || []).map((role) => role.role_type)]
+        const haystack = [
+            user.name,
+            user.email,
+            user.affiliation,
+            user.department_name,
+            ...(user.roles || []).map((role) => role.role_type),
+        ]
             .join(' ')
             .toLowerCase();
 
@@ -58,6 +69,7 @@ const resetUserForm = () => {
     userForm.name = '';
     userForm.email = '';
     userForm.affiliation = '';
+    userForm.department_id = '';
     userForm.password = '';
     userForm.is_active = true;
     userForm.role_ids = [];
@@ -77,6 +89,7 @@ const openUserForm = (user = null) => {
     userForm.name = user.name;
     userForm.email = user.email;
     userForm.affiliation = user.affiliation;
+    userForm.department_id = user.department_id ?? '';
     userForm.password = '';
     userForm.is_active = user.is_active;
     userForm.role_ids = user.roles.map((role) => role.id);
@@ -97,6 +110,7 @@ const saveUser = async () => {
         name: userForm.name,
         email: userForm.email,
         affiliation: userForm.affiliation,
+        department_id: userForm.department_id || null,
         is_active: userForm.is_active,
         role_ids: userForm.role_ids,
     };
@@ -214,7 +228,9 @@ const toggleStatus = async (user) => {
                             <p class="mt-1 text-sm text-slate-500">{{ user.email }}</p>
                         </div>
 
-                        <div class="text-sm text-slate-700">{{ user.affiliation || '—' }}</div>
+                        <div class="text-sm text-slate-700">
+                            {{ user.department_name || user.affiliation || '—' }}
+                        </div>
 
                         <div class="flex flex-wrap gap-2">
                             <span v-for="role in user.roles" :key="role.id" class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">{{ role.role_type }}</span>
@@ -269,6 +285,17 @@ const toggleStatus = async (user) => {
                             <label class="mb-2 block text-sm font-medium text-slate-700" for="affiliation">所屬單位</label>
                             <input id="affiliation" v-model="userForm.affiliation" type="text" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900" placeholder="例如：資訊工程學系">
                             <p v-if="userErrors.affiliation" class="mt-2 text-sm text-rose-700">{{ userErrors.affiliation[0] }}</p>
+                        </div>
+
+                        <div>
+                            <label class="mb-2 block text-sm font-medium text-slate-700" for="department">系所（可選）</label>
+                            <select id="department" v-model="userForm.department_id" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900">
+                                <option value="">未指定</option>
+                                <option v-for="department in departments" :key="department.id" :value="department.id">
+                                    {{ department.name }}
+                                </option>
+                            </select>
+                            <p v-if="userErrors.department_id" class="mt-2 text-sm text-rose-700">{{ userErrors.department_id[0] }}</p>
                         </div>
 
                         <div>

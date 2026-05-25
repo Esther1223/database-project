@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Room extends Model
@@ -19,9 +20,11 @@ class Room extends Model
         'room_type',
         'capacity',
         'building',
+        'department_id',
         'information',
         'hourly_rate',
         'need_approval',
+        'is_open_access',
     ];
 
     protected function casts(): array
@@ -30,6 +33,7 @@ class Room extends Model
             'capacity' => 'integer',
             'hourly_rate' => 'integer',
             'need_approval' => 'boolean',
+            'is_open_access' => 'boolean',
         ];
     }
 
@@ -71,5 +75,13 @@ class Room extends Model
     public function roomSections(): HasMany
     {
         return $this->hasMany(RoomSection::class);
+    }
+
+    /**
+     * @return BelongsTo<Department, $this>
+     */
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class);
     }
 }

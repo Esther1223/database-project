@@ -1,25 +1,34 @@
 <script setup>
-import axios from 'axios';
-import { computed, onMounted, ref } from 'vue';
+import axios from "axios";
+import { computed, onMounted, ref } from "vue";
 
 defineProps({
     title: {
         type: String,
-        default: 'Dashboard',
+        default: "Dashboard",
     },
 });
 
 const currentUser = ref(null);
 const loggingOut = ref(false);
 
-const isAdmin = computed(() => currentUser.value?.roles?.some((role) => role.role_type === '管理員'));
+const isAdmin = computed(() =>
+    currentUser.value?.roles?.some((role) => role.role_type === "管理員"),
+);
 const canReviewApprovals = computed(() =>
-    currentUser.value?.roles?.some((role) => ['管理員', '行政人員', '教授'].includes(role.role_type))
+    currentUser.value?.roles?.some((role) =>
+        ["管理員", "行政人員", "教授"].includes(role.role_type),
+    ),
+);
+const canManagePayments = computed(() =>
+    currentUser.value?.roles?.some((role) =>
+        ["管理員", "行政人員"].includes(role.role_type),
+    ),
 );
 
 const loadCurrentUser = async () => {
     try {
-        const response = await axios.get('/api/user');
+        const response = await axios.get("/api/user");
         currentUser.value = response.data;
     } catch {
         currentUser.value = null;
@@ -38,8 +47,8 @@ const logout = async () => {
     loggingOut.value = true;
 
     try {
-        await axios.post('/api/logout');
-        window.location.href = '/login';
+        await axios.post("/api/logout");
+        window.location.href = "/login";
     } finally {
         loggingOut.value = false;
     }
@@ -49,7 +58,9 @@ const logout = async () => {
 <template>
     <div class="min-h-screen bg-slate-50 text-slate-900">
         <header class="border-b border-slate-200 bg-white/90 backdrop-blur">
-            <div class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div
+                class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between"
+            >
                 <div>
                     <h1 class="text-2xl font-semibold">校園教室預約系統</h1>
                     <p v-if="currentUser" class="mt-1 text-sm text-slate-500">
@@ -70,15 +81,23 @@ const logout = async () => {
                         :disabled="loggingOut"
                         @click="logout"
                     >
-                        {{ loggingOut ? '登出中...' : '登出' }}
+                        {{ loggingOut ? "登出中..." : "登出" }}
                     </button>
                 </div>
             </div>
         </header>
 
-        <main class="mx-auto grid max-w-7xl gap-6 px-6 py-10 lg:grid-cols-[260px_minmax(0,1fr)]">
-            <aside class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-6 lg:h-fit">
-                <p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">導覽</p>
+        <main
+            class="mx-auto grid max-w-7xl gap-6 px-6 py-10 lg:grid-cols-[260px_minmax(0,1fr)]"
+        >
+            <aside
+                class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-6 lg:h-fit"
+            >
+                <p
+                    class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500"
+                >
+                    導覽
+                </p>
 
                 <nav class="mt-4 space-y-2">
                     <a
@@ -101,6 +120,13 @@ const logout = async () => {
                         class="flex items-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                     >
                         審核管理
+                    </a>
+                    <a
+                        v-if="canManagePayments"
+                        href="/admin/payments"
+                        class="flex items-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                    >
+                        付款管理
                     </a>
                     <a
                         href="/rooms"

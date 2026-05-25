@@ -26,9 +26,11 @@ class UpdateRoomRequest extends FormRequest
             'type' => ['required', 'string', 'max:255'],
             'capacity' => ['required', 'integer', 'min:1'],
             'building' => ['required', 'string', 'max:255'],
+            'department_id' => ['nullable', 'integer', 'exists:departments,id'],
             'information' => ['nullable', 'string'],
             'hourly_rate' => ['required', 'integer', 'min:0'],
             'need_approval' => ['required', 'boolean'],
+            'is_open_access' => ['required', 'boolean'],
         ];
     }
 }

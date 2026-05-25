@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Payment;
 use App\Models\Reservation;
 use App\Models\Room;
 use App\Models\RoomSection;
@@ -32,38 +33,66 @@ class ReservationService
         'TS_1600' => ['00:00:00', '01:00:00'],
     ];
 
+    public function __construct(private readonly FeeService $feeService)
+    {
+    }
+
     public function create(array $data, int $userId): Reservation
     {
-        return DB::transaction(function () use ($data, $userId): Reservation {
-            $room = Room::findOrFail($data['room_id']);
-            $section = $this->lockOrCreateSection($data, $room);
+        return DB::transaction(fn (): Reservation => $this->createReservation($data, $userId));
+    }
 
-            if ($section->status !== 'available') {
-                abort(422, '該時段已被借走或關閉');
+    /**
+     * @return array<int, Reservation>
+     */
+    public function createMany(array $data, int $userId): array
+    {
+        return DB::transaction(function () use ($data, $userId): array {
+            $timeSlotIds = array_values(array_unique($data['time_slot_ids'] ?? []));
+            $reservations = [];
+
+            foreach ($timeSlotIds as $timeSlotId) {
+                $slotData = $data;
+                unset($slotData['time_slot_ids']);
+                $slotData['time_slot_id'] = $timeSlotId;
+                $reservations[] = $this->createReservation($slotData, $userId);
             }
 
-            [$startTime, $endTime] = $this->sectionDateTimeRange($section);
-
-            if ($this->hasConflict($room->id, $startTime, $endTime)) {
-                abort(422, '該時段已有預約');
-            }
-
-            $reservationStatus = $room->need_approval ? 'pending' : 'success';
-
-            $reservation = Reservation::create([
-                'user_id' => $userId,
-                'room_id' => $room->id,
-                'start_time' => $startTime,
-                'end_time' => $endTime,
-                'reservation_status' => $reservationStatus,
-            ]);
-
-            if ($reservationStatus === 'success') {
-                $section->update(['status' => 'reserved']);
-            }
-
-            return $reservation->load('room');
+            return $reservations;
         });
+    }
+
+    private function createReservation(array $data, int $userId): Reservation
+    {
+        $room = Room::findOrFail($data['room_id']);
+        $section = $this->lockOrCreateSection($data, $room);
+
+        if ($section->status !== 'available') {
+            abort(422, '該時段已被借走或關閉');
+        }
+
+        [$startTime, $endTime] = $this->sectionDateTimeRange($section);
+
+        if ($this->hasConflict($room->id, $startTime, $endTime)) {
+            abort(422, '該時段已有預約');
+        }
+
+        $reservationStatus = $room->need_approval ? 'pending' : 'success';
+
+        $reservation = Reservation::create([
+            'user_id' => $userId,
+            'room_id' => $room->id,
+            'start_time' => $startTime,
+            'end_time' => $endTime,
+            'reservation_status' => $reservationStatus,
+        ]);
+
+        if ($reservationStatus === 'success') {
+            $section->update(['status' => 'reserved']);
+            $this->createPaymentIfNeeded($reservation);
+        }
+
+        return $reservation->fresh(['room', 'payment']);
     }
 
     private function lockOrCreateSection(array $data, Room $room): RoomSection
@@ -196,5 +225,23 @@ class ReservationService
             (string) $hour,
             sprintf('TS_%04d', $slotNumber * 100),
         ];
+    }
+
+    private function createPaymentIfNeeded(Reservation $reservation): void
+    {
+        $amount = $this->feeService->calculateAmount($reservation);
+
+        if ($amount <= 0) {
+            return;
+        }
+
+        $payment = Payment::firstOrNew(['reservation_id' => $reservation->id]);
+        $payment->amount = $amount;
+
+        if (!$payment->exists) {
+            $payment->payment_status = 'unpaid';
+        }
+
+        $payment->save();
     }
 }

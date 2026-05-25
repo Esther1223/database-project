@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Reservation;
 
 use App\Models\Reservation;
+use App\Models\Room;
 use App\Models\RoomSection;
 use App\Models\TimeSlot;
 use Carbon\Carbon;
@@ -30,7 +31,9 @@ class StoreReservationRequest extends FormRequest
             'room_id' => ['required', 'exists:rooms,id'],
             'section_id' => ['nullable', 'exists:room_sections,id'],
             'date' => ['required_without:section_id', 'date_format:Y-m-d'],
-            'time_slot_id' => ['required_without:section_id', 'exists:time_slots,time_slot_id'],
+            'time_slot_id' => ['required_without_all:section_id,time_slot_ids', 'exists:time_slots,time_slot_id'],
+            'time_slot_ids' => ['required_without_all:section_id,time_slot_id', 'array', 'min:1'],
+            'time_slot_ids.*' => ['string', 'distinct', 'exists:time_slots,time_slot_id'],
         ];
     }
 
@@ -38,6 +41,58 @@ class StoreReservationRequest extends FormRequest
     {
         $validator->after(function (Validator $validator): void {
             if ($validator->errors()->isNotEmpty()) {
+                return;
+            }
+
+            $user = $this->user();
+            $room = Room::find($this->integer('room_id'));
+
+            if ($user !== null && $room !== null && $user->hasRole('學生')) {
+                if ($room->type === '實驗室') {
+                    $validator->errors()->add('room_id', '學生無法借用實驗室空間。');
+                    return;
+                }
+
+                if ($room->department_id !== null && !$room->is_open_access) {
+                    if ((int) $user->department_id !== (int) $room->department_id) {
+                        $validator->errors()->add('room_id', '學生僅可借用所屬系所的空間。');
+                        return;
+                    }
+                }
+            }
+
+            if ($this->filled('time_slot_ids')) {
+                $timeSlotIds = array_values(array_unique($this->input('time_slot_ids', [])));
+                $date = (string) $this->input('date');
+
+                foreach ($timeSlotIds as $timeSlotId) {
+                    $timeSlot = TimeSlot::where('time_slot_id', $timeSlotId)->first();
+
+                    if ($timeSlot?->status === 'disable') {
+                        $validator->errors()->add('time_slot_ids', '選擇的時段包含已停用時段。');
+                        return;
+                    }
+
+                    $timeRange = $this->timeRangeForSlot($timeSlotId);
+
+                    if ($timeRange === null) {
+                        $validator->errors()->add('time_slot_ids', '預約時段格式錯誤。');
+                        return;
+                    }
+
+                    $startTime = Carbon::parse("{$date} {$timeRange[0]}");
+                    $endTime = Carbon::parse("{$date} {$timeRange[1]}");
+
+                    if ($endTime->lessThanOrEqualTo($startTime)) {
+                        $endTime->addDay();
+                    }
+
+                    if ($startTime->diffInMinutes($endTime, false) < 60) {
+                        $validator->errors()->add('time_slot_ids', '預約時間最少需要 1 小時。');
+                        return;
+                    }
+                }
+
                 return;
             }
 

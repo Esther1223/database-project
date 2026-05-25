@@ -60,14 +60,26 @@ class ReservationController extends Controller
     public function store(StoreReservationRequest $request): JsonResponse
     {
         $validated = $request->validated();
+        $reservations = null;
 
-        $reservation = $this->reservationService->create($validated, Auth::id());
+        if (!empty($validated['time_slot_ids'] ?? [])) {
+            $reservations = $this->reservationService->createMany($validated, Auth::id());
+        } else {
+            $reservations = [$this->reservationService->create($validated, Auth::id())];
+        }
+
+        $status = $reservations[0]->reservation_status ?? 'success';
+        $message = $status === 'pending'
+            ? '申請已送出，等待行政人員審核'
+            : '預約成功！';
+
+        if (count($reservations) > 1) {
+            $message = $message.' 已建立 '.count($reservations).' 筆預約。';
+        }
 
         return response()->json([
-            'message' => $reservation->reservation_status === 'pending'
-                ? '申請已送出，等待行政人員審核'
-                : '預約成功！',
-            'data' => $reservation,
+            'message' => $message,
+            'data' => $reservations,
         ], 201);
     }
 

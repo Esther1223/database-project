@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Room\StoreRoomRequest;
 use App\Http\Requests\Room\UpdateRoomRequest;
+use App\Models\Department;
 use App\Models\Room;
 use App\Models\TimeSlot;
 use Illuminate\Http\JsonResponse;
@@ -73,6 +74,16 @@ class RoomController extends Controller
             ->values()
             ->all();
 
+        $departments = Department::query()
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Department $department): array => [
+                'id' => $department->id,
+                'name' => $department->name,
+            ])
+            ->values()
+            ->all();
+
         return Inertia::render(
             $request->routeIs('admin.rooms.index') ? 'Admin/Rooms/RoomManagePage' : 'Rooms/RoomListPage',
             [
@@ -80,6 +91,7 @@ class RoomController extends Controller
                 'filters' => $filters,
                 'roomTypes' => $roomTypes,
                 'buildings' => $buildings,
+                'departments' => $departments,
             ],
         );
     }
@@ -184,8 +196,10 @@ class RoomController extends Controller
             'type' => $room->type,
             'capacity' => $room->capacity,
             'building' => $room->building,
+            'department_id' => $room->department_id,
             'rate' => $room->rate,
             'need_approval' => (bool) $room->need_approval,
+            'is_open_access' => (bool) $room->is_open_access,
             'information' => $room->information,
             'created_at' => $room->created_at?->toDateTimeString(),
             'updated_at' => $room->updated_at?->toDateTimeString(),
@@ -202,9 +216,11 @@ class RoomController extends Controller
             'type' => $validated['type'],
             'capacity' => (int) $validated['capacity'],
             'building' => $validated['building'],
+            'department_id' => $validated['department_id'] ?? null,
             'information' => $validated['information'] ?? null,
             'rate' => (int) $validated['hourly_rate'],
             'need_approval' => (bool) $validated['need_approval'],
+            'is_open_access' => (bool) $validated['is_open_access'],
         ];
     }
 

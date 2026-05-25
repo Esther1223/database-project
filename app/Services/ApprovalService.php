@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Approval;
+use App\Models\Payment;
 use App\Models\Reservation;
 use App\Models\RoomSection;
 use App\Models\TimeSlot;
@@ -11,6 +12,9 @@ use Illuminate\Support\Facades\DB;
 
 class ApprovalService
 {
+    public function __construct(private readonly FeeService $feeService)
+    {
+    }
     /**
      * Approve a pending reservation: create approval record, set reservation_status to 'success',
      * and mark related room sections as 'reserved'.
@@ -35,8 +39,9 @@ class ApprovalService
 
             // mark room sections as reserved
             $this->reserveRoomSections($reservation);
+            $this->createPaymentIfNeeded($reservation);
 
-            return $reservation->fresh('room');
+            return $reservation->fresh(['room', 'payment']);
         });
     }
 
@@ -116,5 +121,23 @@ class ApprovalService
             (string) $hour,
             sprintf('TS_%04d', $slotNumber * 100),
         ];
+    }
+
+    private function createPaymentIfNeeded(Reservation $reservation): void
+    {
+        $amount = $this->feeService->calculateAmount($reservation);
+
+        if ($amount <= 0) {
+            return;
+        }
+
+        $payment = Payment::firstOrNew(['reservation_id' => $reservation->id]);
+        $payment->amount = $amount;
+
+        if (!$payment->exists) {
+            $payment->payment_status = 'unpaid';
+        }
+
+        $payment->save();
     }
 }

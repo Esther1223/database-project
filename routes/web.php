@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\RoomSectionController;
@@ -34,6 +35,12 @@ Route::middleware(['auth', 'role:管理員'])->prefix('admin')->name('admin.')->
     Route::delete('/users/{user}', [AdminUserController::class, 'destroy'])->name('users.destroy');
     Route::patch('/users/{user}/status', [AdminUserController::class, 'updateStatus'])->name('users.status');
     Route::put('/users/{user}/roles', [AdminUserController::class, 'updateRoles'])->name('users.roles');
+});
+
+Route::middleware(['auth', 'role:管理員,行政人員'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
+    Route::get('/payments/list', [PaymentController::class, 'list'])->name('payments.list');
+    Route::patch('/payments/{payment}/status', [PaymentController::class, 'updateStatus'])->name('payments.status');
 });
 
 Route::prefix('api')->group(function () {

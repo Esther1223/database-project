@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Approval;
+use App\Models\Department;
 use App\Models\Payment;
 use App\Models\Reservation;
 use App\Models\Role;
@@ -30,6 +31,14 @@ class DatabaseSeeder extends Seeder
             '學生',
         ])->mapWithKeys(fn (string $roleType): array => [
             $roleType => Role::updateOrCreate(['role_type' => $roleType]),
+        ]);
+
+        $departments = collect([
+            '資訊工程學系',
+            '資訊中心',
+            '總務處',
+        ])->mapWithKeys(fn (string $name): array => [
+            $name => Department::updateOrCreate(['name' => $name]),
         ]);
 
         $users = collect([
@@ -68,6 +77,7 @@ class DatabaseSeeder extends Seeder
                     'name' => $userData['name'],
                     'password' => Hash::make($userData['password']),
                     'affiliation' => $userData['affiliation'],
+                    'department_id' => $departments[$userData['affiliation']]->id ?? null,
                 ],
             );
 
@@ -82,18 +92,22 @@ class DatabaseSeeder extends Seeder
                 'room_type' => '會議室',
                 'capacity' => 30,
                 'building' => '行政大樓',
+                'department_id' => $departments['資訊工程學系']->id,
                 'information' => '含投影機、白板與視訊設備。',
                 'hourly_rate' => 500,
                 'need_approval' => true,
+                'is_open_access' => false,
             ],
             [
                 'room_name' => 'B201 教室',
                 'room_type' => '教室',
                 'capacity' => 60,
                 'building' => '教學大樓',
+                'department_id' => null,
                 'information' => '適合課程、講座與社團活動。',
                 'hourly_rate' => 0,
                 'need_approval' => false,
+                'is_open_access' => false,
             ],
         ])->mapWithKeys(fn (array $roomData): array => [
             $roomData['room_name'] => Room::updateOrCreate(
