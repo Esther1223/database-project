@@ -1,7 +1,7 @@
 <script setup>
 import axios from "axios";
 import { Head, router } from "@inertiajs/vue3";
-import { computed, reactive, ref } from "vue";
+import { computed, reactive, ref, nextTick } from "vue";
 import AuthenticatedLayout from "../../../Layouts/AuthenticatedLayout.vue";
 
 const props = defineProps({
@@ -43,6 +43,8 @@ const roomForm = reactive({
     hourly_rate: 0,
     need_approval: false,
     is_open_access: false,
+    open_access_departments: [],
+    _temp_open_department_id: "",
 });
 
 const roomErrors = reactive({});
@@ -132,6 +134,8 @@ const resetRoomForm = () => {
     roomForm.hourly_rate = 0;
     roomForm.need_approval = false;
     roomForm.is_open_access = false;
+    roomForm.open_access_departments = [];
+    roomForm._temp_open_department_id = "";
     roomEditingId.value = null;
     clearErrors(roomErrors);
 };
@@ -154,6 +158,10 @@ const openRoomForm = (room = null) => {
     roomForm.hourly_rate = room.rate;
     roomForm.need_approval = room.need_approval;
     roomForm.is_open_access = room.is_open_access;
+    roomForm.open_access_departments = (room.open_access_departments || []).map((d) =>
+        typeof d === 'object' ? d.id : d,
+    );
+    roomForm._temp_open_department_id = "";
     roomEditingId.value = room.id;
 };
 
@@ -176,9 +184,10 @@ const saveRoom = async () => {
         information: roomForm.information,
         hourly_rate: roomForm.hourly_rate,
         need_approval: roomForm.need_approval,
-        is_open_access: roomForm.department_id
-            ? roomForm.is_open_access
-            : false,
+        is_open_access: roomForm.is_open_access,
+        open_access_departments: roomForm.is_open_access
+            ? roomForm.open_access_departments || []
+            : [],
     };
 
     try {
@@ -200,6 +209,40 @@ const saveRoom = async () => {
         }
     } finally {
         roomSubmitting.value = false;
+    }
+};
+
+const addOpenDepartment = () => {
+    const val = roomForm._temp_open_department_id;
+
+    if (!val) return;
+
+    const id = Number(val);
+
+    if (!roomForm.open_access_departments.includes(id)) {
+        roomForm.open_access_departments.push(id);
+    }
+
+    roomForm._temp_open_department_id = "";
+};
+
+const removeOpenDepartment = (id) => {
+    roomForm.open_access_departments = roomForm.open_access_departments.filter(
+        (x) => x !== id,
+    );
+};
+
+const getDepartmentName = (id) => {
+    const d = props.departments.find((item) => item.id === id);
+    return d ? d.name : "未知系所";
+};
+
+const openDeptSelectRef = ref(null);
+
+const onToggleOpenAccess = async () => {
+    if (roomForm.is_open_access) {
+        await nextTick();
+        openDeptSelectRef.value?.focus?.();
     }
 };
 
@@ -719,7 +762,7 @@ const departmentName = (room) => {
                             >
                                 <input
                                     v-model="roomForm.is_open_access"
-                                    :disabled="!roomForm.department_id"
+                                    @change="onToggleOpenAccess"
                                     type="checkbox"
                                     class="h-4 w-4 rounded border-slate-300 text-slate-900"
                                 />
@@ -733,6 +776,53 @@ const departmentName = (room) => {
                             >
                                 {{ roomErrors.is_open_access[0] }}
                             </p>
+
+                            <div v-show="roomForm.is_open_access" class="space-y-3">
+                                <p class="text-sm text-slate-600">選擇可跨系使用的系所：</p>
+                                <div class="flex items-center gap-2">
+                                    <select
+                                        ref="openDeptSelectRef"
+                                        v-model="roomForm._temp_open_department_id"
+                                        class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900"
+                                    >
+                                        <option value="">請選擇系所</option>
+                                        <option
+                                            v-for="department in departments.filter(d => String(d.id) !== String(roomForm.department_id))"
+                                            :key="department.id"
+                                            :value="department.id"
+                                        >
+                                            {{ department.name }}
+                                        </option>
+                                    </select>
+                                    <button
+                                        type="button"
+                                        class="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                                        :disabled="!roomForm._temp_open_department_id"
+                                        @click="addOpenDepartment"
+                                    >
+                                        +
+                                    </button>
+                                </div>
+
+                                <div class="flex flex-wrap gap-2">
+                                    <span
+                                        v-for="deptId in roomForm.open_access_departments"
+                                        :key="deptId"
+                                        class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700"
+                                    >
+                                        <span>{{ getDepartmentName(deptId) }}</span>
+                                        <button
+                                            type="button"
+                                            class="rounded-full text-sm text-slate-500 hover:text-slate-700"
+                                            @click="removeOpenDepartment(deptId)"
+                                            aria-label="移除"
+                                        >
+                                            ×
+                                        </button>
+                                    </span>
+                                    <p v-if="roomForm.open_access_departments.length === 0" class="text-sm text-slate-500">尚未選擇其他系所</p>
+                                </div>
+                            </div>
 
                             <div class="flex gap-3 pt-2">
                                 <button

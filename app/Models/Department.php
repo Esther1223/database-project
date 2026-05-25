@@ -29,4 +29,12 @@ class Department extends Model
     {
         return $this->hasMany(Room::class);
     }
+
+    /**
+     * Rooms that this department can access via cross-open.
+     */
+    public function sharedRooms()
+    {
+        return $this->belongsToMany(\App\Models\Room::class, 'department_room');
+    }
 }

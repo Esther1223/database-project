@@ -78,6 +78,14 @@ class Room extends Model
     }
 
     /**
+     * Departments that are allowed to access this room (cross-open).
+     */
+    public function openDepartments()
+    {
+        return $this->belongsToMany(\App\Models\Department::class, 'department_room');
+    }
+
+    /**
      * @return BelongsTo<Department, $this>
      */
     public function department(): BelongsTo

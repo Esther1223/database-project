@@ -148,7 +148,13 @@ class RoomController extends Controller
     {
         $this->authorize('create', Room::class);
 
-        $room = Room::create($this->roomStoragePayload($request->validated()));
+        $validated = $request->validated();
+        $room = Room::create($this->roomStoragePayload($validated));
+
+        // sync open access departments if provided
+        if (!empty($validated['open_access_departments'])) {
+            $room->openDepartments()->sync($validated['open_access_departments']);
+        }
 
         return response()->json([
             'message' => '空間已建立',
@@ -163,7 +169,13 @@ class RoomController extends Controller
     {
         $this->authorize('update', $room);
 
-        $room->forceFill($this->roomStoragePayload($request->validated()))->save();
+        $validated = $request->validated();
+        $room->forceFill($this->roomStoragePayload($validated))->save();
+
+        // sync open access departments
+        if (array_key_exists('open_access_departments', $validated)) {
+            $room->openDepartments()->sync($validated['open_access_departments'] ?? []);
+        }
 
         return response()->json([
             'message' => '空間已更新',
@@ -200,6 +212,7 @@ class RoomController extends Controller
             'rate' => $room->rate,
             'need_approval' => (bool) $room->need_approval,
             'is_open_access' => (bool) $room->is_open_access,
+            'open_access_departments' => $room->openDepartments()->get()->map(fn (Department $d): array => ['id' => $d->id, 'name' => $d->name])->values()->all(),
             'information' => $room->information,
             'created_at' => $room->created_at?->toDateTimeString(),
             'updated_at' => $room->updated_at?->toDateTimeString(),

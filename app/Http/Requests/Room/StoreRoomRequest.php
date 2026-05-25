@@ -31,6 +31,8 @@ class StoreRoomRequest extends FormRequest
             'hourly_rate' => ['required', 'integer', 'min:0'],
             'need_approval' => ['required', 'boolean'],
             'is_open_access' => ['required', 'boolean'],
+            'open_access_departments' => ['nullable', 'array'],
+            'open_access_departments.*' => ['integer', 'exists:departments,id'],
         ];
     }
 }
