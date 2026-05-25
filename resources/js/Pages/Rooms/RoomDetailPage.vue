@@ -28,9 +28,10 @@ watch(selectedDate, (newDate) => {
 </script>
 
 <template>
-    <Head :title="room.name" />
+    <div>
+        <Head :title="room.name" />
 
-    <AuthenticatedLayout :title="room.name">
+        <AuthenticatedLayout :title="room.name">
         <section class="space-y-6">
             <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -119,21 +120,20 @@ watch(selectedDate, (newDate) => {
                     這一天目前沒有時段資料。
                 </div>
 
-                <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div v-else class="space-y-3">
                     <div v-for="section in sections" :key="section.time_slot_id"
-                         class="flex items-center justify-between rounded-2xl border p-4 transition-all"
+                         class="flex items-center justify-between gap-4 rounded-2xl border px-5 py-4 transition-all"
                          :class="{
                             'border-slate-100 bg-slate-50 opacity-60': section.state === 'disabled',
                             'border-orange-200 bg-orange-50 opacity-90': section.state === 'reserved',
                             'border-blue-100 bg-blue-50/50': section.state === 'available'
                          }">
                         
-                        <div>
-                           <p class="text-sm font-semibold text-slate-900">{{ section.date }}</p>
-                            <p class="text-xs text-slate-500 mt-1">{{ section.time_label }}</p>
+                        <div class="min-w-0">
+                           <p class="text-base font-semibold text-slate-900">{{ section.time_label }}</p>
                         </div>
 
-                        <div>
+                        <div class="shrink-0">
                             <span v-if="section.state === 'disabled'" 
                                   class="text-xs font-semibold text-slate-400">暫停開放</span>
                             
@@ -146,5 +146,6 @@ watch(selectedDate, (newDate) => {
                     </div>
                 </div>
             </div> </section>
-    </AuthenticatedLayout>
+        </AuthenticatedLayout>
+    </div>
 </template>

@@ -128,22 +128,47 @@ class RoomSectionController extends Controller
         return 'available';
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    private function sectionPayload(RoomSection $section): array
+    {
+        $timeSlot = $section->timeSlot;
+        $state = $this->sectionState($timeSlot?->status, $section->status);
+
+        return [
+            'id' => $section->id,
+            'room_id' => $section->room_id,
+            'date' => Carbon::parse($section->date)->format('Y-m-d'),
+            'time_slot_id' => $section->time_slot_id,
+            'status' => $section->status,
+            'state' => $state,
+            'is_bookable' => $state === 'available',
+            'time_slot' => $timeSlot === null ? null : [
+                'id' => $timeSlot->id,
+                'time_slot_id' => $timeSlot->time_slot_id,
+                'status' => $timeSlot->status,
+                'label' => $this->formatTimeSlotLabel($timeSlot->time_slot_id),
+            ],
+        ];
+    }
+
     private function formatTimeSlotLabel(string $timeSlotId): string
     {
         if (ctype_digit($timeSlotId)) {
             $startHour = (int) $timeSlotId;
             $endHour = $startHour + 1;
 
-            return sprintf('%02d:00 - %02d:00', $startHour, $endHour);
+            return sprintf('%02d:00 - %02d:00', $startHour % 24, $endHour % 24);
         }
 
         if (preg_match('/^TS_(\d{2})00$/', $timeSlotId, $matches) !== 1) {
             return $timeSlotId;
         }
 
-        $startHour = (int) $matches[1];
+        $startHour = 8 + (int) $matches[1];
         $endHour = $startHour + 1;
 
-        return sprintf('%02d:00 - %02d:00', $startHour, $endHour);
+        return sprintf('%02d:00 - %02d:00', $startHour % 24, $endHour % 24);
     }
 }

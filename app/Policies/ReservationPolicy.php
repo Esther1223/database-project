@@ -34,12 +34,14 @@ class ReservationPolicy
 
     public function update(User $user, Reservation $reservation): bool
     {
-        return $reservation->user_id === $user->id && $reservation->reservation_status === 'pending';
+        return $reservation->user_id === $user->id
+            && in_array($reservation->reservation_status, ['pending', 'success'], true);
     }
 
     public function delete(User $user, Reservation $reservation): bool
     {
-        return $reservation->user_id === $user->id && $reservation->reservation_status === 'pending';
+        return $reservation->user_id === $user->id
+            && in_array($reservation->reservation_status, ['pending', 'success'], true);
     }
 
     public function approve(User $user, Reservation $reservation): bool

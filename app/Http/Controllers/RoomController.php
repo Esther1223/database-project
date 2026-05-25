@@ -226,13 +226,13 @@ class RoomController extends Controller
         if (ctype_digit($timeSlotId)) {
             $startHour = (int) $timeSlotId;
 
-            return sprintf('%02d:00 - %02d:00', $startHour, $startHour + 1);
+            return sprintf('%02d:00 - %02d:00', $startHour % 24, ($startHour + 1) % 24);
         }
 
         if (preg_match('/^TS_(\d{2})00$/', $timeSlotId, $matches) === 1) {
-            $startHour = (int) $matches[1];
+            $startHour = 8 + (int) $matches[1];
 
-            return sprintf('%02d:00 - %02d:00', $startHour, $startHour + 1);
+            return sprintf('%02d:00 - %02d:00', $startHour % 24, ($startHour + 1) % 24);
         }
 
         return $timeSlotId;

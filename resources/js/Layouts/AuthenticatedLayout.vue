@@ -99,6 +99,18 @@ const logout = async () => {
                     >
                         空間列表
                     </a>
+                    <a
+                        href="/reservations/create"
+                        class="flex items-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                    >
+                        建立預約
+                    </a>
+                    <a
+                        href="/reservations"
+                        class="flex items-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                    >
+                        我的預約
+                    </a>
                 </nav>
             </aside>
 

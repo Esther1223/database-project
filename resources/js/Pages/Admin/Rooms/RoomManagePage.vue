@@ -215,9 +215,10 @@ const deleteRoom = async (room) => {
 </script>
 
 <template>
-    <Head title="空間管理" />
+    <div>
+        <Head title="空間管理" />
 
-    <AuthenticatedLayout title="空間管理">
+        <AuthenticatedLayout title="空間管理">
         <section class="space-y-6">
             <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -379,5 +380,6 @@ const deleteRoom = async (room) => {
                 </div>
             </div>
         </teleport>
-    </AuthenticatedLayout>
+        </AuthenticatedLayout>
+    </div>
 </template>

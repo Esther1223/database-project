@@ -92,9 +92,10 @@ watch([selectedRoomId, selectedDate], loadSlots, { immediate: true });
 </script>
 
 <template>
-    <Head title="教室可借時段" />
+    <div>
+        <Head title="教室可借時段" />
 
-    <AuthenticatedLayout title="教室可借時段">
+        <AuthenticatedLayout title="教室可借時段">
         <section class="space-y-6">
             <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -173,5 +174,6 @@ watch([selectedRoomId, selectedDate], loadSlots, { immediate: true });
                 </div>
             </div>
         </section>
-    </AuthenticatedLayout>
+        </AuthenticatedLayout>
+    </div>
 </template>

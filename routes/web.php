@@ -3,6 +3,7 @@
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ReservationController;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RoomSectionController;
@@ -46,6 +47,13 @@ Route::get('/rooms/{room}/disabled-sections', [RoomSectionController::class, 'ge
 Route::patch('/room-sections/{roomSection}/status', [RoomSectionController::class, 'updateAvailability']);
 Route::patch('/time-slots/{timeSlot}/status', [RoomSectionController::class, 'updateAdminDisable']);
 
-Route::post('/reservations', [RoomSectionController::class, 'store']);
+Route::middleware('auth')->group(function () {
+    Route::get('/reservations', [ReservationController::class, 'index']);
+    Route::get('/reservations/create', [ReservationController::class, 'create']);
+    Route::post('/reservations', [ReservationController::class, 'store']);
+    Route::get('/reservations/my', [ReservationController::class, 'myReservations']);
+    Route::get('/reservations/{reservation}', [ReservationController::class, 'show']);
+    Route::patch('/reservations/{reservation}/cancel', [ReservationController::class, 'cancel']);
+});
 
 require __DIR__.'/auth.php';

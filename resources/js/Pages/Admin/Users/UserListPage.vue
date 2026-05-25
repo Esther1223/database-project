@@ -169,9 +169,10 @@ const toggleStatus = async (user) => {
 </script>
 
 <template>
-    <Head title="使用者管理" />
+    <div>
+        <Head title="使用者管理" />
 
-    <AuthenticatedLayout title="使用者管理">
+        <AuthenticatedLayout title="使用者管理">
         <section class="space-y-6">
             <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -302,5 +303,6 @@ const toggleStatus = async (user) => {
                 </div>
             </div>
         </teleport>
-    </AuthenticatedLayout>
+        </AuthenticatedLayout>
+    </div>
 </template>
