@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\RoomSectionController;
@@ -16,7 +17,7 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
+    return Inertia::render('Admin/DashboardPage');
 })->middleware(['auth'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
@@ -47,6 +48,13 @@ Route::middleware(['auth', 'role:管理員,行政人員'])->prefix('admin')->nam
     Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
     Route::get('/payments/list', [PaymentController::class, 'list'])->name('payments.list');
     Route::patch('/payments/{payment}/status', [PaymentController::class, 'updateStatus'])->name('payments.status');
+
+    Route::get('/reports/reservations', [ReportController::class, 'reservationReport'])->name('reports.reservations');
+    Route::get('/reports/reservations/monthly', [ReportController::class, 'monthlyReservations'])->name('reports.reservations.monthly');
+    Route::get('/reports/revenue', [ReportController::class, 'revenueReport'])->name('reports.revenue');
+    Route::get('/reports/revenue/monthly', [ReportController::class, 'monthlyRevenue'])->name('reports.revenue.monthly');
+
+    Route::get('/reservations/history', [ReservationController::class, 'history'])->name('reservations.history');
 });
 
 Route::prefix('api')->group(function () {

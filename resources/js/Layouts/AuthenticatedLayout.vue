@@ -25,6 +25,11 @@ const canManagePayments = computed(() =>
         ["管理員", "行政人員"].includes(role.role_type),
     ),
 );
+const canViewReports = computed(() =>
+    currentUser.value?.roles?.some((role) =>
+        ["管理員", "行政人員"].includes(role.role_type),
+    ),
+);
 
 const loadCurrentUser = async () => {
     try {
@@ -134,6 +139,20 @@ const logout = async () => {
                         class="flex items-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                     >
                         付款管理
+                    </a>
+                    <a
+                        v-if="canViewReports"
+                        href="/admin/reports/reservations"
+                        class="flex items-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                    >
+                        使用紀錄
+                    </a>
+                    <a
+                        v-if="canViewReports"
+                        href="/admin/reports/revenue"
+                        class="flex items-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                    >
+                        收入統計
                     </a>
                     <a
                         href="/rooms"
