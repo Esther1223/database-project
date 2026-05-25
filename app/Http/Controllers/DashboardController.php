@@ -65,6 +65,9 @@ class DashboardController extends Controller
                     ->whereIn('reservation_status', ['pending', 'success'])
                     ->whereBetween('start_time', [$now, $now->copy()->addDay()])
                     ->count(),
+                // Provide lists for frontend display
+                'unpaid_orders_list' => $this->unpaidOrdersList($reservationScope, $canViewRevenue),
+                'upcoming_reservations_list' => $this->upcomingReservationsList($reservationScope, $now),
                 'inactive_accounts' => $canManageUsers
                     ? User::where('is_active', false)->count()
                     : null,
@@ -215,6 +218,59 @@ class DashboardController extends Controller
                     'borrow_count' => (int) $row->borrow_count,
                 ];
             })
+            ->all();
+    }
+
+    private function unpaidOrdersList(Builder $reservationScope, bool $canViewRevenue): array
+    {
+        $reservationIds = (clone $reservationScope)->select('id');
+
+        $payments = Payment::with(['reservation.room'])
+            ->where('payment_status', 'unpaid')
+            ->when(! $canViewRevenue, fn ($query) => $query->whereIn('reservation_id', $reservationIds))
+            ->latest('created_at')
+            ->limit(10)
+            ->get()
+            ->map(fn (Payment $payment): array => [
+                'id' => $payment->id,
+                'reservation_id' => $payment->reservation_id,
+                'amount' => $payment->amount,
+                'room' => $payment->reservation
+                    ? [
+                        'id' => $payment->reservation->room?->id,
+                        'name' => $payment->reservation->room?->name,
+                        'building' => $payment->reservation->room?->building,
+                    ]
+                    : null,
+                'start_time' => $payment->reservation?->start_time?->toDateTimeString(),
+            ])
+            ->all();
+
+        return $payments;
+    }
+
+    private function upcomingReservationsList(Builder $reservationScope, Carbon $now): array
+    {
+        return (clone $reservationScope)
+            ->with('room')
+            ->whereIn('reservation_status', ['pending', 'success'])
+            ->whereBetween('start_time', [$now, $now->copy()->addDay()])
+            ->orderBy('start_time')
+            ->limit(10)
+            ->get()
+            ->map(fn (Reservation $reservation): array => [
+                'id' => $reservation->id,
+                'date' => $reservation->start_time?->toDateString(),
+                'start_time' => $reservation->start_time?->toDateTimeString(),
+                'end_time' => $reservation->end_time?->toDateTimeString(),
+                'room' => $reservation->room
+                    ? [
+                        'id' => $reservation->room->id,
+                        'name' => $reservation->room->name,
+                        'building' => $reservation->room->building,
+                    ]
+                    : null,
+            ])
             ->all();
     }
 

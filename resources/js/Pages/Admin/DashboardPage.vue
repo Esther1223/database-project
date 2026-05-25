@@ -100,22 +100,29 @@ const formatAmount = (amount) =>
 
 const formatDateTime = (value) => {
     if (!value) return "-";
+
     const raw = String(value).trim();
     const normalized = raw.replace(" ", "T");
     const hasTimezone = /[zZ]|[+-]\d{2}:?\d{2}$/.test(normalized);
-    const date = new Date(hasTimezone ? normalized : `${normalized}Z`);
 
-    if (Number.isNaN(date.getTime())) {
-        return raw;
+    if (hasTimezone) {
+        const date = new Date(normalized);
+        if (Number.isNaN(date.getTime())) return raw;
+
+        return date
+            .toLocaleString("sv-SE", { timeZone: "Asia/Taipei", hour12: false })
+            .slice(0, 16)
+            .replaceAll("-", "/");
     }
 
-    return date
-        .toLocaleString("sv-SE", {
-            timeZone: "Asia/Taipei",
-            hour12: false,
-        })
-        .slice(0, 16)
-        .replaceAll("-", "/");
+    const parts = normalized.split("T");
+    if (parts.length === 2) {
+        const datePart = parts[0].replaceAll("-", "/");
+        const timePart = parts[1].slice(0, 5);
+        return `${datePart} ${timePart}`;
+    }
+
+    return raw;
 };
 
 const reservationStatusLabel = (status) => {
@@ -180,7 +187,7 @@ onMounted(loadSummary);
                         儀表板
                     </h2>
                     <p class="mt-2 text-sm text-slate-600">
-                        快速掌握截至今日預約、待處理事項、本月統計與近期紀錄。
+                        快速掌握截至今日預約、待付款與即將開始的預約、本月統計與近期紀錄。
                     </p>
                 </div>
 
@@ -219,32 +226,59 @@ onMounted(loadSummary);
                         :class="canViewManagementStats ? 'xl:grid-cols-2' : 'xl:grid-cols-1'"
                     >
                         <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-                            <h3 class="text-xl font-semibold text-slate-950">
-                                待處理事項
-                            </h3>
-                            <div class="mt-5 space-y-3">
-                                <a
-                                    v-for="item in taskItems"
-                                    :key="item.label"
-                                    :href="item.href"
-                                    class="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition hover:bg-white"
-                                >
-                                    <span class="text-sm font-medium text-slate-700">
-                                        {{ item.label }}
-                                    </span>
-                                    <span class="text-lg font-semibold text-slate-950">
-                                        {{ item.value }}
-                                    </span>
-                                </a>
-                                <p
-                                    v-if="taskItems.length === 0"
-                                    class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500"
-                                >
-                                    目前沒有待處理事項。
+                            <h3 class="text-xl font-semibold text-slate-950">待付款</h3>
+                            <div class="mt-5">
+                                <div v-if="summary.tasks?.unpaid_orders_list?.length > 0" class="space-y-2">
+                                    <a
+                                        v-for="payment in summary.tasks.unpaid_orders_list"
+                                        :key="payment.id"
+                                        :href="`/payments/${payment.id}`"
+                                        class="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition hover:bg-white"
+                                    >
+                                        <div class="min-w-0">
+                                            <p class="truncate text-sm font-semibold text-slate-950">
+                                                {{ payment.room?.name || '未指定教室' }}
+                                            </p>
+                                            <p class="mt-1 text-xs text-slate-500">
+                                                {{ formatDateTime(payment.start_time) }}
+                                            </p>
+                                        </div>
+                                        <span class="shrink-0 text-sm font-semibold text-slate-950">
+                                            NT$ {{ formatAmount(payment.amount) }}
+                                        </span>
+                                    </a>
+                                </div>
+                                <p v-else class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                                    目前沒有待付款項目。
                                 </p>
                             </div>
                         </div>
 
+                        <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+                            <h3 class="text-xl font-semibold text-slate-950">即將開始的預約</h3>
+                            <div class="mt-5">
+                                <div v-if="summary.tasks?.upcoming_reservations_list?.length > 0" class="space-y-2">
+                                    <div
+                                        v-for="res in summary.tasks.upcoming_reservations_list"
+                                        :key="res.id"
+                                        class="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
+                                    >
+                                        <div class="min-w-0">
+                                            <p class="truncate text-sm font-semibold text-slate-950">
+                                                {{ res.room?.name || '未知教室' }}
+                                            </p>
+                                            <p class="mt-1 text-xs text-slate-500">
+                                                {{ res.date }} · {{ formatDateTime(res.start_time) }} - {{ formatDateTime(res.end_time) }}
+                                            </p>
+                                        </div>
+                                        <a :href="`/reservations/${res.id}`" class="shrink-0 text-sm font-semibold text-slate-600">詳情</a>
+                                    </div>
+                                </div>
+                                <p v-else class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                                    目前沒有即將開始的預約。
+                                </p>
+                            </div>
+                        </div>
                         <div
                             v-if="canViewManagementStats"
                             class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"

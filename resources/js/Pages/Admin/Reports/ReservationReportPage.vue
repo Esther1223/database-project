@@ -39,22 +39,29 @@ const params = () =>
 
 const formatDateTime = (value) => {
     if (!value) return "-";
+
     const raw = String(value).trim();
     const normalized = raw.replace(" ", "T");
     const hasTimezone = /[zZ]|[+-]\d{2}:?\d{2}$/.test(normalized);
-    const date = new Date(hasTimezone ? normalized : `${normalized}Z`);
 
-    if (Number.isNaN(date.getTime())) {
-        return raw;
+    if (hasTimezone) {
+        const date = new Date(normalized);
+        if (Number.isNaN(date.getTime())) return raw;
+
+        return date
+            .toLocaleString("sv-SE", { timeZone: "Asia/Taipei", hour12: false })
+            .slice(0, 16)
+            .replaceAll("-", "/");
     }
 
-    return date
-        .toLocaleString("sv-SE", {
-            timeZone: "Asia/Taipei",
-            hour12: false,
-        })
-        .slice(0, 16)
-        .replaceAll("-", "/");
+    const parts = normalized.split("T");
+    if (parts.length === 2) {
+        const datePart = parts[0].replaceAll("-", "/");
+        const timePart = parts[1].slice(0, 5);
+        return `${datePart} ${timePart}`;
+    }
+
+    return raw;
 };
 
 const loadData = async () => {
