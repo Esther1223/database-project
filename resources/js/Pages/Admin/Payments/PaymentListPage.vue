@@ -217,9 +217,7 @@ onMounted(loadPayments);
                                     {{ roomInfo(payment) }}
                                 </p>
                                 <p class="mt-2 text-sm text-slate-600">
-                                    申請者：{{ userName(payment) }} · 編號 #{{
-                                        payment.reservation?.id || "-"
-                                    }}
+                                    申請者：{{ userName(payment) }} 
                                 </p>
                             </div>
 
