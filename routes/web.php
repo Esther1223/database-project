@@ -4,21 +4,20 @@ use App\Http\Controllers\Admin\DepartmentController as AdminDepartmentController
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\RoomSectionController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 Route::get('/', function () {
     return redirect()->route('login');
 });
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Admin/DashboardPage');
-})->middleware(['auth'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth'])->name('dashboard');
+Route::get('/dashboard/summary', [DashboardController::class, 'summary'])->middleware(['auth'])->name('dashboard.summary');
 
 Route::middleware('auth')->group(function () {
     Route::get('/rooms', [RoomController::class, 'index'])->name('rooms.index');

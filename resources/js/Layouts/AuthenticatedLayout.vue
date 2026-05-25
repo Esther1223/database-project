@@ -11,6 +11,7 @@ defineProps({
 
 const currentUser = ref(null);
 const loggingOut = ref(false);
+const isNavOpen = ref(true);
 
 const isAdmin = computed(() =>
     currentUser.value?.roles?.some((role) => role.role_type === "管理員"),
@@ -58,6 +59,10 @@ const logout = async () => {
         loggingOut.value = false;
     }
 };
+
+const toggleNavigation = () => {
+    isNavOpen.value = !isNavOpen.value;
+};
 </script>
 
 <template>
@@ -66,11 +71,25 @@ const logout = async () => {
             <div
                 class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between"
             >
-                <div>
-                    <h1 class="text-2xl font-semibold">校園教室預約系統</h1>
-                    <p v-if="currentUser" class="mt-1 text-sm text-slate-500">
-                        {{ currentUser.name }} · {{ currentUser.email }}
-                    </p>
+                <div class="flex items-center gap-4">
+                    <button
+                        type="button"
+                        class="flex h-11 w-11 shrink-0 flex-col items-center justify-center gap-1.5 rounded-2xl border border-slate-300 text-slate-700 transition hover:bg-slate-100"
+                        :aria-expanded="isNavOpen"
+                        aria-label="切換導覽選單"
+                        @click="toggleNavigation"
+                    >
+                        <span class="h-0.5 w-5 rounded-full bg-current"></span>
+                        <span class="h-0.5 w-5 rounded-full bg-current"></span>
+                        <span class="h-0.5 w-5 rounded-full bg-current"></span>
+                    </button>
+
+                    <div>
+                        <h1 class="text-2xl font-semibold">校園教室預約系統</h1>
+                        <p v-if="currentUser" class="mt-1 text-sm text-slate-500">
+                            {{ currentUser.name }} · {{ currentUser.email }}
+                        </p>
+                    </div>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-3">
@@ -93,18 +112,24 @@ const logout = async () => {
         </header>
 
         <main
-            class="mx-auto grid max-w-7xl gap-6 px-6 py-10 lg:grid-cols-[260px_minmax(0,1fr)]"
+            class="mx-auto flex max-w-7xl gap-6 px-6 py-10 transition-all duration-300 ease-out"
         >
             <aside
-                class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-6 lg:h-fit"
+                class="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm transition-all duration-300 ease-out lg:sticky lg:top-6 lg:h-fit"
+                :class="
+                    isNavOpen
+                        ? 'w-full shrink-0 p-5 opacity-100 translate-x-0 lg:w-[260px]'
+                        : 'w-0 shrink-0 border-transparent p-0 opacity-0 -translate-x-4'
+                "
             >
-                <p
-                    class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500"
-                >
-                    導覽
-                </p>
+                <div class="w-[220px] lg:w-[220px]">
+                    <p
+                        class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500"
+                    >
+                        導覽
+                    </p>
 
-                <nav class="mt-4 space-y-2">
+                    <nav class="mt-4 space-y-2">
                     <a
                         v-if="isAdmin"
                         href="/admin/users"
@@ -172,10 +197,11 @@ const logout = async () => {
                     >
                         我的預約
                     </a>
-                </nav>
+                    </nav>
+                </div>
             </aside>
 
-            <div class="min-w-0">
+            <div class="min-w-0 flex-1 transition-all duration-300 ease-out">
                 <slot />
             </div>
         </main>

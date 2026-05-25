@@ -1,51 +1,168 @@
 <script setup>
+import axios from "axios";
 import { Head } from "@inertiajs/vue3";
+import { computed, onMounted, ref } from "vue";
 import AuthenticatedLayout from "../../Layouts/AuthenticatedLayout.vue";
 
-const managementLinks = [
+const summary = ref(null);
+const loading = ref(true);
+const errorMessage = ref("");
+
+const todayCards = computed(() => [
     {
-        title: "使用紀錄與管理查詢",
-        description: "查詢預約歷史，檢視月借用次數、空間排名與狀態分布。",
-        href: "/admin/reports/reservations",
-        roles: "管理員 / 行政人員",
+        label: "今日預約數",
+        value: summary.value?.today?.reservations || 0,
+        tone: "text-slate-950",
     },
     {
-        title: "收入統計",
-        description: "依月份、空間與付款狀態統計已收款與待收款金額。",
-        href: "/admin/reports/revenue",
-        roles: "管理員 / 行政人員",
+        label: "今日待審核數",
+        value: summary.value?.today?.pending || 0,
+        tone: "text-amber-700",
     },
     {
-        title: "付款管理",
-        description: "檢視付款清單並更新付款狀態。",
-        href: "/admin/payments",
-        roles: "管理員 / 行政人員",
+        label: "今日已核准數",
+        value: summary.value?.today?.approved || 0,
+        tone: "text-emerald-700",
     },
     {
-        title: "審核管理",
-        description: "處理待審核申請並查看審核歷史。",
-        href: "/approvals",
-        roles: "管理員 / 行政人員 / 教授",
+        label: "今日取消數",
+        value: summary.value?.today?.cancelled || 0,
+        tone: "text-rose-700",
     },
-    {
-        title: "空間管理",
-        description: "維護教室、會議室、實驗室等可借用空間。",
-        href: "/admin/rooms",
-        roles: "管理員",
-    },
-    {
-        title: "單位管理",
-        description: "新增、修改與刪除所屬單位。",
-        href: "/admin/departments",
-        roles: "管理員",
-    },
-    {
-        title: "使用者管理",
-        description: "管理帳號、啟用狀態、所屬單位與角色。",
-        href: "/admin/users",
-        roles: "管理員",
-    },
-];
+]);
+
+const taskItems = computed(() => {
+    const tasks = summary.value?.tasks || {};
+
+    return [
+        {
+            label: "待審核預約",
+            value: tasks.pending_reservations,
+            href: "/approvals",
+        },
+        {
+            label: "未付款訂單",
+            value: tasks.unpaid_orders,
+            href: "/admin/payments",
+        },
+        {
+            label: "即將開始的預約",
+            value: tasks.upcoming_reservations,
+            href: "/reservations",
+        },
+        {
+            label: "帳號待啟用",
+            value: tasks.inactive_accounts,
+            href: "/admin/users",
+        },
+    ].filter((item) => item.value !== null && item.value !== undefined);
+});
+
+const monthItems = computed(() => {
+    const month = summary.value?.month || {};
+
+    return [
+        {
+            label: "本月借用次數",
+            value: month.borrow_count || 0,
+            suffix: "次",
+        },
+        {
+            label: "本月收入",
+            value: month.revenue,
+            prefix: "NT$ ",
+            money: true,
+        },
+        {
+            label: "本月未收款金額",
+            value: month.unpaid_amount,
+            prefix: "NT$ ",
+            money: true,
+        },
+        {
+            label: "本月最常被借用空間",
+            value: month.top_room?.name || "-",
+            detail: month.top_room
+                ? `${month.top_room.borrow_count} 次 · ${[
+                      month.top_room.type,
+                      month.top_room.building,
+                  ]
+                      .filter(Boolean)
+                      .join(" · ")}`
+                : "目前沒有資料",
+        },
+    ].filter((item) => item.value !== null && item.value !== undefined);
+});
+
+const formatAmount = (amount) =>
+    new Intl.NumberFormat("zh-TW").format(amount || 0);
+
+const formatDateTime = (value) => {
+    if (!value) return "-";
+    const raw = String(value).trim();
+    const normalized = raw.replace(" ", "T");
+    const hasTimezone = /[zZ]|[+-]\d{2}:?\d{2}$/.test(normalized);
+    const date = new Date(hasTimezone ? normalized : `${normalized}Z`);
+
+    if (Number.isNaN(date.getTime())) {
+        return raw;
+    }
+
+    return date
+        .toLocaleString("sv-SE", {
+            timeZone: "Asia/Taipei",
+            hour12: false,
+        })
+        .slice(0, 16)
+        .replaceAll("-", "/");
+};
+
+const reservationStatusLabel = (status) => {
+    const labels = {
+        pending: "待審核",
+        success: "已核准",
+        cancelled: "已取消",
+        rejected: "已拒絕",
+    };
+
+    return labels[status] || status || "-";
+};
+
+const paymentStatusLabel = (status) => {
+    const labels = {
+        paid: "已付款",
+        unpaid: "未付款",
+    };
+
+    return labels[status] || status || "-";
+};
+
+const approvalDecisionLabel = (decision) => {
+    const labels = {
+        approved: "已核准",
+        rejected: "已拒絕",
+    };
+
+    return labels[decision] || decision || "-";
+};
+
+const loadSummary = async () => {
+    loading.value = true;
+    errorMessage.value = "";
+
+    try {
+        const response = await axios.get("/dashboard/summary");
+        summary.value = response.data;
+    } catch (error) {
+        console.error("載入儀表板失敗：", error.response?.data || error.message);
+        errorMessage.value =
+            error.response?.data?.message || "儀表板資料載入失敗，請稍後再試。";
+    } finally {
+        loading.value = false;
+    }
+};
+
+onMounted(loadSummary);
 </script>
 
 <template>
@@ -59,38 +176,240 @@ const managementLinks = [
                         Dashboard
                     </p>
                     <h2 class="mt-3 text-3xl font-semibold text-slate-950">
-                        管理功能清單
+                        儀表板
                     </h2>
                     <p class="mt-2 text-sm text-slate-600">
-                        從這裡進入預約、付款、審核、空間、單位與使用者管理。
+                        快速掌握今日預約、待處理事項、本月統計與近期紀錄。
                     </p>
                 </div>
 
-                <div class="grid gap-4 md:grid-cols-2">
-                    <a
-                        v-for="link in managementLinks"
-                        :key="link.href"
-                        :href="link.href"
-                        class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-                    >
-                        <div class="flex items-start justify-between gap-4">
-                            <div class="min-w-0">
-                                <h3 class="text-lg font-semibold text-slate-950">
-                                    {{ link.title }}
-                                </h3>
-                                <p class="mt-2 text-sm leading-6 text-slate-600">
-                                    {{ link.description }}
+                <p
+                    v-if="errorMessage"
+                    class="rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-semibold text-rose-700"
+                >
+                    {{ errorMessage }}
+                </p>
+
+                <div
+                    v-if="loading"
+                    class="rounded-2xl border border-slate-200 bg-white px-5 py-16 text-center text-sm font-medium text-slate-500 shadow-sm"
+                >
+                    載入儀表板中...
+                </div>
+
+                <template v-else>
+                    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                        <div
+                            v-for="card in todayCards"
+                            :key="card.label"
+                            class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                        >
+                            <p class="text-sm font-medium text-slate-500">
+                                {{ card.label }}
+                            </p>
+                            <p class="mt-2 text-3xl font-semibold" :class="card.tone">
+                                {{ card.value }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="grid gap-6 xl:grid-cols-2">
+                        <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+                            <h3 class="text-xl font-semibold text-slate-950">
+                                待處理事項
+                            </h3>
+                            <div class="mt-5 space-y-3">
+                                <a
+                                    v-for="item in taskItems"
+                                    :key="item.label"
+                                    :href="item.href"
+                                    class="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition hover:bg-white"
+                                >
+                                    <span class="text-sm font-medium text-slate-700">
+                                        {{ item.label }}
+                                    </span>
+                                    <span class="text-lg font-semibold text-slate-950">
+                                        {{ item.value }}
+                                    </span>
+                                </a>
+                                <p
+                                    v-if="taskItems.length === 0"
+                                    class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500"
+                                >
+                                    目前沒有待處理事項。
                                 </p>
                             </div>
-                            <span class="shrink-0 text-xl font-semibold text-slate-400">
-                                ›
-                            </span>
                         </div>
-                        <p class="mt-4 text-xs font-semibold text-slate-500">
-                            {{ link.roles }}
-                        </p>
-                    </a>
-                </div>
+
+                        <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+                            <h3 class="text-xl font-semibold text-slate-950">
+                                本月統計
+                            </h3>
+                            <div class="mt-5 grid gap-3 sm:grid-cols-2">
+                                <div
+                                    v-for="item in monthItems"
+                                    :key="item.label"
+                                    class="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                                >
+                                    <p class="text-sm font-medium text-slate-500">
+                                        {{ item.label }}
+                                    </p>
+                                    <p class="mt-2 text-xl font-semibold text-slate-950">
+                                        <template v-if="item.money">
+                                            {{ item.prefix }}{{ formatAmount(item.value) }}
+                                        </template>
+                                        <template v-else>
+                                            {{ item.prefix || "" }}{{ item.value }}{{ item.suffix || "" }}
+                                        </template>
+                                    </p>
+                                    <p v-if="item.detail" class="mt-1 text-sm text-slate-500">
+                                        {{ item.detail }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
+                        <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+                            <h3 class="text-xl font-semibold text-slate-950">
+                                近期紀錄
+                            </h3>
+
+                            <div class="mt-5 space-y-6">
+                                <div>
+                                    <h4 class="text-sm font-semibold text-slate-500">
+                                        最近 5 筆預約
+                                    </h4>
+                                    <div class="mt-3 divide-y divide-slate-200 rounded-2xl border border-slate-200">
+                                        <div
+                                            v-for="reservation in summary.recent.reservations"
+                                            :key="reservation.id"
+                                            class="px-4 py-3"
+                                        >
+                                            <div class="flex items-start justify-between gap-4">
+                                                <div class="min-w-0">
+                                                    <p class="truncate text-sm font-semibold text-slate-950">
+                                                        {{ reservation.room_name }}
+                                                    </p>
+                                                    <p class="mt-1 text-xs text-slate-500">
+                                                        {{ reservation.user_name || "-" }} · {{ formatDateTime(reservation.start_time) }}
+                                                    </p>
+                                                </div>
+                                                <span class="shrink-0 text-xs font-semibold text-slate-500">
+                                                    {{ reservationStatusLabel(reservation.status) }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <p
+                                            v-if="summary.recent.reservations.length === 0"
+                                            class="px-4 py-8 text-center text-sm text-slate-500"
+                                        >
+                                            目前沒有預約紀錄。
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div v-if="summary.permissions.can_view_revenue">
+                                    <h4 class="text-sm font-semibold text-slate-500">
+                                        最近 5 筆付款
+                                    </h4>
+                                    <div class="mt-3 divide-y divide-slate-200 rounded-2xl border border-slate-200">
+                                        <div
+                                            v-for="payment in summary.recent.payments"
+                                            :key="payment.id"
+                                            class="px-4 py-3"
+                                        >
+                                            <div class="flex items-start justify-between gap-4">
+                                                <div class="min-w-0">
+                                                    <p class="truncate text-sm font-semibold text-slate-950">
+                                                        {{ payment.room_name }}
+                                                    </p>
+                                                    <p class="mt-1 text-xs text-slate-500">
+                                                        {{ payment.user_name || "-" }} · {{ paymentStatusLabel(payment.status) }}
+                                                    </p>
+                                                </div>
+                                                <span class="shrink-0 text-sm font-semibold text-slate-950">
+                                                    NT$ {{ formatAmount(payment.amount) }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <p
+                                            v-if="summary.recent.payments.length === 0"
+                                            class="px-4 py-8 text-center text-sm text-slate-500"
+                                        >
+                                            目前沒有付款紀錄。
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div v-if="summary.permissions.can_review_approvals">
+                                    <h4 class="text-sm font-semibold text-slate-500">
+                                        最近 5 筆審核結果
+                                    </h4>
+                                    <div class="mt-3 divide-y divide-slate-200 rounded-2xl border border-slate-200">
+                                        <div
+                                            v-for="approval in summary.recent.approvals"
+                                            :key="approval.id"
+                                            class="px-4 py-3"
+                                        >
+                                            <div class="flex items-start justify-between gap-4">
+                                                <div class="min-w-0">
+                                                    <p class="truncate text-sm font-semibold text-slate-950">
+                                                        {{ approval.room_name }}
+                                                    </p>
+                                                    <p class="mt-1 text-xs text-slate-500">
+                                                        {{ approval.user_name || "-" }} · {{ approval.approver_name || "-" }}
+                                                    </p>
+                                                </div>
+                                                <span class="shrink-0 text-xs font-semibold text-slate-500">
+                                                    {{ approvalDecisionLabel(approval.decision) }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <p
+                                            v-if="summary.recent.approvals.length === 0"
+                                            class="px-4 py-8 text-center text-sm text-slate-500"
+                                        >
+                                            目前沒有審核紀錄。
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+                            <h3 class="text-xl font-semibold text-slate-950">
+                                空間使用排行
+                            </h3>
+                            <div class="mt-5 space-y-4">
+                                <div
+                                    v-for="room in summary.room_rankings"
+                                    :key="room.id || room.name"
+                                    class="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
+                                >
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm font-semibold text-slate-950">
+                                            {{ room.name }}
+                                        </p>
+                                        <p class="mt-1 text-xs text-slate-500">
+                                            {{ [room.type, room.building].filter(Boolean).join(" · ") || "-" }}
+                                        </p>
+                                    </div>
+                                    <span class="shrink-0 text-sm font-semibold text-slate-950">
+                                        {{ room.borrow_count }} 次
+                                    </span>
+                                </div>
+                                <p
+                                    v-if="summary.room_rankings.length === 0"
+                                    class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500"
+                                >
+                                    目前沒有排行資料。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </template>
             </section>
         </AuthenticatedLayout>
     </div>
