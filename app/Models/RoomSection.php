@@ -32,13 +32,12 @@ class RoomSection extends Model
     protected function isBookable(): Attribute
     {
         return Attribute::make(
-            get: function () {
-                $isSectionAvailable = $this->status === 'available';
-                $isTimeSlotEnabled = $this->timeSlot?->status !== 'disable';
-                return $isSectionAvailable && $isTimeSlotEnabled;
+            get: function (): bool {
+                return $this->status === 'available' && $this->timeSlot?->status === 'enable';
             }
         );
     }
+
     /**
      * @return BelongsTo<Room, $this>
      */

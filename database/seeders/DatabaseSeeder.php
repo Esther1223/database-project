@@ -103,46 +103,26 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $timeSlots = collect([
-            ['time_slot_id' => 'TS_0000',  'status' => 'enable'],
-            ['time_slot_id' => 'TS_0100',  'status' => 'enable'],
-            ['time_slot_id' => 'TS_0200', 'status' => 'enable'],
-            ['time_slot_id' => 'TS_0300', 'status' => 'enable'],
-            ['time_slot_id' => 'TS_0400', 'status' => 'enable'],
-            ['time_slot_id' => 'TS_0500', 'status' => 'enable'],
-            ['time_slot_id' => 'TS_0600', 'status' => 'enable'],
-            ['time_slot_id' => 'TS_0700', 'status' => 'enable'],
-            ['time_slot_id' => 'TS_0800', 'status' => 'enable'],
-            ['time_slot_id' => 'TS_0900', 'status' => 'enable'],
-            ['time_slot_id' => 'TS_1000', 'status' => 'enable'],
-            ['time_slot_id' => 'TS_1100', 'status' => 'enable'],
-            ['time_slot_id' => 'TS_1200', 'status' => 'disable'],
-            ['time_slot_id' => 'TS_1300', 'status' => 'enable'],
-            ['time_slot_id' => 'TS_1400', 'status' => 'enable'],
-            ['time_slot_id' => 'TS_1500', 'status' => 'enable'],
-            ['time_slot_id' => 'TS_1600', 'status' => 'enable'],
+            ['time_slot_id' => '8', 'status' => 'enable'],
+            ['time_slot_id' => '9', 'status' => 'enable'],
+            ['time_slot_id' => '10', 'status' => 'enable'],
+            ['time_slot_id' => '11', 'status' => 'enable'],
+            ['time_slot_id' => '12', 'status' => 'enable'],
+            ['time_slot_id' => '13', 'status' => 'enable'],
+            ['time_slot_id' => '14', 'status' => 'enable'],
+            ['time_slot_id' => '15', 'status' => 'enable'],
+            ['time_slot_id' => '16', 'status' => 'enable'],
+            ['time_slot_id' => '17', 'status' => 'enable'],
+            ['time_slot_id' => '18', 'status' => 'enable'],
+            ['time_slot_id' => '19', 'status' => 'enable'],
+            ['time_slot_id' => '20', 'status' => 'enable'],
+
         ])->mapWithKeys(fn (array $timeSlotData): array => [
             $timeSlotData['time_slot_id'] => TimeSlot::updateOrCreate(
                 ['time_slot_id' => $timeSlotData['time_slot_id']],
                 $timeSlotData,
             ),
         ]);
-
-        foreach ($rooms as $room) {
-            foreach (['2026-05-12', '2026-05-13', '2026-05-14'] as $date) {
-                foreach ($timeSlots as $timeSlot) {
-                    RoomSection::updateOrCreate(
-                        [
-                            'room_id' => $room->id,
-                            'date' => $date,
-                            'time_slot_id' => $timeSlot->time_slot_id,
-                        ],
-                        [
-                            'status' => $timeSlot->status === 'disable' ? 'unavailable' : 'available',
-                        ],
-                    );
-                }
-            }
-        }
 
         $reservation = Reservation::updateOrCreate(
             [
@@ -156,8 +136,31 @@ class DatabaseSeeder extends Seeder
 
         RoomSection::where('room_id', $rooms['A101 會議室']->id)
             ->where('date', '2026-05-12')
-            ->whereIn('time_slot_id', ['TS_0900', 'TS_1000'])
-            ->update(['status' => 'reserved']);
+            ->whereIn('time_slot_id', ['9', '10'])
+            ->delete();
+
+        foreach (['9', '10'] as $timeSlotId) {
+            RoomSection::updateOrCreate(
+                [
+                    'room_id' => $rooms['A101 會議室']->id,
+                    'date' => '2026-05-12',
+                    'time_slot_id' => $timeSlotId,
+                ],
+                [
+                    'status' => 'reserved',
+                ],
+            );
+        }
+
+        Reservation::updateOrCreate(
+            [
+                'user_id' => $users['學生']->id,
+                'room_id' => $rooms['B201 教室']->id,
+                'start_time' => '2026-05-13 13:00:00',
+                'end_time' => '2026-05-13 15:00:00',
+            ],
+            ['reservation_status' => 'pending'],
+        );
 
         Approval::updateOrCreate(
             ['reservation_id' => $reservation->id],

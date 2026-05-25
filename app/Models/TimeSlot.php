@@ -15,6 +15,13 @@ class TimeSlot extends Model
         'status',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'status' => 'string',
+        ];
+    }
+
     /**
      * @return HasMany<RoomSection, $this>
      */

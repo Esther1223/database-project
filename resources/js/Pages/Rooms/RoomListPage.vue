@@ -139,8 +139,8 @@ const goToPage = (url) => {
                 <div class="grid grid-cols-[1.5fr_1fr_1fr_180px] gap-4 border-b border-slate-200 bg-slate-50 px-6 py-4 text-sm font-semibold text-slate-600">
                     <div>空間資料</div>
                     <div>容量 / 建築</div>
-                    <div>費率 / 審核</div>
-                    <div class="text-right">操作</div>
+                    <div>費率</div>
+                    <div></div>
                 </div>
 
                 <div v-if="rooms.data.length" class="divide-y divide-slate-200">

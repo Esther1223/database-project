@@ -5,12 +5,11 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Room\StoreRoomRequest;
 use App\Http\Requests\Room\UpdateRoomRequest;
 use App\Models\Room;
+use App\Models\TimeSlot;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Support\Facades\Auth;
-use App\Models\Reservation;
 
 class RoomController extends Controller
 {
@@ -91,41 +90,37 @@ class RoomController extends Controller
     public function show(Request $request, Room $room): Response
     {
         $this->authorize('view', $room);
-        
+
         $selectedDate = $request->query('date', now()->toDateString());
-        $userId = Auth::id(); 
 
-        $sections = $room->roomsections()
-            ->with('timeSlot')
+        $reservedSections = $room->roomSections()
             ->where('date', $selectedDate)
-            ->orderBy('time_slot_id')
-            ->get();
-        $myReservations = Reservation::where('user_id', $userId)
-            ->where('room_id', $room->id)
-            ->whereDate('start_time', $selectedDate)
-            ->get();
+            ->get()
+            ->keyBy('time_slot_id');
 
-        $timeMap = [
-            'TS_0000' => '08:00:00', 'TS_0100' => '09:00:00',
-            'TS_0200' => '10:00:00', 'TS_0300' => '11:00:00',
-            'TS_0400' => '12:00:00', 'TS_0500' => '13:00:00',
-            'TS_0600' => '14:00:00', 'TS_0700' => '15:00:00',
-            'TS_0800' => '16:00:00', 'TS_0900' => '17:00:00',
-            'TS_1000' => '18:00:00', 'TS_1100' => '19:00:00',
-            'TS_1200' => '20:00:00',
-        ];
+        $sections = TimeSlot::query()
+            ->orderByRaw('CAST(time_slot_id AS UNSIGNED)')
+            ->get()
+            ->map(function (TimeSlot $timeSlot) use ($reservedSections, $room, $selectedDate): array {
+                $reservedSection = $reservedSections->get($timeSlot->time_slot_id);
+                $state = $this->sectionState($timeSlot->status, $reservedSection?->status);
 
-        $sections->transform(function ($section) use ($myReservations, $timeMap) {
-            $pureDate = \Carbon\Carbon::parse($section->date)->format('Y-m-d');
-
-            $startTimeStr = $pureDate . ' ' . ($timeMap[$section->time_slot_id] ?? '00:00:00');
-
-            $myRes = $myReservations->firstWhere('start_time', $startTimeStr);
-
-            $section->my_reservation = $myRes ? $myRes->reservation_status : null;
-            
-            return $section;
-        });
+                return [
+                    'id' => $reservedSection?->id,
+                    'room_id' => $room->id,
+                    'date' => $selectedDate,
+                    'time_slot_id' => $timeSlot->time_slot_id,
+                    'status' => $reservedSection?->status ?? 'available',
+                    'state' => $state,
+                    'time_label' => $this->formatTimeSlotLabel($timeSlot->time_slot_id),
+                    'time_slot' => [
+                        'id' => $timeSlot->id,
+                        'time_slot_id' => $timeSlot->time_slot_id,
+                        'status' => $timeSlot->status,
+                        'label' => $this->formatTimeSlotLabel($timeSlot->time_slot_id),
+                    ],
+                ];
+            });
         
         return Inertia::render('Rooms/RoomDetailPage', [
             'room' => $this->roomPayload($room),
@@ -211,5 +206,35 @@ class RoomController extends Controller
             'rate' => (int) $validated['hourly_rate'],
             'need_approval' => (bool) $validated['need_approval'],
         ];
+    }
+
+    private function sectionState(?string $timeSlotStatus, ?string $sectionStatus): string
+    {
+        if ($timeSlotStatus === 'disable') {
+            return 'disabled';
+        }
+
+        if ($sectionStatus === 'reserved') {
+            return 'reserved';
+        }
+
+        return 'available';
+    }
+
+    private function formatTimeSlotLabel(string $timeSlotId): string
+    {
+        if (ctype_digit($timeSlotId)) {
+            $startHour = (int) $timeSlotId;
+
+            return sprintf('%02d:00 - %02d:00', $startHour, $startHour + 1);
+        }
+
+        if (preg_match('/^TS_(\d{2})00$/', $timeSlotId, $matches) === 1) {
+            $startHour = (int) $matches[1];
+
+            return sprintf('%02d:00 - %02d:00', $startHour, $startHour + 1);
+        }
+
+        return $timeSlotId;
     }
 }
