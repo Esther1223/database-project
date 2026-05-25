@@ -27,11 +27,12 @@ class DashboardController extends Controller
         $roles = $user->roles()->pluck('role_type')->values()->all();
 
         $canViewOperations = $this->hasAnyRole($roles, ['管理員', '行政人員']);
-        $canReviewApprovals = $this->hasAnyRole($roles, ['管理員', '行政人員', '教授']);
+        $canReviewApprovals = $this->hasAnyRole($roles, ['管理員', '行政人員']);
         $canViewRevenue = $this->hasAnyRole($roles, ['管理員', '行政人員']);
+        $canViewManagementStats = $canViewOperations;
         $canManageUsers = in_array('管理員', $roles, true);
 
-        $today = today();
+        $todayEnd = today()->endOfDay();
         $now = now();
         $monthStart = $now->copy()->startOfMonth();
         $monthEnd = $now->copy()->endOfMonth();
@@ -44,21 +45,22 @@ class DashboardController extends Controller
                 'can_view_operations' => $canViewOperations,
                 'can_review_approvals' => $canReviewApprovals,
                 'can_view_revenue' => $canViewRevenue,
+                'can_view_management_stats' => $canViewManagementStats,
                 'can_manage_users' => $canManageUsers,
             ],
             'today' => [
-                'reservations' => (clone $reservationScope)->whereDate('start_time', $today)->count(),
-                'pending' => (clone $reservationScope)->whereDate('start_time', $today)->where('reservation_status', 'pending')->count(),
-                'approved' => (clone $reservationScope)->whereDate('start_time', $today)->where('reservation_status', 'success')->count(),
-                'cancelled' => (clone $reservationScope)->whereDate('start_time', $today)->where('reservation_status', 'cancelled')->count(),
+                'reservations' => (clone $reservationScope)->where('start_time', '<=', $todayEnd)->count(),
+                'pending' => (clone $reservationScope)->where('start_time', '<=', $todayEnd)->where('reservation_status', 'pending')->count(),
+                'approved' => (clone $reservationScope)->where('start_time', '<=', $todayEnd)->where('reservation_status', 'success')->count(),
+                'cancelled' => (clone $reservationScope)->where('start_time', '<=', $todayEnd)->where('reservation_status', 'cancelled')->count(),
             ],
             'tasks' => [
                 'pending_reservations' => $canReviewApprovals
                     ? Reservation::where('reservation_status', 'pending')->count()
-                    : null,
+                    : (clone $reservationScope)->where('reservation_status', 'pending')->count(),
                 'unpaid_orders' => $canViewRevenue
                     ? Payment::where('payment_status', 'unpaid')->count()
-                    : null,
+                    : $this->scopedUnpaidPaymentCount($reservationScope),
                 'upcoming_reservations' => (clone $reservationScope)
                     ->whereIn('reservation_status', ['pending', 'success'])
                     ->whereBetween('start_time', [$now, $now->copy()->addDay()])
@@ -68,23 +70,27 @@ class DashboardController extends Controller
                     : null,
             ],
             'month' => [
-                'borrow_count' => (clone $reservationScope)
-                    ->whereBetween('start_time', [$monthStart, $monthEnd])
-                    ->count(),
+                'borrow_count' => $canViewManagementStats
+                    ? (clone $reservationScope)
+                        ->whereBetween('start_time', [$monthStart, $monthEnd])
+                        ->count()
+                    : null,
                 'revenue' => $canViewRevenue
                     ? $this->paymentAmountForMonth($monthStart, $monthEnd)
                     : null,
                 'unpaid_amount' => $canViewRevenue
                     ? $this->paymentAmountForMonth($monthStart, $monthEnd, 'unpaid')
                     : null,
-                'top_room' => $this->topRoomForMonth($reservationScope, $monthStart, $monthEnd),
+                'top_room' => $canViewManagementStats
+                    ? $this->topRoomForMonth($reservationScope, $monthStart, $monthEnd)
+                    : null,
             ],
             'recent' => [
                 'reservations' => $this->recentReservations($reservationScope),
                 'payments' => $canViewRevenue ? $this->recentPayments() : [],
                 'approvals' => $canReviewApprovals ? $this->recentApprovals() : [],
             ],
-            'room_rankings' => $this->roomRankings($reservationScope),
+            'room_rankings' => $canViewManagementStats ? $this->roomRankings($reservationScope) : [],
         ]);
     }
 
@@ -100,6 +106,16 @@ class DashboardController extends Controller
             ->whereHas('reservation', fn (Builder $query) => $query->whereBetween('start_time', [$monthStart, $monthEnd]))
             ->when($status, fn (Builder $query, string $status) => $query->where('payment_status', $status))
             ->sum('amount');
+    }
+
+    private function scopedUnpaidPaymentCount(Builder $reservationScope): int
+    {
+        $reservationIds = (clone $reservationScope)->select('id');
+
+        return Payment::query()
+            ->where('payment_status', 'unpaid')
+            ->whereIn('reservation_id', $reservationIds)
+            ->count();
     }
 
     private function topRoomForMonth(Builder $reservationScope, Carbon $monthStart, Carbon $monthEnd): ?array

@@ -52,14 +52,14 @@ class StoreReservationRequest extends FormRequest
             )) {
                 if ($room->type === '實驗室') {
                     $validator->errors()->add('room_id', '學生無法借用實驗室空間。');
+
                     return;
                 }
 
-                if ($room->department_id !== null && !$room->is_open_access) {
-                    if ((int) $user->department_id !== (int) $room->department_id) {
-                        $validator->errors()->add('room_id', '僅可借用所屬系所的空間。');
-                        return;
-                    }
+                if (! $room->isBookableBy($user)) {
+                    $validator->errors()->add('room_id', '僅可借用所屬單位或非單位空間。');
+
+                    return;
                 }
             }
 
@@ -72,6 +72,7 @@ class StoreReservationRequest extends FormRequest
 
                     if ($timeSlot?->status === 'disable') {
                         $validator->errors()->add('time_slot_ids', '選擇的時段包含已停用時段。');
+
                         return;
                     }
 
@@ -79,6 +80,7 @@ class StoreReservationRequest extends FormRequest
 
                     if ($timeRange === null) {
                         $validator->errors()->add('time_slot_ids', '預約時段格式錯誤。');
+
                         return;
                     }
 
@@ -91,6 +93,7 @@ class StoreReservationRequest extends FormRequest
 
                     if ($startTime->diffInMinutes($endTime, false) < 60) {
                         $validator->errors()->add('time_slot_ids', '預約時間最少需要 1 小時。');
+
                         return;
                     }
                 }
@@ -133,6 +136,7 @@ class StoreReservationRequest extends FormRequest
 
             if ($timeRange === null) {
                 $validator->errors()->add('time_slot_id', '預約時段格式錯誤。');
+
                 return;
             }
 

@@ -18,7 +18,7 @@ const isAdmin = computed(() =>
 );
 const canReviewApprovals = computed(() =>
     currentUser.value?.roles?.some((role) =>
-        ["管理員", "行政人員", "教授"].includes(role.role_type),
+        ["管理員", "行政人員"].includes(role.role_type),
     ),
 );
 const canManagePayments = computed(() =>

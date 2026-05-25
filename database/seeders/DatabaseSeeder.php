@@ -70,7 +70,7 @@ class DatabaseSeeder extends Seeder
                 'password' => 'student',
                 'affiliation' => '資訊工程學系',
             ],
-        ])->mapWithKeys(function (array $userData) use ($roles): array {
+        ])->mapWithKeys(function (array $userData) use ($roles, $departments): array {
             $user = User::updateOrCreate(
                 ['email' => $userData['email']],
                 [

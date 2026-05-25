@@ -30,6 +30,7 @@ class ReservationController extends Controller
         $this->authorize('create', Reservation::class);
 
         $rooms = Room::query()
+            ->bookableForUser(Auth::user())
             ->orderBy('room_name')
             ->get()
             ->map(fn (Room $room): array => [

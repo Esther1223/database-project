@@ -46,6 +46,6 @@ class ReservationPolicy
 
     public function approve(User $user, Reservation $reservation): bool
     {
-        return $user->hasRole('行政人員') || $user->hasRole('教授');
+        return $user->hasRole('行政人員');
     }
 }

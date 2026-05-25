@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -82,7 +83,7 @@ class Room extends Model
      */
     public function openDepartments()
     {
-        return $this->belongsToMany(\App\Models\Department::class, 'department_room');
+        return $this->belongsToMany(Department::class, 'department_room');
     }
 
     /**
@@ -91,5 +92,54 @@ class Room extends Model
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function scopeBookableForUser(Builder $query, User $user): Builder
+    {
+        if ($user->isAdmin()) {
+            return $query;
+        }
+
+        return $query->where(function (Builder $builder) use ($user): void {
+            $builder
+                ->whereNull('department_id')
+                ->orWhere('department_id', $user->department_id)
+                ->orWhere(function (Builder $openBuilder) use ($user): void {
+                    $openBuilder
+                        ->where('is_open_access', true)
+                        ->where(function (Builder $departmentBuilder) use ($user): void {
+                            $departmentBuilder
+                                ->whereDoesntHave('openDepartments')
+                                ->orWhereHas('openDepartments', fn (Builder $query) => $query->where('departments.id', $user->department_id));
+                        });
+                });
+        });
+    }
+
+    public function isBookableBy(User $user): bool
+    {
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        if ($this->department_id === null) {
+            return true;
+        }
+
+        if ((int) $this->department_id === (int) $user->department_id) {
+            return true;
+        }
+
+        if (! $this->is_open_access) {
+            return false;
+        }
+
+        if ($this->relationLoaded('openDepartments') && $this->openDepartments->isEmpty()) {
+            return true;
+        }
+
+        return $this->openDepartments()
+            ->where('departments.id', $user->department_id)
+            ->exists();
     }
 }

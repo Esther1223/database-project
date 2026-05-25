@@ -77,7 +77,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/reservations/{reservation}/cancel', [ReservationController::class, 'cancel']);
 });
 
-Route::middleware(['auth', 'role:管理員,行政人員,教授'])->prefix('approvals')->name('approvals.')->group(function () {
+Route::middleware(['auth', 'role:管理員,行政人員'])->prefix('approvals')->name('approvals.')->group(function () {
     Route::get('/', [ApprovalController::class, 'index'])->name('index');
     Route::get('/pending', [ApprovalController::class, 'pending'])->name('pending');
     Route::get('/history', [ApprovalController::class, 'history'])->name('history');

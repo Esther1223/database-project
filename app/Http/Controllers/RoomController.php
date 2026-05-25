@@ -29,29 +29,9 @@ class RoomController extends Controller
 
         $query = Room::query()->orderBy('room_name');
 
-        // If the current user is a student, restrict visible rooms:
-        // - rooms without a department (public)
-        // - rooms that belong to the student's department
-        // - rooms that are marked as open access and either have no specific open-departments configured
-        //   or explicitly include the student's department in the department_room pivot.
         $user = $request->user();
-        if ($user !== null && (
-            $user->hasRole('學生') || $user->hasRole('教授') || $user->hasRole('行政人員')
-        )) {
-            $query->leftJoin('department_room as dr', 'rooms.id', '=', 'dr.room_id')
-                ->where(function ($q) use ($user) {
-                    $q->whereNull('rooms.department_id')
-                        ->orWhere('rooms.department_id', $user->department_id)
-                        ->orWhere(function ($q2) use ($user) {
-                            $q2->where('rooms.is_open_access', true)
-                                ->where(function ($q3) use ($user) {
-                                    $q3->whereNull('dr.department_id')
-                                        ->orWhere('dr.department_id', $user->department_id);
-                                });
-                        });
-                });
-            // Ensure we select rooms.* after join and avoid duplicates
-            $query->select('rooms.*')->distinct();
+        if ($user !== null) {
+            $query->bookableForUser($user);
         }
 
         $query->when($filters['search'] !== '', function ($builder) use ($filters): void {
@@ -158,7 +138,7 @@ class RoomController extends Controller
                     ],
                 ];
             });
-        
+
         return Inertia::render('Rooms/RoomDetailPage', [
             'room' => $this->roomPayload($room),
             'sections' => $sections,
@@ -177,7 +157,7 @@ class RoomController extends Controller
         $room = Room::create($this->roomStoragePayload($validated));
 
         // sync open access departments if provided
-        if (!empty($validated['open_access_departments'])) {
+        if (! empty($validated['open_access_departments'])) {
             $room->openDepartments()->sync($validated['open_access_departments']);
         }
 

@@ -10,22 +10,22 @@ const errorMessage = ref("");
 
 const todayCards = computed(() => [
     {
-        label: "今日預約數",
+        label: "總預約數",
         value: summary.value?.today?.reservations || 0,
         tone: "text-slate-950",
     },
     {
-        label: "今日待審核數",
+        label: "待審核數",
         value: summary.value?.today?.pending || 0,
         tone: "text-amber-700",
     },
     {
-        label: "今日已核准數",
+        label: "已核准數",
         value: summary.value?.today?.approved || 0,
         tone: "text-emerald-700",
     },
     {
-        label: "今日取消數",
+        label: "已取消數",
         value: summary.value?.today?.cancelled || 0,
         tone: "text-rose-700",
     },
@@ -36,14 +36,11 @@ const taskItems = computed(() => {
 
     return [
         {
-            label: "待審核預約",
-            value: tasks.pending_reservations,
-            href: "/approvals",
-        },
-        {
-            label: "未付款訂單",
+            label: "待付款",
             value: tasks.unpaid_orders,
-            href: "/admin/payments",
+            href: summary.value?.permissions?.can_view_revenue
+                ? "/admin/payments"
+                : "/reservations",
         },
         {
             label: "即將開始的預約",
@@ -57,6 +54,10 @@ const taskItems = computed(() => {
         },
     ].filter((item) => item.value !== null && item.value !== undefined);
 });
+
+const canViewManagementStats = computed(
+    () => summary.value?.permissions?.can_view_management_stats,
+);
 
 const monthItems = computed(() => {
     const month = summary.value?.month || {};
@@ -179,7 +180,7 @@ onMounted(loadSummary);
                         儀表板
                     </h2>
                     <p class="mt-2 text-sm text-slate-600">
-                        快速掌握今日預約、待處理事項、本月統計與近期紀錄。
+                        快速掌握截至今日預約、待處理事項、本月統計與近期紀錄。
                     </p>
                 </div>
 
@@ -213,7 +214,10 @@ onMounted(loadSummary);
                         </div>
                     </div>
 
-                    <div class="grid gap-6 xl:grid-cols-2">
+                    <div
+                        class="grid gap-6"
+                        :class="canViewManagementStats ? 'xl:grid-cols-2' : 'xl:grid-cols-1'"
+                    >
                         <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
                             <h3 class="text-xl font-semibold text-slate-950">
                                 待處理事項
@@ -241,7 +245,10 @@ onMounted(loadSummary);
                             </div>
                         </div>
 
-                        <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+                        <div
+                            v-if="canViewManagementStats"
+                            class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
+                        >
                             <h3 class="text-xl font-semibold text-slate-950">
                                 本月統計
                             </h3>
@@ -270,7 +277,14 @@ onMounted(loadSummary);
                         </div>
                     </div>
 
-                    <div class="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
+                    <div
+                        class="grid gap-6"
+                        :class="
+                            canViewManagementStats
+                                ? 'xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]'
+                                : 'xl:grid-cols-1'
+                        "
+                    >
                         <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
                             <h3 class="text-xl font-semibold text-slate-950">
                                 近期紀錄
@@ -378,7 +392,10 @@ onMounted(loadSummary);
                             </div>
                         </div>
 
-                        <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+                        <div
+                            v-if="canViewManagementStats"
+                            class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
+                        >
                             <h3 class="text-xl font-semibold text-slate-950">
                                 空間使用排行
                             </h3>

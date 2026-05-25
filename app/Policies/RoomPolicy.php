@@ -22,7 +22,7 @@ class RoomPolicy
 
     public function view(User $user, Room $room): bool
     {
-        return $this->viewAny($user);
+        return $this->viewAny($user) && $room->isBookableBy($user);
     }
 
     public function create(User $user): bool
