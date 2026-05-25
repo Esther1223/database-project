@@ -46,10 +46,8 @@ class ReservationController extends Controller
             ->values()
             ->all();
 
-        $initialDate = RoomSection::query()
-            ->orderBy('date')
-            ->value('date') ?? now()->toDateString();
-        $initialDate = Carbon::parse($initialDate)->toDateString();
+        // Default the reservation initial date to today's date
+        $initialDate = now()->toDateString();
 
         return Inertia::render('Reservations/CreateReservationPage', [
             'rooms' => $rooms,
