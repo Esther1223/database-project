@@ -31,8 +31,15 @@ class StoreRoomRequest extends FormRequest
             'hourly_rate' => ['required', 'integer', 'min:0'],
             'need_approval' => ['required', 'boolean'],
             'is_open_access' => ['required', 'boolean'],
-            'open_access_departments' => ['nullable', 'array'],
+            'open_access_departments' => ['required_if:is_open_access,1,true', 'array', 'min:1'],
             'open_access_departments.*' => ['integer', 'exists:departments,id'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'open_access_departments.required_if' => '當勾選「系所空間跨系開放」時，請至少選擇一個系所。',
         ];
     }
 }

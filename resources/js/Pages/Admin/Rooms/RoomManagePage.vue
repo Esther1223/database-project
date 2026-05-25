@@ -822,6 +822,7 @@ const departmentName = (room) => {
                                     </span>
                                     <p v-if="roomForm.open_access_departments.length === 0" class="text-sm text-slate-500">尚未選擇其他系所</p>
                                 </div>
+                                <p v-if="roomErrors.open_access_departments" class="mt-2 text-sm text-rose-700">{{ roomErrors.open_access_departments[0] }}</p>
                             </div>
 
                             <div class="flex gap-3 pt-2">

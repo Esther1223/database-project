@@ -47,7 +47,9 @@ class StoreReservationRequest extends FormRequest
             $user = $this->user();
             $room = Room::find($this->integer('room_id'));
 
-            if ($user !== null && $room !== null && $user->hasRole('學生')) {
+            if ($user !== null && $room !== null && (
+                $user->hasRole('學生') || $user->hasRole('教授') || $user->hasRole('行政人員')
+            )) {
                 if ($room->type === '實驗室') {
                     $validator->errors()->add('room_id', '學生無法借用實驗室空間。');
                     return;
@@ -55,7 +57,7 @@ class StoreReservationRequest extends FormRequest
 
                 if ($room->department_id !== null && !$room->is_open_access) {
                     if ((int) $user->department_id !== (int) $room->department_id) {
-                        $validator->errors()->add('room_id', '學生僅可借用所屬系所的空間。');
+                        $validator->errors()->add('room_id', '僅可借用所屬系所的空間。');
                         return;
                     }
                 }
