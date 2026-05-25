@@ -49,16 +49,87 @@ class ReservationService
     {
         return DB::transaction(function () use ($data, $userId): array {
             $timeSlotIds = array_values(array_unique($data['time_slot_ids'] ?? []));
-            $reservations = [];
 
-            foreach ($timeSlotIds as $timeSlotId) {
-                $slotData = $data;
-                unset($slotData['time_slot_ids']);
-                $slotData['time_slot_id'] = $timeSlotId;
-                $reservations[] = $this->createReservation($slotData, $userId);
+            if (empty($timeSlotIds)) {
+                return [];
             }
 
-            return $reservations;
+            // create a single reservation that spans from the earliest slot start to the latest slot end
+            $room = Room::findOrFail($data['room_id']);
+            $date = $data['date'] ?? null;
+
+            if ($date === null) {
+                abort(422, '缺少預約日期');
+            }
+
+            $slotRanges = [];
+            foreach ($timeSlotIds as $timeSlotId) {
+                $timeRange = $this->timeRangeForSlot($timeSlotId);
+
+                if ($timeRange === null) {
+                    abort(422, '預約時段格式錯誤。');
+                }
+
+                $start = Carbon::parse("{$date} {$timeRange[0]}");
+                $end = Carbon::parse("{$date} {$timeRange[1]}");
+
+                if ($end->lessThanOrEqualTo($start)) {
+                    $end->addDay();
+                }
+
+                $slotRanges[] = ['id' => (string) $timeSlotId, 'start' => $start, 'end' => $end];
+            }
+
+            usort($slotRanges, fn ($a, $b) => $a['start']->getTimestamp() <=> $b['start']->getTimestamp());
+
+            $first = $slotRanges[0];
+            $last = $slotRanges[count($slotRanges) - 1];
+
+            // lock or create all involved room sections and validate availability
+            $sections = [];
+            foreach ($timeSlotIds as $timeSlotId) {
+                $slotData = [
+                    'room_id' => $room->id,
+                    'date' => $date,
+                    'time_slot_id' => $timeSlotId,
+                ];
+
+                $section = $this->lockOrCreateSection($slotData, $room);
+
+                if ($section->status !== 'available') {
+                    abort(422, '所選時段已被借走或關閉');
+                }
+
+                $sections[] = $section;
+            }
+
+            // check conflict for the full span
+            $startTime = $first['start']->toDateTimeString();
+            $endTime = $last['end']->toDateTimeString();
+
+            if ($this->hasConflict($room->id, $startTime, $endTime)) {
+                abort(422, '該時段已有預約');
+            }
+
+            $reservationStatus = $room->need_approval ? 'pending' : 'success';
+
+            $reservation = Reservation::create([
+                'user_id' => $userId,
+                'room_id' => $room->id,
+                'start_time' => $startTime,
+                'end_time' => $endTime,
+                'reservation_status' => $reservationStatus,
+            ]);
+
+            if ($reservationStatus === 'success') {
+                foreach ($sections as $section) {
+                    $section->update(['status' => 'reserved']);
+                }
+
+                $this->createPaymentIfNeeded($reservation);
+            }
+
+            return [$reservation->fresh(['room', 'payment'])];
         });
     }
 

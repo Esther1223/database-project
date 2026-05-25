@@ -100,7 +100,31 @@ class ReservationController extends Controller
         $reservations = Reservation::with(['room', 'approval', 'payment'])
             ->where('user_id', Auth::id())
             ->latest('start_time')
-            ->get();
+            ->get()
+            ->map(fn (Reservation $reservation): array => [
+                'id' => $reservation->id,
+                'start_time' => $reservation->start_time?->toDateTimeString(),
+                'end_time' => $reservation->end_time?->toDateTimeString(),
+                'reservation_status' => $reservation->reservation_status,
+                'created_at' => $reservation->created_at?->toDateTimeString(),
+                'room' => $reservation->room
+                    ? [
+                        'id' => $reservation->room->id,
+                        'name' => $reservation->room->name,
+                        'type' => $reservation->room->type,
+                        'building' => $reservation->room->building,
+                    ]
+                    : null,
+                'approval' => $reservation->approval ? [
+                    'id' => $reservation->approval->id,
+                    'status' => $reservation->approval->status,
+                ] : null,
+                'payment' => $reservation->payment ? [
+                    'id' => $reservation->payment->id,
+                    'amount' => $reservation->payment->amount,
+                    'payment_status' => $reservation->payment->payment_status,
+                ] : null,
+            ]);
 
         return response()->json([
             'data' => $reservations,

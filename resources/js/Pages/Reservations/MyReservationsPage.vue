@@ -22,26 +22,41 @@ const activeCount = computed(
 );
 
 const formatDateTime = (value) => {
-    if (!value) {
-        return "-";
-    }
+    if (!value) return "-";
 
     const raw = String(value).trim();
-    const normalized = raw.replace(" ", "T");
-    const hasTimezone = /[zZ]|[+-]\d{2}:?\d{2}$/.test(normalized);
-    const date = new Date(hasTimezone ? normalized : `${normalized}Z`);
+    const cleaned = raw.replace(/(Z|[+-]\d{2}:?\d{2})$/i, "").trim();
+    const normalized = cleaned.replace(" ", "T");
 
-    if (Number.isNaN(date.getTime())) {
-        return raw;
+    const parts = normalized.split("T");
+    if (parts.length >= 2) {
+        const datePart = parts[0].replaceAll("-", "/");
+        const timePart = parts[1].slice(0, 5);
+        return `${datePart} ${timePart}`;
     }
 
-    return date
-        .toLocaleString("sv-SE", {
-            timeZone: "Asia/Taipei",
-            hour12: false,
-        })
-        .slice(0, 16)
-        .replaceAll("-", "/");
+    return cleaned;
+};
+
+const dateOnly = (value) => {
+    if (!value) return "-";
+    const raw = String(value).trim();
+    const cleaned = raw.replace(/(Z|[+-]\d{2}:?\d{2})$/i, "").trim();
+    const parts = cleaned.replace(" ", "T").split("T");
+    return parts[0] ? parts[0].replaceAll("-", "/") : cleaned;
+};
+
+const slotRangeLabel = (startValue, endValue) => {
+    if (!startValue || !endValue) return "-";
+    const clean = (v) => String(v).trim().replace(/(Z|[+-]\d{2}:?\d{2})$/i, "").trim();
+    const s = clean(startValue).replace(" ", "T");
+    const e = clean(endValue).replace(" ", "T");
+    const sParts = s.split("T");
+    const eParts = e.split("T");
+    const sTime = sParts[1] ? sParts[1].slice(0, 5) : "";
+    const eTime = eParts[1] ? eParts[1].slice(0, 5) : "";
+    if (!sTime || !eTime) return `${s} - ${e}`;
+    return `${sTime} - ${eTime}`;
 };
 
 const roomName = (reservation) =>
@@ -222,19 +237,15 @@ onMounted(loadReservations);
                                     {{ roomType(reservation) }} ·
                                     {{ roomBuilding(reservation) }}
                                 </p>
-                                <p class="mt-2 text-sm text-slate-600">
-                                    預約編號 #{{ reservation.id }}
-                                </p>
                             </div>
 
                             <div class="text-sm text-slate-700">
                                 <p>
-                                    {{ formatDateTime(reservation.start_time) }}
-                                </p>
-                                <p class="mt-1 text-slate-500">
-                                    至
-                                    {{ formatDateTime(reservation.end_time) }}
-                                </p>
+                                        {{ dateOnly(reservation.start_time) }}
+                                    </p>
+                                    <p class="mt-1 text-slate-500">
+                                        {{ slotRangeLabel(reservation.start_time, reservation.end_time) }}
+                                    </p>
                             </div>
 
                             <div>

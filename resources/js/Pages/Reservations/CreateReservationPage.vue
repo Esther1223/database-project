@@ -28,25 +28,6 @@ const message = ref("");
 const errorMessage = ref("");
 const successDialog = ref(null);
 
-const timeSlotMap = {
-    TS_0000: "08:00 - 09:00",
-    TS_0100: "09:00 - 10:00",
-    TS_0200: "10:00 - 11:00",
-    TS_0300: "11:00 - 12:00",
-    TS_0400: "12:00 - 13:00",
-    TS_0500: "13:00 - 14:00",
-    TS_0600: "14:00 - 15:00",
-    TS_0700: "15:00 - 16:00",
-    TS_0800: "16:00 - 17:00",
-    TS_0900: "17:00 - 18:00",
-    TS_1000: "18:00 - 19:00",
-    TS_1100: "19:00 - 20:00",
-    TS_1200: "20:00 - 21:00",
-    TS_1300: "21:00 - 22:00",
-    TS_1400: "22:00 - 23:00",
-    TS_1500: "23:00 - 00:00",
-    TS_1600: "00:00 - 01:00",
-};
 
 const selectedRoom = computed(() =>
     props.rooms.find((room) => room.id === Number(selectedRoomId.value)),
@@ -62,11 +43,21 @@ const bookableSections = computed(() =>
     sections.value.filter((section) => isSelectableSection(section)),
 );
 
-const formatTimeSlot = (section) =>
-    section?.time_slot?.label ||
-    timeSlotMap[section?.time_slot_id] ||
-    section?.time_slot_id ||
-    "-";
+const formatTimeSlot = (section) => {
+    if (section?.time_slot?.label) return section.time_slot.label;
+
+    const id = section?.time_slot_id;
+    if (id === null || id === undefined) return "-";
+
+    if (/^\d+$/.test(String(id))) {
+        const startHour = Number(id) % 24;
+        const endHour = (startHour + 1) % 24;
+        const pad = (n) => String(n).padStart(2, "0");
+        return `${pad(startHour)}:00 - ${pad(endHour)}:00`;
+    }
+    
+    return id || "-";
+};
 
 const isSelectableSection = (section) => section.is_bookable;
 
