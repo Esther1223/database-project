@@ -134,7 +134,7 @@ onMounted(loadReservations);
                             <p
                                 class="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500"
                             >
-                                Reservations
+                                My Reservations
                             </p>
                             <h2
                                 class="mt-3 text-3xl font-semibold text-slate-950"

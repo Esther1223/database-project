@@ -177,6 +177,7 @@ const toggleStatus = async (user) => {
             <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div>
+                        <p class="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500">Users</p>
                         <h2 class="mt-3 text-3xl font-semibold text-slate-950">使用者管理</h2>
                     </div>
 

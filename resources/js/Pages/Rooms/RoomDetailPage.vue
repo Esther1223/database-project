@@ -47,7 +47,7 @@ watch(selectedDate, (newDate) => {
                 </div>
             </div>
 
-            <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+            <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
                 <div class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
                     <p class="text-sm text-slate-500">容量</p>
                     <p class="mt-2 text-2xl font-semibold text-slate-950">{{ room.capacity }} 人</p>
@@ -61,11 +61,6 @@ watch(selectedDate, (newDate) => {
                 <div class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
                     <p class="text-sm text-slate-500">預約規則</p>
                     <p class="mt-2 text-2xl font-semibold text-slate-950">{{ room.need_approval ? '需審核' : '直接預約' }}</p>
-                </div>
-
-                <div class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
-                    <p class="text-sm text-slate-500">空間編號</p>
-                    <p class="mt-2 text-2xl font-semibold text-slate-950">#{{ room.id }}</p>
                 </div>
             </div>
 
@@ -124,21 +119,21 @@ watch(selectedDate, (newDate) => {
                     <div v-for="section in sections" :key="section.time_slot_id"
                          class="flex items-center justify-between gap-4 rounded-2xl border px-5 py-4 transition-all"
                          :class="{
-                            'border-slate-100 bg-slate-50 opacity-60': section.state === 'disabled',
-                            'border-orange-200 bg-orange-50 opacity-90': section.state === 'reserved',
+                            'border-slate-200 bg-slate-50 text-slate-500': section.state === 'disabled',
+                            'border-slate-200 bg-slate-50 text-slate-500': section.state === 'reserved',
                             'border-blue-100 bg-blue-50/50': section.state === 'available'
-                         }">
+                        }">
                         
                         <div class="min-w-0">
-                           <p class="text-base font-semibold text-slate-900">{{ section.time_label }}</p>
+                           <p class="text-base font-semibold">{{ section.time_label }}</p>
                         </div>
 
                         <div class="shrink-0">
-                            <span v-if="section.state === 'disabled'" 
-                                  class="text-xs font-semibold text-slate-400">暫停開放</span>
+                            <span v-if="section.state === 'disabled'"
+                                class="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-500">暫停開放</span>
                             
-                            <span v-else-if="section.state === 'reserved'" 
-                                  class="text-xs font-semibold text-slate-400">已被預約</span>
+                            <span v-else-if="section.state === 'reserved'"
+                                class="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-500">已被預約</span>
                             
                             <span v-else 
                                   class="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700">可預約</span>

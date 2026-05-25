@@ -51,8 +51,7 @@ const logout = async () => {
         <header class="border-b border-slate-200 bg-white/90 backdrop-blur">
             <div class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">{{ title }}</p>
-                    <h1 class="text-xl font-semibold">校園教室預約系統</h1>
+                    <h1 class="text-2xl font-semibold">校園教室預約系統</h1>
                     <p v-if="currentUser" class="mt-1 text-sm text-slate-500">
                         {{ currentUser.name }} · {{ currentUser.email }}
                     </p>
