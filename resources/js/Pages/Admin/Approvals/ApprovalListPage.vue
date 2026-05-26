@@ -238,7 +238,6 @@ onMounted(loadPending);
                                         reservation.user?.email ||
                                         "-"
                                     }}
-                                    · 編號 #{{ reservation.id }}
                                 </p>
                             </div>
 

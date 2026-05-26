@@ -647,7 +647,7 @@ const departmentName = (room) => {
                                 <label
                                     class="mb-2 block text-sm font-medium text-slate-700"
                                     for="department"
-                                    >所屬系所</label
+                                    >所屬單位</label
                                 >
                                 <select
                                     id="department"
