@@ -30,7 +30,9 @@ class StoreReservationRequest extends FormRequest
         return [
             'room_id' => ['required', 'exists:rooms,id'],
             'section_id' => ['nullable', 'exists:room_sections,id'],
-            'date' => ['required_without:section_id', 'date_format:Y-m-d'],
+            'date' => ['required_without_all:section_id,dates', 'date_format:Y-m-d'],
+            'dates' => ['required_without_all:section_id,date', 'array', 'min:1'],
+            'dates.*' => ['date_format:Y-m-d'],
             'time_slot_id' => ['required_without_all:section_id,time_slot_ids', 'exists:time_slots,time_slot_id'],
             'time_slot_ids' => ['required_without_all:section_id,time_slot_id', 'array', 'min:1'],
             'time_slot_ids.*' => ['string', 'distinct', 'exists:time_slots,time_slot_id'],
@@ -65,36 +67,38 @@ class StoreReservationRequest extends FormRequest
 
             if ($this->filled('time_slot_ids')) {
                 $timeSlotIds = array_values(array_unique($this->input('time_slot_ids', [])));
-                $date = (string) $this->input('date');
+                $dates = $this->input('dates') ?? [(string) $this->input('date')];
 
-                foreach ($timeSlotIds as $timeSlotId) {
-                    $timeSlot = TimeSlot::where('time_slot_id', $timeSlotId)->first();
+                foreach ($dates as $date) {
+                    foreach ($timeSlotIds as $timeSlotId) {
+                        $timeSlot = TimeSlot::where('time_slot_id', $timeSlotId)->first();
 
-                    if ($timeSlot?->status === 'disable') {
-                        $validator->errors()->add('time_slot_ids', '選擇的時段包含已停用時段。');
+                        if ($timeSlot?->status === 'disable') {
+                            $validator->errors()->add('time_slot_ids', '選擇的時段包含已停用時段。');
 
-                        return;
-                    }
+                            return;
+                        }
 
-                    $timeRange = $this->timeRangeForSlot($timeSlotId);
+                        $timeRange = $this->timeRangeForSlot($timeSlotId);
 
-                    if ($timeRange === null) {
-                        $validator->errors()->add('time_slot_ids', '預約時段格式錯誤。');
+                        if ($timeRange === null) {
+                            $validator->errors()->add('time_slot_ids', '預約時段格式錯誤。');
 
-                        return;
-                    }
+                            return;
+                        }
 
-                    $startTime = Carbon::parse("{$date} {$timeRange[0]}");
-                    $endTime = Carbon::parse("{$date} {$timeRange[1]}");
+                        $startTime = Carbon::parse("{$date} {$timeRange[0]}");
+                        $endTime = Carbon::parse("{$date} {$timeRange[1]}");
 
-                    if ($endTime->lessThanOrEqualTo($startTime)) {
-                        $endTime->addDay();
-                    }
+                        if ($endTime->lessThanOrEqualTo($startTime)) {
+                            $endTime->addDay();
+                        }
 
-                    if ($startTime->diffInMinutes($endTime, false) < 60) {
-                        $validator->errors()->add('time_slot_ids', '預約時間最少需要 1 小時。');
+                        if ($startTime->diffInMinutes($endTime, false) < 60) {
+                            $validator->errors()->add('time_slot_ids', '預約時間最少需要 1 小時。');
 
-                        return;
+                            return;
+                        }
                     }
                 }
 

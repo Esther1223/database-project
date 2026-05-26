@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Room;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreRoomRequest extends FormRequest
 {
@@ -31,7 +32,11 @@ class StoreRoomRequest extends FormRequest
             'hourly_rate' => ['required', 'integer', 'min:0'],
             'need_approval' => ['required', 'boolean'],
             'is_open_access' => ['required', 'boolean'],
-            'open_access_departments' => ['required_if:is_open_access,1,true', 'array', 'min:1'],
+            'open_access_departments' => [
+                Rule::excludeUnless(fn () => $this->boolean('is_open_access')),
+                'array',
+                'min:1',
+            ],
             'open_access_departments.*' => ['integer', 'exists:departments,id'],
         ];
     }
@@ -39,7 +44,7 @@ class StoreRoomRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'open_access_departments.required_if' => '當勾選「系所空間跨系開放」時，請至少選擇一個系所。',
+            'open_access_departments.min' => '當勾選「系所空間跨系開放」時，請至少選擇一個系所。',
         ];
     }
 }
