@@ -137,6 +137,12 @@ const saveUser = async () => {
 };
 
 const deleteUser = async (user) => {
+    // Prevent deleting admin users from the UI
+    if (isAdmin(user)) {
+        notice.value = "無法刪除管理員帳號";
+        return;
+    }
+
     if (!window.confirm(`確定刪除使用者「${user.name}」嗎？`)) {
         return;
     }
@@ -158,9 +164,27 @@ const deleteUser = async (user) => {
     }
 };
 
+const isAdmin = (user) => {
+    if (!user || !Array.isArray(user.roles)) return false;
+    return user.roles.some((role) => {
+        const t = (role.role_type || "").toString().toLowerCase();
+        return (
+            t === "admin" ||
+            t === "administrator" ||
+            t === "管理員"
+        );
+    });
+};
+
 const toggleStatus = async (user) => {
     busyKey.value = `status-${user.id}`;
     notice.value = "";
+    // Prevent disabling admin users from the UI
+    if (user?.is_active && isAdmin(user)) {
+        busyKey.value = "";
+        notice.value = "無法停用管理員帳號";
+        return;
+    }
 
     try {
         await axios.patch(`/admin/users/${user.id}/status`, {
@@ -304,33 +328,33 @@ const toggleStatus = async (user) => {
                                 >
                                     修改
                                 </button>
+                                <!-- 不顯示管理員的停用按鈕 -->
                                 <button
+                                    v-if="!(user.is_active && isAdmin(user))"
                                     type="button"
-                                    class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                    :class="[
+                                        'rounded-xl px-3 py-2 text-sm font-semibold transition',
+                                        (busyKey === `status-${user.id}`) ? 'opacity-70 cursor-wait' : '',
+                                        'border border-slate-300 text-slate-700 hover:bg-slate-100'
+                                    ]"
                                     :disabled="busyKey === `status-${user.id}`"
                                     @click="toggleStatus(user)"
                                 >
-                                    {{
-                                        busyKey === `status-${user.id}`
-                                            ? "..."
-                                            : user.is_active
-                                              ? "停用"
-                                              : "啟用"
-                                    }}
+                                    {{ busyKey === `status-${user.id}` ? '...' : (user.is_active ? '停用' : '啟用') }}
                                 </button>
+                                <!-- 不顯示管理員的刪除按鈕 -->
                                 <button
+                                    v-if="!isAdmin(user)"
                                     type="button"
-                                    class="rounded-xl border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
-                                    :disabled="
-                                        busyKey === `delete-user-${user.id}`
-                                    "
+                                    :class="[
+                                        'rounded-xl px-3 py-2 text-sm font-semibold transition',
+                                        busyKey === `delete-user-${user.id}` ? 'opacity-70 cursor-wait' : '',
+                                        'border border-rose-200 text-rose-700 hover:bg-rose-50'
+                                    ]"
+                                    :disabled="busyKey === `delete-user-${user.id}`"
                                     @click="deleteUser(user)"
                                 >
-                                    {{
-                                        busyKey === `delete-user-${user.id}`
-                                            ? "..."
-                                            : "刪除"
-                                    }}
+                                    {{ busyKey === `delete-user-${user.id}` ? '...' : '刪除' }}
                                 </button>
                             </div>
                         </div>

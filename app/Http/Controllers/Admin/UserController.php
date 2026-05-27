@@ -176,15 +176,11 @@ class UserController extends Controller
                 'user_id' => '不能刪除目前登入中的帳號。',
             ]);
         }
-
+        // Disallow deleting admin users from backend
         if ($user->roles()->where('role_type', '管理員')->exists()) {
-            $adminCount = User::whereHas('roles', fn ($query) => $query->where('role_type', '管理員'))->count();
-
-            if ($adminCount <= 1) {
-                throw ValidationException::withMessages([
-                    'user_id' => '至少需要保留一位管理員。',
-                ]);
-            }
+            throw ValidationException::withMessages([
+                'user_id' => '無法刪除管理員帳號。',
+            ]);
         }
 
         $user->delete();
@@ -202,6 +198,20 @@ class UserController extends Controller
         $validated = $request->validate([
             'is_active' => ['required', 'boolean'],
         ]);
+
+        // Prevent deactivating admin users from backend
+        if ($validated['is_active'] === false && $user->roles()->where('role_type', '管理員')->exists()) {
+            throw ValidationException::withMessages([
+                'is_active' => '無法停用管理員帳號。',
+            ]);
+        }
+
+        // Prevent deactivating currently authenticated user
+        if ($validated['is_active'] === false && $request->user()?->id === $user->id) {
+            throw ValidationException::withMessages([
+                'is_active' => '不能停用目前登入中的帳號。',
+            ]);
+        }
 
         $user->forceFill([
             'is_active' => $validated['is_active'],
