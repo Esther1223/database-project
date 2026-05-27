@@ -330,7 +330,6 @@ onMounted(loadPending);
                                         approval.reservation?.user?.email ||
                                         "-"
                                     }}
-                                    · 預約 #{{ approval.reservation_id }}
                                 </p>
                             </div>
 
