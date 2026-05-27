@@ -168,11 +168,7 @@ const isAdmin = (user) => {
     if (!user || !Array.isArray(user.roles)) return false;
     return user.roles.some((role) => {
         const t = (role.role_type || "").toString().toLowerCase();
-        return (
-            t === "admin" ||
-            t === "administrator" ||
-            t === "管理員"
-        );
+        return t === "admin" || t === "administrator" || t === "管理員";
     });
 };
 
@@ -334,13 +330,21 @@ const toggleStatus = async (user) => {
                                     type="button"
                                     :class="[
                                         'rounded-xl px-3 py-2 text-sm font-semibold transition',
-                                        (busyKey === `status-${user.id}`) ? 'opacity-70 cursor-wait' : '',
-                                        'border border-slate-300 text-slate-700 hover:bg-slate-100'
+                                        busyKey === `status-${user.id}`
+                                            ? 'opacity-70 cursor-wait'
+                                            : '',
+                                        'border border-slate-300 text-slate-700 hover:bg-slate-100',
                                     ]"
                                     :disabled="busyKey === `status-${user.id}`"
                                     @click="toggleStatus(user)"
                                 >
-                                    {{ busyKey === `status-${user.id}` ? '...' : (user.is_active ? '停用' : '啟用') }}
+                                    {{
+                                        busyKey === `status-${user.id}`
+                                            ? "..."
+                                            : user.is_active
+                                              ? "停用"
+                                              : "啟用"
+                                    }}
                                 </button>
                                 <!-- 不顯示管理員的刪除按鈕 -->
                                 <button
@@ -348,13 +352,21 @@ const toggleStatus = async (user) => {
                                     type="button"
                                     :class="[
                                         'rounded-xl px-3 py-2 text-sm font-semibold transition',
-                                        busyKey === `delete-user-${user.id}` ? 'opacity-70 cursor-wait' : '',
-                                        'border border-rose-200 text-rose-700 hover:bg-rose-50'
+                                        busyKey === `delete-user-${user.id}`
+                                            ? 'opacity-70 cursor-wait'
+                                            : '',
+                                        'border border-rose-200 text-rose-700 hover:bg-rose-50',
                                     ]"
-                                    :disabled="busyKey === `delete-user-${user.id}`"
+                                    :disabled="
+                                        busyKey === `delete-user-${user.id}`
+                                    "
                                     @click="deleteUser(user)"
                                 >
-                                    {{ busyKey === `delete-user-${user.id}` ? '...' : '刪除' }}
+                                    {{
+                                        busyKey === `delete-user-${user.id}`
+                                            ? "..."
+                                            : "刪除"
+                                    }}
                                 </button>
                             </div>
                         </div>
@@ -573,7 +585,10 @@ const toggleStatus = async (user) => {
                                 <button
                                     type="submit"
                                     class="flex-1 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-                                    :disabled="userSubmitting || userForm.role_ids.length === 0"
+                                    :disabled="
+                                        userSubmitting ||
+                                        userForm.role_ids.length === 0
+                                    "
                                 >
                                     {{
                                         userSubmitting
