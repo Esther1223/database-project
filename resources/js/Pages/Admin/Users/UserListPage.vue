@@ -561,13 +561,19 @@ const toggleStatus = async (user) => {
                                 >
                                     {{ userErrors.role_ids[0] }}
                                 </p>
+                                <p
+                                    v-else-if="userForm.role_ids.length === 0"
+                                    class="mt-2 text-sm text-rose-700"
+                                >
+                                    請至少選擇一個角色。
+                                </p>
                             </div>
 
                             <div class="flex gap-3 pt-2">
                                 <button
                                     type="submit"
                                     class="flex-1 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-                                    :disabled="userSubmitting"
+                                    :disabled="userSubmitting || userForm.role_ids.length === 0"
                                 >
                                     {{
                                         userSubmitting

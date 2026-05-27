@@ -75,8 +75,11 @@ class UserController extends Controller
             'department_id' => ['required', 'integer', 'exists:departments,id'],
             'password' => ['required', 'string', 'min:6'],
             'is_active' => ['sometimes', 'boolean'],
-            'role_ids' => ['array'],
+            'role_ids' => ['required', 'array', 'min:1'],
             'role_ids.*' => ['integer', 'exists:roles,id'],
+        ], [
+            'role_ids.required' => '請至少選擇一個角色。',
+            'role_ids.min' => '請至少選擇一個角色。',
         ]);
 
         $roleIds = array_map('intval', $validated['role_ids'] ?? []);
@@ -123,8 +126,11 @@ class UserController extends Controller
             'department_id' => ['required', 'integer', 'exists:departments,id'],
             'password' => ['nullable', 'string', 'min:6'],
             'is_active' => ['sometimes', 'boolean'],
-            'role_ids' => ['array'],
+            'role_ids' => ['required', 'array', 'min:1'],
             'role_ids.*' => ['integer', 'exists:roles,id'],
+        ], [
+            'role_ids.required' => '請至少選擇一個角色。',
+            'role_ids.min' => '請至少選擇一個角色。',
         ]);
 
         $roleIds = array_map('intval', $validated['role_ids'] ?? $user->roles()->pluck('roles.id')->all());
@@ -258,8 +264,11 @@ class UserController extends Controller
     public function updateRoles(Request $request, User $user): JsonResponse
     {
         $validated = $request->validate([
-            'role_ids' => ['array'],
+            'role_ids' => ['required', 'array', 'min:1'],
             'role_ids.*' => ['integer', 'exists:roles,id'],
+        ], [
+            'role_ids.required' => '請至少選擇一個角色。',
+            'role_ids.min' => '請至少選擇一個角色。',
         ]);
 
         $adminRoleId = Role::query()->where('role_type', '管理員')->value('id');
