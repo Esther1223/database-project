@@ -37,6 +37,8 @@ class CompleteSeeder extends Seeder
             '資訊工程學系',
             '資訊中心',
             '總務處',
+            '數學系',
+            '光電工程學系',
         ])->mapWithKeys(fn (string $name): array => [
             $name => Department::updateOrCreate(['name' => $name]),
         ]);
@@ -45,8 +47,9 @@ class CompleteSeeder extends Seeder
         $usersData = [
             ['role' => '管理員', 'name' => 'Admin User', 'email' => 'admin@example.com', 'password' => 'admin', 'affiliation' => '資訊中心'],
             ['role' => '行政人員', 'name' => 'Staff User', 'email' => 'staff@example.com', 'password' => 'staff', 'affiliation' => '總務處'],
-            ['role' => '教授', 'name' => 'Professor User', 'email' => 'prof@example.com', 'password' => 'professor', 'affiliation' => '資訊工程學系'],
-            ['role' => '學生', 'name' => 'Student User', 'email' => 'student@example.com', 'password' => 'student', 'affiliation' => '資訊工程學系'],
+            ['role' => '教授', 'name' => 'JhihChaing Wu', 'email' => 'wu@example.com', 'password' => 'wu', 'affiliation' => '資訊工程學系'],
+            ['role' => '學生', 'name' => 'KaBuo', 'email' => 'KaBuo@example.com', 'password' => 'kabuo', 'affiliation' => '資訊工程學系'],
+            ['role' => '學生', 'name' => 'Omuba', 'email' => 'Omuba@example.com', 'password' => 'omuba', 'affiliation' => '光電工程學系'],
         ];
 
         $users = collect($usersData)->mapWithKeys(function (array $u) use ($roles, $departments): array {
@@ -62,19 +65,35 @@ class CompleteSeeder extends Seeder
 
             $user->roles()->syncWithoutDetaching([$roles[$u['role']]->id]);
 
-            return [$u['role'] => $user];
+            // key by email to avoid duplicate-role overwrite
+            return [$u['email'] => $user];
         });
+
+        // helper variables for clarity
+        $admin = $users['admin@example.com'];
+        $staff = $users['staff@example.com'];
+        $professor = $users['wu@example.com'];
+        $studentA = $users['KaBuo@example.com'];
+        $studentB = $users['Omuba@example.com'];
 
         // Rooms
         $roomsData = [
-            ['room_name' => 'A101 會議室', 'room_type' => '會議室', 'capacity' => 30, 'building' => '行政大樓', 'department_id' => $departments['資訊工程學系']->id, 'information' => '含投影機、白板。', 'hourly_rate' => 500, 'need_approval' => true, 'is_open_access' => false],
+            ['room_name' => 'A101 會議室', 'room_type' => '會議室', 'capacity' => 30, 'building' => '科教大樓', 'department_id' => $departments['資訊工程學系']->id, 'information' => '含投影機、白板。', 'hourly_rate' => 500, 'need_approval' => true, 'is_open_access' => false],
             ['room_name' => 'B201 教室', 'room_type' => '教室', 'capacity' => 60, 'building' => '教學大樓', 'department_id' => null, 'information' => '適合課程與講座。', 'hourly_rate' => 0, 'need_approval' => false, 'is_open_access' => false],
             ['room_name' => 'C301 多功能廳', 'room_type' => '多功能廳', 'capacity' => 120, 'building' => '活動中心', 'department_id' => null, 'information' => '大型活動、表演。', 'hourly_rate' => 1500, 'need_approval' => true, 'is_open_access' => false],
+            // B1 is open-access across departments — associate with 光電工程學系 as requested
+            // B1 is owned by 資訊工程學系 but open to other departments (e.g. 光電工程學系)
+            ['room_name' => 'B1 多功能教室', 'room_type' => '教室', 'capacity' => 60, 'building' => '科教大樓', 'department_id' => $departments['資訊工程學系']->id, 'information' => '開放式空間，資工系擁有，光電系可借用。', 'hourly_rate' => 0, 'need_approval' => false, 'is_open_access' => true],
         ];
 
         $rooms = collect($roomsData)->mapWithKeys(fn (array $r): array => [
             $r['room_name'] => Room::updateOrCreate(['room_name' => $r['room_name']], $r),
         ]);
+
+        // Make B1 available to 光電工程學系 as an open department
+        if (isset($rooms['B1 多功能教室']) && isset($departments['光電工程學系'])) {
+            $rooms['B1 多功能教室']->openDepartments()->syncWithoutDetaching([$departments['光電工程學系']->id]);
+        }
 
         // Time slots (8..20)
         $timeSlots = collect(range(8, 20))->mapWithKeys(fn (int $h): array => [
@@ -110,7 +129,7 @@ class CompleteSeeder extends Seeder
 
         $multiRes = Reservation::updateOrCreate(
             [
-                'user_id' => $users['教授']->id,
+                'user_id' => $professor->id,
                 'room_id' => $rooms['A101 會議室']->id,
                 'start_time' => $multiStart,
                 'end_time' => $multiEnd,
@@ -141,9 +160,10 @@ class CompleteSeeder extends Seeder
         $singleStart = "{$singleDate} 13:00:00";
         $singleEnd = "{$singleDate} 14:00:00";
 
+        // use student A for the single-slot reservation
         $singleRes = Reservation::updateOrCreate(
             [
-                'user_id' => $users['學生']->id,
+                'user_id' => $studentA->id,
                 'room_id' => $rooms['B201 教室']->id,
                 'start_time' => $singleStart,
                 'end_time' => $singleEnd,
@@ -163,7 +183,7 @@ class CompleteSeeder extends Seeder
 
         $cancelRes = Reservation::updateOrCreate(
             [
-                'user_id' => $users['管理員']->id,
+                'user_id' => $admin->id,
                 'room_id' => $rooms['C301 多功能廳']->id,
                 'start_time' => $cancelStart,
                 'end_time' => $cancelEnd,
@@ -175,9 +195,10 @@ class CompleteSeeder extends Seeder
         $pendingStart = "{$multiDate} 14:00:00";
         $pendingEnd = "{$multiDate} 15:00:00";
 
+        // use student B for pending reservation
         $pendingRes = Reservation::updateOrCreate(
             [
-                'user_id' => $users['學生']->id,
+                'user_id' => $studentB->id,
                 'room_id' => $rooms['A101 會議室']->id,
                 'start_time' => $pendingStart,
                 'end_time' => $pendingEnd,
@@ -188,7 +209,7 @@ class CompleteSeeder extends Seeder
         // Create an approval for the multi reservation (approved)
         Approval::updateOrCreate(
             ['reservation_id' => $multiRes->id],
-            ['approver_id' => $users['行政人員']->id, 'decision' => 'approved', 'decision_time' => Carbon::now()->subDays(1)->toDateTimeString()],
+            ['approver_id' => $staff->id, 'decision' => 'approved', 'decision_time' => Carbon::now()->subDays(1)->toDateTimeString()],
         );
 
         // Create a paid payment for singleRes
