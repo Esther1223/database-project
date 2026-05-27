@@ -81,6 +81,18 @@ class UserController extends Controller
 
         $roleIds = array_map('intval', $validated['role_ids'] ?? []);
 
+        $adminRoleId = Role::query()->where('role_type', '管理員')->value('id');
+
+        if ($adminRoleId !== null && in_array($adminRoleId, $roleIds, true)) {
+            $adminCount = User::whereHas('roles', fn ($query) => $query->where('role_type', '管理員'))->count();
+
+            if ($adminCount >= 1) {
+                throw ValidationException::withMessages([
+                    'role_ids' => '系統只能有一位管理員。',
+                ]);
+            }
+        }
+
         $department = Department::find($validated['department_id']);
 
         $user = User::create([
@@ -116,6 +128,24 @@ class UserController extends Controller
         ]);
 
         $roleIds = array_map('intval', $validated['role_ids'] ?? $user->roles()->pluck('roles.id')->all());
+
+        $adminRoleId = Role::query()->where('role_type', '管理員')->value('id');
+
+        if (
+            $adminRoleId !== null
+            && in_array($adminRoleId, $roleIds, true)
+            && ! $user->roles()->where('role_type', '管理員')->exists()
+        ) {
+            $adminCount = User::whereHas('roles', fn ($query) => $query->where('role_type', '管理員'))
+                ->whereKeyNot($user->id)
+                ->count();
+
+            if ($adminCount >= 1) {
+                throw ValidationException::withMessages([
+                    'role_ids' => '系統只能有一位管理員。',
+                ]);
+            }
+        }
 
         if (
             array_key_exists('is_active', $validated)
@@ -234,6 +264,22 @@ class UserController extends Controller
 
         $adminRoleId = Role::query()->where('role_type', '管理員')->value('id');
         $requestedRoleIds = $validated['role_ids'] ?? [];
+
+        if (
+            $adminRoleId !== null
+            && in_array($adminRoleId, $requestedRoleIds, true)
+            && ! $user->roles()->where('role_type', '管理員')->exists()
+        ) {
+            $adminCount = User::whereHas('roles', fn ($query) => $query->where('role_type', '管理員'))
+                ->whereKeyNot($user->id)
+                ->count();
+
+            if ($adminCount >= 1) {
+                throw ValidationException::withMessages([
+                    'role_ids' => '系統只能有一位管理員。',
+                ]);
+            }
+        }
 
         if (
             $adminRoleId !== null
