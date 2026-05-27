@@ -9,6 +9,7 @@ const reservations = ref([]);
 const loading = ref(false);
 const cancellingId = ref(null);
 const reservationToCancel = ref(null);
+const detailReservation = ref(null);
 const message = ref("");
 const errorMessage = ref("");
 
@@ -73,6 +74,16 @@ const reservationSlotLabels = (reservation) => {
     );
 };
 
+const reservationSlotSummary = (reservation) => {
+    const labels = reservationSlotLabels(reservation);
+
+    if (labels.length <= 2) {
+        return labels;
+    }
+
+    return [labels[0], `另 ${labels.length - 1} 個時段`];
+};
+
 const roomName = (reservation) =>
     reservation.room?.name || reservation.room?.room_name || "未知空間";
 
@@ -98,6 +109,14 @@ const closeCancelDialog = () => {
     }
 
     reservationToCancel.value = null;
+};
+
+const openDetailDialog = (reservation) => {
+    detailReservation.value = reservation;
+};
+
+const closeDetailDialog = () => {
+    detailReservation.value = null;
 };
 
 const loadReservations = async () => {
@@ -215,11 +234,12 @@ onMounted(loadReservations);
                     class="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm"
                 >
                     <div
-                        class="grid grid-cols-[1.4fr_1fr_1fr_140px] gap-4 border-b border-slate-200 bg-slate-50 px-6 py-4 text-sm font-semibold text-slate-600"
+                        class="grid grid-cols-[1.35fr_1fr_0.8fr_120px_140px] gap-4 border-b border-slate-200 bg-slate-50 px-6 py-4 text-sm font-semibold text-slate-600"
                     >
                         <div>空間</div>
                         <div>時段</div>
                         <div>狀態</div>
+                        <div class="text-left">詳細資料</div>
                         <div class="text-left">操作</div>
                     </div>
 
@@ -241,7 +261,7 @@ onMounted(loadReservations);
                         <div
                             v-for="reservation in reservations"
                             :key="reservation.id"
-                            class="grid grid-cols-1 gap-4 px-6 py-5 lg:grid-cols-[1.4fr_1fr_1fr_140px] lg:items-center"
+                            class="grid grid-cols-1 gap-4 px-6 py-5 lg:grid-cols-[1.35fr_1fr_0.8fr_120px_140px] lg:items-center"
                         >
                             <div>
                                 <p class="text-lg font-semibold text-slate-950">
@@ -257,7 +277,7 @@ onMounted(loadReservations);
                                 <p>{{ dateOnly(reservation.start_time) }}</p>
                                 <div class="mt-1 flex flex-wrap gap-2">
                                     <span
-                                        v-for="slot in reservationSlotLabels(reservation)"
+                                        v-for="slot in reservationSlotSummary(reservation)"
                                         :key="slot"
                                         class="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600"
                                     >
@@ -270,6 +290,16 @@ onMounted(loadReservations);
                                 <ReservationStatusBadge
                                     :status="reservation.reservation_status"
                                 />
+                            </div>
+
+                            <div class="flex justify-start">
+                                <button
+                                    type="button"
+                                    class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                                    @click="openDetailDialog(reservation)"
+                                >
+                                    詳細資料
+                                </button>
                             </div>
 
                             <div class="flex justify-start">
@@ -297,6 +327,111 @@ onMounted(loadReservations);
                     </div>
                 </div>
                 <teleport to="body">
+                    <div
+                        v-if="detailReservation"
+                        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-8"
+                        @click.self="closeDetailDialog"
+                    >
+                        <div
+                            class="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl"
+                        >
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <p
+                                        class="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500"
+                                    >
+                                        Reservation Detail
+                                    </p>
+                                    <h3
+                                        class="mt-3 text-2xl font-semibold text-slate-950"
+                                    >
+                                        預約詳細資料
+                                    </h3>
+                                </div>
+                                <button
+                                    type="button"
+                                    class="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-lg font-semibold leading-none text-slate-600 transition hover:bg-slate-100"
+                                    aria-label="關閉"
+                                    @click="closeDetailDialog"
+                                >
+                                    ×
+                                </button>
+                            </div>
+
+                            <div
+                                class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700"
+                            >
+                                <p class="text-lg font-semibold text-slate-950">
+                                    {{ roomName(detailReservation) }}
+                                </p>
+                                <p class="mt-1">
+                                    {{ roomType(detailReservation) }} ·
+                                    {{ roomBuilding(detailReservation) }}
+                                </p>
+                                <div class="mt-3">
+                                    <ReservationStatusBadge
+                                        :status="detailReservation.reservation_status"
+                                    />
+                                </div>
+                                <p class="mt-3">
+                                    共
+                                    {{
+                                        detailReservation.slots?.length || 1
+                                    }}
+                                    個時段
+                                </p>
+                            </div>
+
+                            <div
+                                class="mt-5 overflow-hidden rounded-2xl border border-slate-200"
+                            >
+                                <div
+                                    class="grid grid-cols-[1fr_110px] gap-4 border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600"
+                                >
+                                    <div>時段</div>
+                                    <div>狀態</div>
+                                </div>
+                                <div class="divide-y divide-slate-200">
+                                    <div
+                                        v-for="slot in detailReservation.slots || []"
+                                        :key="slot.id"
+                                        class="grid grid-cols-[1fr_110px] gap-4 px-4 py-3 text-sm"
+                                    >
+                                        <div class="text-slate-800">
+                                            {{
+                                                `${String(slot.date || "").replaceAll("-", "/")} ${slotRangeLabel(
+                                                    slot.start_time,
+                                                    slot.end_time,
+                                                )}`
+                                            }}
+                                        </div>
+                                        <div class="font-semibold text-slate-600">
+                                            {{ slot.reservation_status }}
+                                        </div>
+                                    </div>
+                                    <div
+                                        v-if="!detailReservation.slots?.length"
+                                        class="grid grid-cols-[1fr_110px] gap-4 px-4 py-3 text-sm"
+                                    >
+                                        <div class="text-slate-800">
+                                            {{
+                                                `${dateOnly(detailReservation.start_time)} ${slotRangeLabel(
+                                                    detailReservation.start_time,
+                                                    detailReservation.end_time,
+                                                )}`
+                                            }}
+                                        </div>
+                                        <div class="font-semibold text-slate-600">
+                                            {{
+                                                detailReservation.reservation_status
+                                            }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div
                         v-if="reservationToCancel"
                         class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-8"

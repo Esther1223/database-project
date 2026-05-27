@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -38,6 +39,7 @@ class DashboardController extends Controller
 
         $reservationScope = $this->reservationScope($user, $canViewOperations || $canReviewApprovals);
         $personalReservationScope = $this->reservationScope($user, false);
+        $reservationGroupCounts = $this->reservationGroupCounts($reservationScope);
 
         return response()->json([
             'roles' => $roles,
@@ -49,10 +51,10 @@ class DashboardController extends Controller
                 'can_manage_users' => $canManageUsers,
             ],
             'today' => [
-                'reservations' => (clone $reservationScope)->count(),
-                'pending' => (clone $reservationScope)->where('reservation_status', 'pending')->count(),
-                'approved' => (clone $reservationScope)->where('reservation_status', 'success')->count(),
-                'cancelled' => (clone $reservationScope)->where('reservation_status', 'cancelled')->count(),
+                'reservations' => $reservationGroupCounts['reservations'],
+                'pending' => $reservationGroupCounts['pending'],
+                'approved' => $reservationGroupCounts['approved'],
+                'cancelled' => $reservationGroupCounts['cancelled'],
             ],
             'tasks' => [
                 'pending_reservations' => $canReviewApprovals
@@ -103,6 +105,21 @@ class DashboardController extends Controller
             ->when(! $canViewAll, fn (Builder $query) => $query->where('user_id', $user->id));
     }
 
+    private function reservationGroupCounts(Builder $reservationScope): array
+    {
+        $statuses = (clone $reservationScope)
+            ->get(['id', 'reservation_group_id', 'reservation_status'])
+            ->groupBy(fn (Reservation $reservation): string => $reservation->reservation_group_id ?: (string) $reservation->id)
+            ->map(fn (Collection $group): string => $this->groupStatus($group));
+
+        return [
+            'reservations' => $statuses->count(),
+            'pending' => $statuses->filter(fn (string $status): bool => $status === 'pending')->count(),
+            'approved' => $statuses->filter(fn (string $status): bool => $status === 'success')->count(),
+            'cancelled' => $statuses->filter(fn (string $status): bool => $status === 'cancelled')->count(),
+        ];
+    }
+
     private function paymentAmountForMonth(Carbon $monthStart, Carbon $monthEnd, ?string $status = null): int
     {
         return (int) Payment::query()
@@ -150,17 +167,13 @@ class DashboardController extends Controller
         return (clone $reservationScope)
             ->with(['room', 'user'])
             ->latest('created_at')
-            ->limit(5)
+            ->limit(50)
             ->get()
-            ->map(fn (Reservation $reservation): array => [
-                'id' => $reservation->id,
-                'start_time' => $reservation->start_time?->toDateTimeString(),
-                'end_time' => $reservation->end_time?->toDateTimeString(),
-                'status' => $reservation->reservation_status,
-                'room_name' => $reservation->room?->name ?? '未知空間',
-                'room_building' => $reservation->room?->building,
-                'user_name' => $reservation->user?->name ?? $reservation->user?->email,
-            ])
+            ->groupBy(fn (Reservation $reservation): string => $reservation->reservation_group_id ?: (string) $reservation->id)
+            ->map(fn (Collection $group): array => $this->recentReservationGroupPayload($group))
+            ->sortByDesc('created_at')
+            ->take(5)
+            ->values()
             ->all();
     }
 
@@ -168,16 +181,13 @@ class DashboardController extends Controller
     {
         return Payment::with(['reservation.room', 'reservation.user'])
             ->latest('created_at')
-            ->limit(5)
+            ->limit(50)
             ->get()
-            ->map(fn (Payment $payment): array => [
-                'id' => $payment->id,
-                'amount' => $payment->amount,
-                'status' => $payment->payment_status,
-                'room_name' => $payment->reservation?->room?->name ?? '未知空間',
-                'user_name' => $payment->reservation?->user?->name ?? $payment->reservation?->user?->email,
-                'created_at' => $payment->created_at?->toDateTimeString(),
-            ])
+            ->groupBy(fn (Payment $payment): string => $payment->reservation?->reservation_group_id ?: (string) $payment->reservation_id)
+            ->map(fn (Collection $group): array => $this->recentPaymentGroupPayload($group))
+            ->sortByDesc('created_at')
+            ->take(5)
+            ->values()
             ->all();
     }
 
@@ -185,17 +195,78 @@ class DashboardController extends Controller
     {
         return Approval::with(['reservation.room', 'reservation.user', 'approver'])
             ->latest('decision_time')
-            ->limit(5)
+            ->limit(50)
             ->get()
-            ->map(fn (Approval $approval): array => [
-                'id' => $approval->id,
-                'decision' => $approval->decision,
-                'decision_time' => $approval->decision_time?->toDateTimeString(),
-                'room_name' => $approval->reservation?->room?->name ?? '未知空間',
-                'user_name' => $approval->reservation?->user?->name ?? $approval->reservation?->user?->email,
-                'approver_name' => $approval->approver?->name ?? $approval->approver?->email,
-            ])
+            ->groupBy(fn (Approval $approval): string => $approval->reservation?->reservation_group_id ?: (string) $approval->reservation_id)
+            ->map(fn (Collection $group): array => $this->recentApprovalGroupPayload($group))
+            ->sortByDesc('decision_time')
+            ->take(5)
+            ->values()
             ->all();
+    }
+
+    private function recentReservationGroupPayload(Collection $group): array
+    {
+        $sorted = $group->sortBy('start_time')->values();
+        /** @var Reservation $first */
+        $first = $sorted->first();
+        /** @var Reservation $last */
+        $last = $sorted->last();
+
+        return [
+            'id' => $first->id,
+            'reservation_group_id' => $first->reservation_group_id,
+            'slot_count' => $sorted->count(),
+            'created_at' => $sorted->sortByDesc('created_at')->first()?->created_at?->toDateTimeString(),
+            'start_time' => $first->start_time?->toDateTimeString(),
+            'end_time' => $last->end_time?->toDateTimeString(),
+            'status' => $this->groupStatus($sorted),
+            'room_name' => $first->room?->name ?? '未知空間',
+            'room_building' => $first->room?->building,
+            'user_name' => $first->user?->name ?? $first->user?->email,
+        ];
+    }
+
+    private function recentPaymentGroupPayload(Collection $group): array
+    {
+        $sorted = $group->sortBy(fn (Payment $payment): string => $payment->reservation?->start_time?->toDateTimeString() ?? '')->values();
+        /** @var Payment $first */
+        $first = $sorted->first();
+        $reservationGroupId = $first->reservation?->reservation_group_id;
+        $slotCount = $reservationGroupId
+            ? Reservation::where('reservation_group_id', $reservationGroupId)->count()
+            : 1;
+
+        return [
+            'id' => $first->id,
+            'payment_ids' => $sorted->pluck('id')->values()->all(),
+            'slot_count' => $slotCount,
+            'amount' => $sorted->sum('amount'),
+            'status' => $sorted->contains(fn (Payment $payment): bool => $payment->payment_status === 'unpaid') ? 'unpaid' : 'paid',
+            'room_name' => $first->reservation?->room?->name ?? '未知空間',
+            'user_name' => $first->reservation?->user?->name ?? $first->reservation?->user?->email,
+            'created_at' => $sorted->sortByDesc('created_at')->first()?->created_at?->toDateTimeString(),
+        ];
+    }
+
+    private function recentApprovalGroupPayload(Collection $group): array
+    {
+        /** @var Approval $first */
+        $first = $group->sortByDesc('decision_time')->first();
+        $reservationGroupId = $first->reservation?->reservation_group_id;
+        $slotCount = $reservationGroupId
+            ? Reservation::where('reservation_group_id', $reservationGroupId)->count()
+            : 1;
+
+        return [
+            'id' => $first->id,
+            'slot_count' => $slotCount,
+            'decision' => $first->decision,
+            'decision_time' => $first->decision_time?->toDateTimeString(),
+            'room_name' => $first->reservation?->room?->name ?? '未知空間',
+            'user_name' => $first->reservation?->user?->name ?? $first->reservation?->user?->email,
+            'approver_name' => $first->approver?->name ?? $first->approver?->email,
+        ];
     }
 
     private function roomRankings(Builder $reservationScope): array
@@ -272,6 +343,19 @@ class DashboardController extends Controller
                     : null,
             ])
             ->all();
+    }
+
+    private function groupStatus(Collection $reservations): string
+    {
+        $statuses = $reservations->pluck('reservation_status');
+
+        foreach (['pending', 'success', 'cancelled', 'rejected'] as $status) {
+            if ($statuses->contains($status)) {
+                return $status;
+            }
+        }
+
+        return (string) ($statuses->first() ?? '-');
     }
 
     private function hasAnyRole(array $roles, array $allowedRoles): bool

@@ -343,6 +343,9 @@ onMounted(loadSummary);
                                                     <p class="mt-1 text-xs text-slate-500">
                                                         {{ reservation.user_name || "-" }} · {{ formatDateTime(reservation.start_time) }}
                                                     </p>
+                                                    <p class="mt-1 text-xs text-slate-500">
+                                                        共 {{ reservation.slot_count || 1 }} 個時段
+                                                    </p>
                                                 </div>
                                                 <span class="shrink-0 text-xs font-semibold text-slate-500">
                                                     {{ reservationStatusLabel(reservation.status) }}
@@ -376,6 +379,9 @@ onMounted(loadSummary);
                                                     <p class="mt-1 text-xs text-slate-500">
                                                         {{ payment.user_name || "-" }} · {{ paymentStatusLabel(payment.status) }}
                                                     </p>
+                                                    <p class="mt-1 text-xs text-slate-500">
+                                                        共 {{ payment.slot_count || 1 }} 個時段
+                                                    </p>
                                                 </div>
                                                 <span class="shrink-0 text-sm font-semibold text-slate-950">
                                                     NT$ {{ formatAmount(payment.amount) }}
@@ -408,6 +414,9 @@ onMounted(loadSummary);
                                                     </p>
                                                     <p class="mt-1 text-xs text-slate-500">
                                                         {{ approval.user_name || "-" }} · {{ approval.approver_name || "-" }}
+                                                    </p>
+                                                    <p class="mt-1 text-xs text-slate-500">
+                                                        共 {{ approval.slot_count || 1 }} 個時段
                                                     </p>
                                                 </div>
                                                 <span class="shrink-0 text-xs font-semibold text-slate-500">

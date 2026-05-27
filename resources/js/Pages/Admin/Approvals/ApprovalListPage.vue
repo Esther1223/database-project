@@ -319,12 +319,13 @@ onMounted(loadPending);
                     class="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm"
                 >
                     <div
-                        class="hidden gap-4 border-b border-slate-200 bg-slate-50 px-6 py-4 text-sm font-semibold text-slate-600 lg:grid lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]"
+                        class="hidden gap-4 border-b border-slate-200 bg-slate-50 px-6 py-4 text-sm font-semibold text-slate-600 lg:grid lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.85fr)_minmax(0,0.85fr)_minmax(0,0.85fr)_120px]"
                     >
                         <div>空間 / 申請者</div>
                         <div>審核結果</div>
                         <div>審核者</div>
                         <div>審核時間</div>
+                        <div class="text-center">詳細資料</div>
                     </div>
 
                     <div
@@ -345,7 +346,7 @@ onMounted(loadPending);
                         <div
                             v-for="approval in histories"
                             :key="approval.id"
-                            class="grid grid-cols-1 gap-4 px-6 py-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] lg:items-center"
+                            class="grid grid-cols-1 gap-4 px-6 py-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.85fr)_minmax(0,0.85fr)_minmax(0,0.85fr)_120px] lg:items-center"
                         >
                             <div>
                                 <p class="text-lg font-semibold text-slate-950">
@@ -401,30 +402,20 @@ onMounted(loadPending);
                                 </p>
                             </div>
 
-                            <div class="text-sm text-slate-700">
-                                <p>
-                                    {{ formatDateTime(approval.decision_time) }}
-                                </p>
-                                <p class="mt-1 text-slate-500">
-                                    {{
-                                        formatDateTime(
-                                            approval.reservation?.start_time,
-                                        )
-                                    }}
-                                    至
-                                    {{
-                                        formatDateTime(
-                                            approval.reservation?.end_time,
-                                        )
-                                    }}
-                                </p>
-                                <button
-                                    type="button"
-                                    class="mt-3 rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                                    @click="openDetail(approval, 'history')"
-                                >
-                                    詳細資料
-                                </button>
+	                            <div class="text-sm text-slate-700">
+	                                <p>
+	                                    {{ formatDateTime(approval.decision_time) }}
+	                                </p>
+	                            </div>
+
+	                            <div class="flex justify-start lg:justify-center">
+	                                <button
+	                                    type="button"
+	                                    class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+	                                    @click="openDetail(approval, 'history')"
+	                                >
+	                                    詳細資料
+	                                </button>
                             </div>
                         </div>
                     </div>
