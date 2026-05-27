@@ -6,6 +6,7 @@ use App\Http\Requests\Room\StoreRoomRequest;
 use App\Http\Requests\Room\UpdateRoomRequest;
 use App\Models\Department;
 use App\Models\Room;
+use Carbon\Carbon;
 use App\Models\TimeSlot;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -211,6 +212,7 @@ class RoomController extends Controller
             'rate' => $room->rate,
             'need_approval' => (bool) $room->need_approval,
             'is_open_access' => (bool) $room->is_open_access,
+            'open_access_all' => (bool) $room->open_access_all,
             'open_access_departments' => $room->openDepartments()->get()->map(fn (Department $d): array => ['id' => $d->id, 'name' => $d->name])->values()->all(),
             'information' => $room->information,
             'created_at' => $room->created_at?->toDateTimeString(),
@@ -233,6 +235,7 @@ class RoomController extends Controller
             'rate' => (int) $validated['hourly_rate'],
             'need_approval' => (bool) $validated['need_approval'],
             'is_open_access' => (bool) $validated['is_open_access'],
+            'open_access_all' => (bool) ($validated['is_open_access'] && ($validated['open_access_all'] ?? false)),
         ];
     }
 

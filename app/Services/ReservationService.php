@@ -240,6 +240,12 @@ class ReservationService
                     $this->releaseRoomSection($item);
                 }
             }
+
+            $reservationIds = $reservations->pluck('id')->filter()->values();
+
+            if ($reservationIds->isNotEmpty()) {
+                Payment::whereIn('reservation_id', $reservationIds)->delete();
+            }
         });
 
         return $reservation->fresh('room');

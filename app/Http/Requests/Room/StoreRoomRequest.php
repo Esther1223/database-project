@@ -33,8 +33,9 @@ class StoreRoomRequest extends FormRequest
             'hourly_rate' => ['required', 'integer', 'min:0'],
             'need_approval' => ['required', 'boolean'],
             'is_open_access' => ['required', 'boolean'],
+            'open_access_all' => ['required', 'boolean'],
             'open_access_departments' => [
-                Rule::excludeUnless(fn () => $this->boolean('is_open_access')),
+                Rule::excludeUnless(fn () => $this->boolean('is_open_access') && ! $this->boolean('open_access_all')),
                 'array',
                 'min:1',
             ],
@@ -46,14 +47,18 @@ class StoreRoomRequest extends FormRequest
     {
         return [
             'department_id.required' => '請選擇空間的所屬單位。',
-            'open_access_departments.min' => '當啟用白名單開放時，請至少選擇一個可借用單位。',
+            'open_access_departments.min' => '當啟用白名單開放時，請至少選擇一個可借用單位，或勾選所有人可借用。',
         ];
     }
 
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
-            if ($validator->errors()->isNotEmpty() || ! $this->boolean('is_open_access')) {
+            if (
+                $validator->errors()->isNotEmpty()
+                || ! $this->boolean('is_open_access')
+                || $this->boolean('open_access_all')
+            ) {
                 return;
             }
 

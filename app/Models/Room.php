@@ -26,6 +26,7 @@ class Room extends Model
         'hourly_rate',
         'need_approval',
         'is_open_access',
+        'open_access_all',
     ];
 
     protected function casts(): array
@@ -35,6 +36,7 @@ class Room extends Model
             'hourly_rate' => 'integer',
             'need_approval' => 'boolean',
             'is_open_access' => 'boolean',
+            'open_access_all' => 'boolean',
         ];
     }
 
@@ -106,7 +108,11 @@ class Room extends Model
                 ->orWhere(function (Builder $openBuilder) use ($user): void {
                     $openBuilder
                         ->where('is_open_access', true)
-                        ->whereHas('openDepartments', fn (Builder $query) => $query->where('departments.id', $user->department_id));
+                        ->where(function (Builder $accessBuilder) use ($user): void {
+                            $accessBuilder
+                                ->where('open_access_all', true)
+                                ->orWhereHas('openDepartments', fn (Builder $query) => $query->where('departments.id', $user->department_id));
+                        });
                 });
         });
     }
@@ -123,6 +129,10 @@ class Room extends Model
 
         if (! $this->is_open_access) {
             return false;
+        }
+
+        if ($this->open_access_all) {
+            return true;
         }
 
         return $this->openDepartments()

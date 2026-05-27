@@ -43,6 +43,7 @@ const roomForm = reactive({
     hourly_rate: 0,
     need_approval: false,
     is_open_access: false,
+    open_access_all: false,
     open_access_departments: [],
     _temp_open_department_id: "",
 });
@@ -134,6 +135,7 @@ const resetRoomForm = () => {
     roomForm.hourly_rate = 0;
     roomForm.need_approval = false;
     roomForm.is_open_access = false;
+    roomForm.open_access_all = false;
     roomForm.open_access_departments = [];
     roomForm._temp_open_department_id = "";
     roomEditingId.value = null;
@@ -158,9 +160,12 @@ const openRoomForm = (room = null) => {
     roomForm.hourly_rate = room.rate;
     roomForm.need_approval = room.need_approval;
     roomForm.is_open_access = room.is_open_access;
-    roomForm.open_access_departments = (room.open_access_departments || []).map((d) =>
-        typeof d === 'object' ? d.id : d,
-    );
+    roomForm.open_access_all = room.open_access_all;
+    roomForm.open_access_departments = room.open_access_all
+        ? []
+        : (room.open_access_departments || []).map((d) =>
+              typeof d === "object" ? d.id : d,
+          );
     roomForm._temp_open_department_id = "";
     roomEditingId.value = room.id;
 };
@@ -185,9 +190,13 @@ const saveRoom = async () => {
         hourly_rate: roomForm.hourly_rate,
         need_approval: roomForm.need_approval,
         is_open_access: roomForm.is_open_access,
-        open_access_departments: roomForm.is_open_access
-            ? roomForm.open_access_departments || []
-            : [],
+        open_access_all: roomForm.is_open_access
+            ? roomForm.open_access_all
+            : false,
+        open_access_departments:
+            roomForm.is_open_access && !roomForm.open_access_all
+                ? roomForm.open_access_departments || []
+                : [],
     };
 
     try {
@@ -213,6 +222,8 @@ const saveRoom = async () => {
 };
 
 const addOpenDepartment = () => {
+    if (roomForm.open_access_all) return;
+
     const val = roomForm._temp_open_department_id;
 
     if (!val) return;
@@ -249,6 +260,17 @@ const onToggleOpenAccess = async () => {
     if (roomForm.is_open_access) {
         await nextTick();
         openDeptSelectRef.value?.focus?.();
+    } else {
+        roomForm.open_access_all = false;
+        roomForm.open_access_departments = [];
+        roomForm._temp_open_department_id = "";
+    }
+};
+
+const onToggleOpenAccessAll = () => {
+    if (roomForm.open_access_all) {
+        roomForm.open_access_departments = [];
+        roomForm._temp_open_department_id = "";
     }
 };
 
@@ -463,12 +485,20 @@ const departmentName = (room) => {
                                     </span>
                                     <span
                                         v-if="
-                                            room.department_id &&
-                                            room.is_open_access
+                                            room.is_open_access &&
+                                            !room.open_access_all &&
+                                            room.open_access_departments
+                                                ?.length > 0
                                         "
                                         class="inline-flex rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700"
                                     >
                                         白名單開放
+                                    </span>
+                                    <span
+                                        v-if="room.open_access_all"
+                                        class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700"
+                                    >
+                                        所有人可借用
                                     </span>
                                 </div>
                             </div>
@@ -794,52 +824,111 @@ const departmentName = (room) => {
                                 {{ roomErrors.is_open_access[0] }}
                             </p>
 
-                            <div v-show="roomForm.is_open_access" class="space-y-3">
-                                <p class="text-sm text-slate-600">選擇可借用此空間的其他單位：</p>
-                                <div class="flex items-center gap-2">
-                                    <select
-                                        ref="openDeptSelectRef"
-                                        v-model="roomForm._temp_open_department_id"
-                                        class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900"
-                                    >
-                                        <option value="">請選擇單位</option>
-                                        <option
-                                            v-for="department in departments.filter(d => String(d.id) !== String(roomForm.department_id))"
-                                            :key="department.id"
-                                            :value="department.id"
-                                        >
-                                            {{ department.name }}
-                                        </option>
-                                    </select>
-                                    <button
-                                        type="button"
-                                        class="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-                                        :disabled="!roomForm._temp_open_department_id"
-                                        @click="addOpenDepartment"
-                                    >
-                                        +
-                                    </button>
-                                </div>
-
-                                <div class="flex flex-wrap gap-2">
+                            <div
+                                v-show="roomForm.is_open_access"
+                                class="space-y-3"
+                            >
+                                <label
+                                    class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
+                                >
+                                    <input
+                                        v-model="roomForm.open_access_all"
+                                        @change="onToggleOpenAccessAll"
+                                        type="checkbox"
+                                        class="h-4 w-4 rounded border-slate-300 text-slate-900"
+                                    />
                                     <span
-                                        v-for="deptId in roomForm.open_access_departments"
-                                        :key="deptId"
-                                        class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700"
+                                        class="text-sm font-medium text-slate-700"
+                                        >所有人可借用</span
                                     >
-                                        <span>{{ getDepartmentName(deptId) }}</span>
+                                </label>
+                                <p
+                                    v-if="roomForm.open_access_all"
+                                    class="text-sm text-slate-600"
+                                >
+                                    勾選後，任何單位都可以借用此空間。
+                                </p>
+                                <template v-else>
+                                    <p class="text-sm text-slate-600">
+                                        選擇可借用此空間的其他單位：
+                                    </p>
+                                    <div class="flex items-center gap-2">
+                                        <select
+                                            ref="openDeptSelectRef"
+                                            v-model="
+                                                roomForm._temp_open_department_id
+                                            "
+                                            class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900"
+                                        >
+                                            <option value="">請選擇單位</option>
+                                            <option
+                                                v-for="department in departments.filter(
+                                                    (d) =>
+                                                        String(d.id) !==
+                                                        String(
+                                                            roomForm.department_id,
+                                                        ),
+                                                )"
+                                                :key="department.id"
+                                                :value="department.id"
+                                            >
+                                                {{ department.name }}
+                                            </option>
+                                        </select>
                                         <button
                                             type="button"
-                                            class="rounded-full text-sm text-slate-500 hover:text-slate-700"
-                                            @click="removeOpenDepartment(deptId)"
-                                            aria-label="移除"
+                                            class="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                                            :disabled="
+                                                !roomForm._temp_open_department_id
+                                            "
+                                            @click="addOpenDepartment"
                                         >
-                                            ×
+                                            +
                                         </button>
-                                    </span>
-                                    <p v-if="roomForm.open_access_departments.length === 0" class="text-sm text-slate-500">尚未選擇其他單位</p>
-                                </div>
-                                <p v-if="roomErrors.open_access_departments" class="mt-2 text-sm text-rose-700">{{ roomErrors.open_access_departments[0] }}</p>
+                                    </div>
+
+                                    <div class="flex flex-wrap gap-2">
+                                        <span
+                                            v-for="deptId in roomForm.open_access_departments"
+                                            :key="deptId"
+                                            class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700"
+                                        >
+                                            <span>{{
+                                                getDepartmentName(deptId)
+                                            }}</span>
+                                            <button
+                                                type="button"
+                                                class="rounded-full text-sm text-slate-500 hover:text-slate-700"
+                                                @click="
+                                                    removeOpenDepartment(deptId)
+                                                "
+                                                aria-label="移除"
+                                            >
+                                                ×
+                                            </button>
+                                        </span>
+                                        <p
+                                            v-if="
+                                                roomForm.open_access_departments
+                                                    .length === 0
+                                            "
+                                            class="text-sm text-slate-500"
+                                        >
+                                            尚未選擇其他單位
+                                        </p>
+                                    </div>
+                                    <p
+                                        v-if="
+                                            roomErrors.open_access_departments
+                                        "
+                                        class="mt-2 text-sm text-rose-700"
+                                    >
+                                        {{
+                                            roomErrors
+                                                .open_access_departments[0]
+                                        }}
+                                    </p>
+                                </template>
                             </div>
 
                             <div class="flex gap-3 pt-2">

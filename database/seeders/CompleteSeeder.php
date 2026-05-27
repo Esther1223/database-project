@@ -75,7 +75,7 @@ class CompleteSeeder extends Seeder
             ['room_name' => 'A101 會議室', 'room_type' => '會議室', 'capacity' => 30, 'building' => '科教大樓', 'department_id' => $departments['資訊工程學系']->id, 'information' => '含投影機、白板。', 'hourly_rate' => 500, 'need_approval' => true, 'is_open_access' => false],
             ['room_name' => 'B201 教室', 'room_type' => '教室', 'capacity' => 60, 'building' => '教學大樓', 'department_id' => $departments['資訊中心']->id, 'information' => '適合課程與講座。', 'hourly_rate' => 0, 'need_approval' => false, 'is_open_access' => false],
             ['room_name' => 'C301 多功能廳', 'room_type' => '多功能廳', 'capacity' => 120, 'building' => '活動中心', 'department_id' => $departments['總務處']->id, 'information' => '大型活動、表演。', 'hourly_rate' => 1500, 'need_approval' => true, 'is_open_access' => false],
-            ['room_name' => 'B1 多功能教室', 'room_type' => '教室', 'capacity' => 60, 'building' => '科教大樓', 'department_id' => $departments['資訊工程學系']->id, 'information' => '開放式空間，資工系擁有，光電系可借用。', 'hourly_rate' => 0, 'need_approval' => false, 'is_open_access' => true],
+            ['room_name' => 'B1 多功能教室', 'room_type' => '教室', 'capacity' => 60, 'building' => '科教大樓', 'department_id' => $departments['資訊工程學系']->id, 'information' => '開放式空間，任何人都可以借用。', 'hourly_rate' => 0, 'need_approval' => false, 'is_open_access' => true, 'open_access_all' => true],
         ];
 
         $rooms = collect($roomsData)->mapWithKeys(fn (array $r): array => [
