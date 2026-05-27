@@ -159,7 +159,10 @@ const slotRangeLabel = (startValue, endValue) => {
     if (!startValue || !endValue) return "-";
 
     const clean = (value) =>
-        String(value).trim().replace(/(Z|[+-]\d{2}:?\d{2})$/i, "").trim();
+        String(value)
+            .trim()
+            .replace(/(Z|[+-]\d{2}:?\d{2})$/i, "")
+            .trim();
     const start = clean(startValue).replace(" ", "T");
     const end = clean(endValue).replace(" ", "T");
     const startParts = start.split("T");
@@ -188,7 +191,10 @@ const loadSummary = async () => {
         const response = await axios.get("/dashboard/summary");
         summary.value = response.data;
     } catch (error) {
-        console.error("載入儀表板失敗：", error.response?.data || error.message);
+        console.error(
+            "載入儀表板失敗：",
+            error.response?.data || error.message,
+        );
         errorMessage.value =
             error.response?.data?.message || "儀表板資料載入失敗，請稍後再試。";
     } finally {
@@ -205,8 +211,12 @@ onMounted(loadSummary);
 
         <AuthenticatedLayout title="儀表板">
             <section class="space-y-6">
-                <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-                    <p class="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500">
+                <div
+                    class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
+                >
+                    <p
+                        class="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500"
+                    >
                         Dashboard
                     </p>
                     <h2 class="mt-3 text-3xl font-semibold text-slate-950">
@@ -241,7 +251,10 @@ onMounted(loadSummary);
                             <p class="text-sm font-medium text-slate-500">
                                 {{ card.label }}
                             </p>
-                            <p class="mt-2 text-3xl font-semibold" :class="card.tone">
+                            <p
+                                class="mt-2 text-3xl font-semibold"
+                                :class="card.tone"
+                            >
                                 {{ card.value }}
                             </p>
                         </div>
@@ -249,52 +262,111 @@ onMounted(loadSummary);
 
                     <div
                         class="grid gap-6"
-                        :class="canViewManagementStats ? 'xl:grid-cols-2' : 'xl:grid-cols-1'"
+                        :class="
+                            canViewManagementStats
+                                ? 'xl:grid-cols-2'
+                                : 'xl:grid-cols-1'
+                        "
                     >
-                        <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-                            <h3 class="text-xl font-semibold text-slate-950">待付款</h3>
+                        <div
+                            class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
+                        >
+                            <h3 class="text-xl font-semibold text-slate-950">
+                                待付款
+                            </h3>
                             <div class="mt-5">
-                                <div v-if="summary.tasks?.unpaid_orders_list?.length > 0" class="space-y-2">
+                                <div
+                                    v-if="
+                                        summary.tasks?.unpaid_orders_list
+                                            ?.length > 0
+                                    "
+                                    class="space-y-2"
+                                >
                                     <a
-                                        v-for="payment in summary.tasks.unpaid_orders_list"
+                                        v-for="payment in summary.tasks
+                                            .unpaid_orders_list"
                                         :key="payment.id"
                                         href="/admin/payments"
                                         class="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition hover:bg-white"
                                     >
                                         <div class="min-w-0">
-                                            <p class="truncate text-sm font-semibold text-slate-950">
-                                                {{ payment.room?.name || '未指定教室' }}
+                                            <p
+                                                class="truncate text-sm font-semibold text-slate-950"
+                                            >
+                                                {{
+                                                    payment.room?.name ||
+                                                    "未指定教室"
+                                                }}
                                             </p>
-                                            <p class="mt-1 text-xs text-slate-500">
-                                                {{ formatDateTime(payment.start_time) }}
+                                            <p
+                                                class="mt-1 text-xs text-slate-500"
+                                            >
+                                                {{
+                                                    formatDateTime(
+                                                        payment.start_time,
+                                                    )
+                                                }}
                                             </p>
                                         </div>
-                                        <span class="shrink-0 text-sm font-semibold text-slate-950">
-                                            NT$ {{ formatAmount(payment.amount) }}
+                                        <span
+                                            class="shrink-0 text-sm font-semibold text-slate-950"
+                                        >
+                                            NT$
+                                            {{ formatAmount(payment.amount) }}
                                         </span>
                                     </a>
                                 </div>
-                                <p v-else class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                                <p
+                                    v-else
+                                    class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500"
+                                >
                                     目前沒有待付款項目。
                                 </p>
                             </div>
                         </div>
 
-                        <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-                            <h3 class="text-xl font-semibold text-slate-950">即將開始的預約</h3>
+                        <div
+                            class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
+                        >
+                            <h3 class="text-xl font-semibold text-slate-950">
+                                即將開始的預約
+                            </h3>
                             <div class="mt-5">
-                                <div v-if="summary.tasks?.upcoming_reservations_list?.length > 0" class="space-y-2">
+                                <div
+                                    v-if="
+                                        summary.tasks
+                                            ?.upcoming_reservations_list
+                                            ?.length > 0
+                                    "
+                                    class="space-y-2"
+                                >
                                     <div
-                                        v-for="res in summary.tasks.upcoming_reservations_list"
+                                        v-for="res in summary.tasks
+                                            .upcoming_reservations_list"
                                         :key="res.id"
                                         class="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
                                     >
                                         <div class="min-w-0">
-                                            <p class="truncate text-sm font-semibold text-slate-950">
-                                                {{ res.room?.name || '未知教室' }}
+                                            <p
+                                                class="truncate text-sm font-semibold text-slate-950"
+                                            >
+                                                {{
+                                                    res.room?.name || "未知教室"
+                                                }}
                                             </p>
-                                            <p class="mt-1 text-xs text-slate-500">
-                                                {{ res.date }} · {{ formatDateTime(res.start_time) }} - {{ formatDateTime(res.end_time) }}
+                                            <p
+                                                class="mt-1 text-xs text-slate-500"
+                                            >
+                                                {{ res.date }} ·
+                                                {{
+                                                    formatDateTime(
+                                                        res.start_time,
+                                                    )
+                                                }}
+                                                -
+                                                {{
+                                                    formatDateTime(res.end_time)
+                                                }}
                                             </p>
                                         </div>
                                         <button
@@ -306,7 +378,10 @@ onMounted(loadSummary);
                                         </button>
                                     </div>
                                 </div>
-                                <p v-else class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                                <p
+                                    v-else
+                                    class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500"
+                                >
                                     目前沒有即將開始的預約。
                                 </p>
                             </div>
@@ -324,18 +399,28 @@ onMounted(loadSummary);
                                     :key="item.label"
                                     class="rounded-2xl border border-slate-200 bg-slate-50 p-4"
                                 >
-                                    <p class="text-sm font-medium text-slate-500">
+                                    <p
+                                        class="text-sm font-medium text-slate-500"
+                                    >
                                         {{ item.label }}
                                     </p>
-                                    <p class="mt-2 text-xl font-semibold text-slate-950">
+                                    <p
+                                        class="mt-2 text-xl font-semibold text-slate-950"
+                                    >
                                         <template v-if="item.money">
-                                            {{ item.prefix }}{{ formatAmount(item.value) }}
+                                            {{ item.prefix
+                                            }}{{ formatAmount(item.value) }}
                                         </template>
                                         <template v-else>
-                                            {{ item.prefix || "" }}{{ item.value }}{{ item.suffix || "" }}
+                                            {{ item.prefix || ""
+                                            }}{{ item.value
+                                            }}{{ item.suffix || "" }}
                                         </template>
                                     </p>
-                                    <p v-if="item.detail" class="mt-1 text-sm text-slate-500">
+                                    <p
+                                        v-if="item.detail"
+                                        class="mt-1 text-sm text-slate-500"
+                                    >
                                         {{ item.detail }}
                                     </p>
                                 </div>
@@ -351,41 +436,81 @@ onMounted(loadSummary);
                                 : 'xl:grid-cols-1'
                         "
                     >
-                        <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+                        <div
+                            class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
+                        >
                             <h3 class="text-xl font-semibold text-slate-950">
                                 近期紀錄
                             </h3>
 
                             <div class="mt-5 space-y-6">
                                 <div>
-                                    <h4 class="text-sm font-semibold text-slate-500">
+                                    <h4
+                                        class="text-sm font-semibold text-slate-500"
+                                    >
                                         最近 5 筆預約
                                     </h4>
-                                    <div class="mt-3 divide-y divide-slate-200 rounded-2xl border border-slate-200">
+                                    <div
+                                        class="mt-3 divide-y divide-slate-200 rounded-2xl border border-slate-200"
+                                    >
                                         <div
-                                            v-for="reservation in summary.recent.reservations"
+                                            v-for="reservation in summary.recent
+                                                .reservations"
                                             :key="reservation.id"
                                             class="px-4 py-3"
                                         >
-                                            <div class="flex items-start justify-between gap-4">
+                                            <div
+                                                class="flex items-start justify-between gap-4"
+                                            >
                                                 <div class="min-w-0">
-                                                    <p class="truncate text-sm font-semibold text-slate-950">
-                                                        {{ reservation.room_name }}
+                                                    <p
+                                                        class="truncate text-sm font-semibold text-slate-950"
+                                                    >
+                                                        {{
+                                                            reservation.room_name
+                                                        }}
                                                     </p>
-                                                    <p class="mt-1 text-xs text-slate-500">
-                                                        {{ reservation.user_name || "-" }} · {{ formatDateTime(reservation.start_time) }}
+                                                    <p
+                                                        class="mt-1 text-xs text-slate-500"
+                                                    >
+                                                        {{
+                                                            reservation.user_name ||
+                                                            "-"
+                                                        }}
+                                                        ·
+                                                        {{
+                                                            formatDateTime(
+                                                                reservation.start_time,
+                                                            )
+                                                        }}
                                                     </p>
-                                                    <p class="mt-1 text-xs text-slate-500">
-                                                        共 {{ reservation.slot_count || 1 }} 個時段
+                                                    <p
+                                                        class="mt-1 text-xs text-slate-500"
+                                                    >
+                                                        共
+                                                        {{
+                                                            reservation.slot_count ||
+                                                            1
+                                                        }}
+                                                        個時段
                                                     </p>
                                                 </div>
-                                                <span class="shrink-0 text-xs font-semibold text-slate-500">
-                                                    {{ reservationStatusLabel(reservation.status) }}
+                                                <span
+                                                    class="shrink-0 text-xs font-semibold text-slate-500"
+                                                >
+                                                    {{
+                                                        reservationStatusLabel(
+                                                            reservation.status,
+                                                        )
+                                                    }}
                                                 </span>
                                             </div>
                                         </div>
                                         <p
-                                            v-if="summary.recent.reservations.length === 0"
+                                            v-if="
+                                                summary.recent.reservations
+                                                    .length === 0
+                                            "
                                             class="px-4 py-8 text-center text-sm text-slate-500"
                                         >
                                             目前沒有預約紀錄。
@@ -393,35 +518,74 @@ onMounted(loadSummary);
                                     </div>
                                 </div>
 
-                                <div v-if="summary.permissions.can_view_revenue">
-                                    <h4 class="text-sm font-semibold text-slate-500">
+                                <div
+                                    v-if="summary.permissions.can_view_revenue"
+                                >
+                                    <h4
+                                        class="text-sm font-semibold text-slate-500"
+                                    >
                                         最近 5 筆付款
                                     </h4>
-                                    <div class="mt-3 divide-y divide-slate-200 rounded-2xl border border-slate-200">
+                                    <div
+                                        class="mt-3 divide-y divide-slate-200 rounded-2xl border border-slate-200"
+                                    >
                                         <div
-                                            v-for="payment in summary.recent.payments"
+                                            v-for="payment in summary.recent
+                                                .payments"
                                             :key="payment.id"
                                             class="px-4 py-3"
                                         >
-                                            <div class="flex items-start justify-between gap-4">
+                                            <div
+                                                class="flex items-start justify-between gap-4"
+                                            >
                                                 <div class="min-w-0">
-                                                    <p class="truncate text-sm font-semibold text-slate-950">
+                                                    <p
+                                                        class="truncate text-sm font-semibold text-slate-950"
+                                                    >
                                                         {{ payment.room_name }}
                                                     </p>
-                                                    <p class="mt-1 text-xs text-slate-500">
-                                                        {{ payment.user_name || "-" }} · {{ paymentStatusLabel(payment.status) }}
+                                                    <p
+                                                        class="mt-1 text-xs text-slate-500"
+                                                    >
+                                                        {{
+                                                            payment.user_name ||
+                                                            "-"
+                                                        }}
+                                                        ·
+                                                        {{
+                                                            paymentStatusLabel(
+                                                                payment.status,
+                                                            )
+                                                        }}
                                                     </p>
-                                                    <p class="mt-1 text-xs text-slate-500">
-                                                        共 {{ payment.slot_count || 1 }} 個時段
+                                                    <p
+                                                        class="mt-1 text-xs text-slate-500"
+                                                    >
+                                                        共
+                                                        {{
+                                                            payment.slot_count ||
+                                                            1
+                                                        }}
+                                                        個時段
                                                     </p>
                                                 </div>
-                                                <span class="shrink-0 text-sm font-semibold text-slate-950">
-                                                    NT$ {{ formatAmount(payment.amount) }}
+                                                <span
+                                                    class="shrink-0 text-sm font-semibold text-slate-950"
+                                                >
+                                                    NT$
+                                                    {{
+                                                        formatAmount(
+                                                            payment.amount,
+                                                        )
+                                                    }}
                                                 </span>
                                             </div>
                                         </div>
                                         <p
-                                            v-if="summary.recent.payments.length === 0"
+                                            v-if="
+                                                summary.recent.payments
+                                                    .length === 0
+                                            "
                                             class="px-4 py-8 text-center text-sm text-slate-500"
                                         >
                                             目前沒有付款紀錄。
@@ -429,35 +593,74 @@ onMounted(loadSummary);
                                     </div>
                                 </div>
 
-                                <div v-if="summary.permissions.can_review_approvals">
-                                    <h4 class="text-sm font-semibold text-slate-500">
+                                <div
+                                    v-if="
+                                        summary.permissions.can_review_approvals
+                                    "
+                                >
+                                    <h4
+                                        class="text-sm font-semibold text-slate-500"
+                                    >
                                         最近 5 筆審核結果
                                     </h4>
-                                    <div class="mt-3 divide-y divide-slate-200 rounded-2xl border border-slate-200">
+                                    <div
+                                        class="mt-3 divide-y divide-slate-200 rounded-2xl border border-slate-200"
+                                    >
                                         <div
-                                            v-for="approval in summary.recent.approvals"
+                                            v-for="approval in summary.recent
+                                                .approvals"
                                             :key="approval.id"
                                             class="px-4 py-3"
                                         >
-                                            <div class="flex items-start justify-between gap-4">
+                                            <div
+                                                class="flex items-start justify-between gap-4"
+                                            >
                                                 <div class="min-w-0">
-                                                    <p class="truncate text-sm font-semibold text-slate-950">
+                                                    <p
+                                                        class="truncate text-sm font-semibold text-slate-950"
+                                                    >
                                                         {{ approval.room_name }}
                                                     </p>
-                                                    <p class="mt-1 text-xs text-slate-500">
-                                                        {{ approval.user_name || "-" }} · {{ approval.approver_name || "-" }}
+                                                    <p
+                                                        class="mt-1 text-xs text-slate-500"
+                                                    >
+                                                        {{
+                                                            approval.user_name ||
+                                                            "-"
+                                                        }}
+                                                        ·
+                                                        {{
+                                                            approval.approver_name ||
+                                                            "-"
+                                                        }}
                                                     </p>
-                                                    <p class="mt-1 text-xs text-slate-500">
-                                                        共 {{ approval.slot_count || 1 }} 個時段
+                                                    <p
+                                                        class="mt-1 text-xs text-slate-500"
+                                                    >
+                                                        共
+                                                        {{
+                                                            approval.slot_count ||
+                                                            1
+                                                        }}
+                                                        個時段
                                                     </p>
                                                 </div>
-                                                <span class="shrink-0 text-xs font-semibold text-slate-500">
-                                                    {{ approvalDecisionLabel(approval.decision) }}
+                                                <span
+                                                    class="shrink-0 text-xs font-semibold text-slate-500"
+                                                >
+                                                    {{
+                                                        approvalDecisionLabel(
+                                                            approval.decision,
+                                                        )
+                                                    }}
                                                 </span>
                                             </div>
                                         </div>
                                         <p
-                                            v-if="summary.recent.approvals.length === 0"
+                                            v-if="
+                                                summary.recent.approvals
+                                                    .length === 0
+                                            "
                                             class="px-4 py-8 text-center text-sm text-slate-500"
                                         >
                                             目前沒有審核紀錄。
@@ -481,14 +684,22 @@ onMounted(loadSummary);
                                     class="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
                                 >
                                     <div class="min-w-0">
-                                        <p class="truncate text-sm font-semibold text-slate-950">
+                                        <p
+                                            class="truncate text-sm font-semibold text-slate-950"
+                                        >
                                             {{ room.name }}
                                         </p>
                                         <p class="mt-1 text-xs text-slate-500">
-                                            {{ [room.type, room.building].filter(Boolean).join(" · ") || "-" }}
+                                            {{
+                                                [room.type, room.building]
+                                                    .filter(Boolean)
+                                                    .join(" · ") || "-"
+                                            }}
                                         </p>
                                     </div>
-                                    <span class="shrink-0 text-sm font-semibold text-slate-950">
+                                    <span
+                                        class="shrink-0 text-sm font-semibold text-slate-950"
+                                    >
                                         {{ room.borrow_count }} 次
                                     </span>
                                 </div>
@@ -514,10 +725,14 @@ onMounted(loadSummary);
                         >
                             <div class="flex items-start justify-between gap-4">
                                 <div>
-                                    <p class="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500">
+                                    <p
+                                        class="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500"
+                                    >
                                         Reservation Detail
                                     </p>
-                                    <h3 class="mt-3 text-2xl font-semibold text-slate-950">
+                                    <h3
+                                        class="mt-3 text-2xl font-semibold text-slate-950"
+                                    >
                                         預約詳細資料
                                     </h3>
                                 </div>
@@ -531,30 +746,49 @@ onMounted(loadSummary);
                                 </button>
                             </div>
 
-                            <div class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                            <div
+                                class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700"
+                            >
                                 <p class="text-lg font-semibold text-slate-950">
-                                    {{ upcomingDetail.room?.name || "未知教室" }}
+                                    {{
+                                        upcomingDetail.room?.name || "未知教室"
+                                    }}
                                 </p>
                                 <p class="mt-1">
                                     {{ upcomingDetail.room?.type || "-" }} ·
                                     {{ upcomingDetail.room?.building || "-" }}
                                 </p>
                                 <p class="mt-3">
-                                    狀態：{{ reservationStatusLabel(upcomingDetail.reservation_status) }}
+                                    狀態：{{
+                                        reservationStatusLabel(
+                                            upcomingDetail.reservation_status,
+                                        )
+                                    }}
                                 </p>
                                 <p class="mt-1">
-                                    共 {{ upcomingDetail.slots?.length || upcomingDetail.slot_count || 1 }} 個時段
+                                    共
+                                    {{
+                                        upcomingDetail.slots?.length ||
+                                        upcomingDetail.slot_count ||
+                                        1
+                                    }}
+                                    個時段
                                 </p>
                             </div>
 
-                            <div class="mt-5 overflow-hidden rounded-2xl border border-slate-200">
-                                <div class="grid grid-cols-[1fr_110px] gap-4 border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600">
+                            <div
+                                class="mt-5 overflow-hidden rounded-2xl border border-slate-200"
+                            >
+                                <div
+                                    class="grid grid-cols-[1fr_110px] gap-4 border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600"
+                                >
                                     <div>時段</div>
                                     <div>狀態</div>
                                 </div>
                                 <div class="divide-y divide-slate-200">
                                     <div
-                                        v-for="slot in upcomingDetail.slots || []"
+                                        v-for="slot in upcomingDetail.slots ||
+                                        []"
                                         :key="slot.id"
                                         class="grid grid-cols-[1fr_110px] gap-4 px-4 py-3 text-sm"
                                     >
@@ -566,8 +800,14 @@ onMounted(loadSummary);
                                                 )}`
                                             }}
                                         </div>
-                                        <div class="font-semibold text-slate-600">
-                                            {{ reservationStatusLabel(slot.reservation_status) }}
+                                        <div
+                                            class="font-semibold text-slate-600"
+                                        >
+                                            {{
+                                                reservationStatusLabel(
+                                                    slot.reservation_status,
+                                                )
+                                            }}
                                         </div>
                                     </div>
                                 </div>
