@@ -13,7 +13,10 @@ class Reservation extends Model
 
     protected $fillable = [
         'user_id',
+        'reservation_group_id',
         'room_id',
+        'reservation_date',
+        'time_slot_id',
         'start_time',
         'end_time',
         'reservation_status',
@@ -22,6 +25,7 @@ class Reservation extends Model
     protected function casts(): array
     {
         return [
+            'reservation_date' => 'date',
             'start_time' => 'datetime',
             'end_time' => 'datetime',
         ];

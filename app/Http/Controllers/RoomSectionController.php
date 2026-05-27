@@ -95,7 +95,7 @@ class RoomSectionController extends Controller
             ->get()
             ->map(function (TimeSlot $timeSlot) use ($reservedSections, $room, $selectedDate): array {
                 $reservedSection = $reservedSections->get($timeSlot->time_slot_id);
-                $state = $this->sectionState($timeSlot->status, $reservedSection?->status);
+                $state = $this->sectionState($timeSlot->status, $reservedSection?->status, $selectedDate, $timeSlot->time_slot_id);
 
                 return [
                     'id' => $reservedSection?->id,
@@ -115,7 +115,7 @@ class RoomSectionController extends Controller
             });
     }
 
-    private function sectionState(?string $timeSlotStatus, ?string $sectionStatus): string
+    private function sectionState(?string $timeSlotStatus, ?string $sectionStatus, ?string $date = null, ?string $timeSlotId = null): string
     {
         if ($timeSlotStatus === 'disable') {
             return 'disabled';
@@ -123,6 +123,10 @@ class RoomSectionController extends Controller
 
         if ($sectionStatus === 'reserved') {
             return 'reserved';
+        }
+
+        if ($date !== null && $timeSlotId !== null && $this->slotStartsInPast($date, $timeSlotId)) {
+            return 'expired';
         }
 
         return 'available';
@@ -134,12 +138,13 @@ class RoomSectionController extends Controller
     private function sectionPayload(RoomSection $section): array
     {
         $timeSlot = $section->timeSlot;
-        $state = $this->sectionState($timeSlot?->status, $section->status);
+        $date = Carbon::parse($section->date)->format('Y-m-d');
+        $state = $this->sectionState($timeSlot?->status, $section->status, $date, $section->time_slot_id);
 
         return [
             'id' => $section->id,
             'room_id' => $section->room_id,
-            'date' => Carbon::parse($section->date)->format('Y-m-d'),
+            'date' => $date,
             'time_slot_id' => $section->time_slot_id,
             'status' => $section->status,
             'state' => $state,
@@ -170,5 +175,22 @@ class RoomSectionController extends Controller
         $endHour = $startHour + 1;
 
         return sprintf('%02d:00 - %02d:00', $startHour % 24, $endHour % 24);
+    }
+
+    private function slotStartsInPast(string $date, string $timeSlotId): bool
+    {
+        $startHour = null;
+
+        if (ctype_digit($timeSlotId)) {
+            $startHour = (int) $timeSlotId;
+        } elseif (preg_match('/^TS_(\d{2})00$/', $timeSlotId, $matches) === 1) {
+            $startHour = 8 + (int) $matches[1];
+        }
+
+        if ($startHour === null) {
+            return false;
+        }
+
+        return Carbon::parse(sprintf('%s %02d:00:00', $date, $startHour % 24))->lessThanOrEqualTo(now());
     }
 }

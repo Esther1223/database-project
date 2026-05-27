@@ -134,6 +134,9 @@ watch(selectedDate, (newDate) => {
                             
                             <span v-else-if="section.state === 'reserved'"
                                 class="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-500">已被預約</span>
+
+                            <span v-else-if="section.state === 'expired'"
+                                class="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-500">已過時</span>
                             
                             <span v-else 
                                   class="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700">可預約</span>

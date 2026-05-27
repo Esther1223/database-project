@@ -8,6 +8,7 @@ use App\Models\Room;
 use App\Models\RoomSection;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class ReservationService
 {
@@ -33,9 +34,7 @@ class ReservationService
         'TS_1600' => ['00:00:00', '01:00:00'],
     ];
 
-    public function __construct(private readonly FeeService $feeService)
-    {
-    }
+    public function __construct(private readonly FeeService $feeService) {}
 
     public function create(array $data, int $userId): Reservation
     {
@@ -48,50 +47,21 @@ class ReservationService
     public function createMany(array $data, int $userId): array
     {
         return DB::transaction(function () use ($data, $userId): array {
-            $timeSlotIds = array_values(array_unique($data['time_slot_ids'] ?? []));
+            $selectedSlots = $this->selectedSlotsFromData($data);
 
-            if (empty($timeSlotIds)) {
+            if (empty($selectedSlots)) {
                 return [];
             }
 
-            // create a single reservation that spans from the earliest slot start to the latest slot end
             $room = Room::findOrFail($data['room_id']);
-            $date = $data['date'] ?? null;
+            $reservations = [];
+            $groupId = (string) Str::uuid();
 
-            if ($date === null) {
-                abort(422, '缺少預約日期');
-            }
-
-            $slotRanges = [];
-            foreach ($timeSlotIds as $timeSlotId) {
-                $timeRange = $this->timeRangeForSlot($timeSlotId);
-
-                if ($timeRange === null) {
-                    abort(422, '預約時段格式錯誤。');
-                }
-
-                $start = Carbon::parse("{$date} {$timeRange[0]}");
-                $end = Carbon::parse("{$date} {$timeRange[1]}");
-
-                if ($end->lessThanOrEqualTo($start)) {
-                    $end->addDay();
-                }
-
-                $slotRanges[] = ['id' => (string) $timeSlotId, 'start' => $start, 'end' => $end];
-            }
-
-            usort($slotRanges, fn ($a, $b) => $a['start']->getTimestamp() <=> $b['start']->getTimestamp());
-
-            $first = $slotRanges[0];
-            $last = $slotRanges[count($slotRanges) - 1];
-
-            // lock or create all involved room sections and validate availability
-            $sections = [];
-            foreach ($timeSlotIds as $timeSlotId) {
+            foreach ($selectedSlots as $slot) {
                 $slotData = [
                     'room_id' => $room->id,
-                    'date' => $date,
-                    'time_slot_id' => $timeSlotId,
+                    'date' => $slot['date'],
+                    'time_slot_id' => $slot['time_slot_id'],
                 ];
 
                 $section = $this->lockOrCreateSection($slotData, $room);
@@ -100,37 +70,76 @@ class ReservationService
                     abort(422, '所選時段已被借走或關閉');
                 }
 
-                $sections[] = $section;
-            }
+                if ($this->hasPendingSlotForUser($userId, $room->id, $slot['date'], $slot['time_slot_id'])) {
+                    abort(422, '已送出相同時段的審核申請，取消後才可重新送出。');
+                }
 
-            // check conflict for the full span
-            $startTime = $first['start']->toDateTimeString();
-            $endTime = $last['end']->toDateTimeString();
+                [$startTime, $endTime] = $this->sectionDateTimeRange($section);
 
-            if ($this->hasConflict($room->id, $startTime, $endTime)) {
-                abort(422, '該時段已有預約');
-            }
+                if ($this->hasConflict($room->id, $startTime, $endTime)) {
+                    abort(422, '該時段已有預約');
+                }
 
-            $reservationStatus = $room->need_approval ? 'pending' : 'success';
+                $reservationStatus = $room->need_approval ? 'pending' : 'success';
 
-            $reservation = Reservation::create([
-                'user_id' => $userId,
-                'room_id' => $room->id,
-                'start_time' => $startTime,
-                'end_time' => $endTime,
-                'reservation_status' => $reservationStatus,
-            ]);
+                $reservation = Reservation::create([
+                    'user_id' => $userId,
+                    'reservation_group_id' => $groupId,
+                    'room_id' => $room->id,
+                    'reservation_date' => $slot['date'],
+                    'time_slot_id' => $slot['time_slot_id'],
+                    'start_time' => $startTime,
+                    'end_time' => $endTime,
+                    'reservation_status' => $reservationStatus,
+                ]);
 
-            if ($reservationStatus === 'success') {
-                foreach ($sections as $section) {
+                if ($reservationStatus === 'success') {
                     $section->update(['status' => 'reserved']);
                 }
 
-                $this->createPaymentIfNeeded($reservation);
+                $reservations[] = $reservation->fresh(['room', 'payment']);
             }
 
-            return [$reservation->fresh(['room', 'payment'])];
+            if (($reservations[0]?->reservation_status ?? null) === 'success') {
+                $this->createGroupPaymentIfNeeded($reservations);
+            }
+
+            return $reservations;
         });
+    }
+
+    /**
+     * @return array<int, array{date: string, time_slot_id: string}>
+     */
+    private function selectedSlotsFromData(array $data): array
+    {
+        if (! empty($data['selected_slots'] ?? [])) {
+            return collect($data['selected_slots'])
+                ->map(fn (array $slot): array => [
+                    'date' => (string) $slot['date'],
+                    'time_slot_id' => (string) $slot['time_slot_id'],
+                ])
+                ->unique(fn (array $slot): string => $slot['date'].'|'.$slot['time_slot_id'])
+                ->sortBy(fn (array $slot): string => $slot['date'].' '.$slot['time_slot_id'])
+                ->values()
+                ->all();
+        }
+
+        $dates = $data['dates'] ?? [$data['date'] ?? null];
+        $timeSlotIds = array_values(array_unique($data['time_slot_ids'] ?? []));
+
+        return collect($dates)
+            ->filter()
+            ->flatMap(fn (string $date): array => collect($timeSlotIds)
+                ->map(fn (string $timeSlotId): array => [
+                    'date' => $date,
+                    'time_slot_id' => $timeSlotId,
+                ])
+                ->all())
+            ->unique(fn (array $slot): string => $slot['date'].'|'.$slot['time_slot_id'])
+            ->sortBy(fn (array $slot): string => $slot['date'].' '.$slot['time_slot_id'])
+            ->values()
+            ->all();
     }
 
     private function createReservation(array $data, int $userId): Reservation
@@ -143,6 +152,11 @@ class ReservationService
         }
 
         [$startTime, $endTime] = $this->sectionDateTimeRange($section);
+        $date = Carbon::parse($section->date)->format('Y-m-d');
+
+        if ($this->hasPendingSlotForUser($userId, $room->id, $date, (string) $section->time_slot_id)) {
+            abort(422, '已送出相同時段的審核申請，取消後才可重新送出。');
+        }
 
         if ($this->hasConflict($room->id, $startTime, $endTime)) {
             abort(422, '該時段已有預約');
@@ -152,7 +166,10 @@ class ReservationService
 
         $reservation = Reservation::create([
             'user_id' => $userId,
+            'reservation_group_id' => (string) Str::uuid(),
             'room_id' => $room->id,
+            'reservation_date' => $date,
+            'time_slot_id' => (string) $section->time_slot_id,
             'start_time' => $startTime,
             'end_time' => $endTime,
             'reservation_status' => $reservationStatus,
@@ -168,7 +185,7 @@ class ReservationService
 
     private function lockOrCreateSection(array $data, Room $room): RoomSection
     {
-        if (!empty($data['section_id'])) {
+        if (! empty($data['section_id'])) {
             return RoomSection::whereKey($data['section_id'])
                 ->where('room_id', $room->id)
                 ->lockForUpdate()
@@ -198,22 +215,46 @@ class ReservationService
         DB::transaction(function () use ($reservation): void {
             $reservation->refresh();
 
-            if (!in_array($reservation->reservation_status, ['pending', 'success'], true)) {
+            if (! in_array($reservation->reservation_status, ['pending', 'success'], true)) {
                 abort(422, '此預約目前不能取消');
             }
 
-            $wasSuccess = $reservation->reservation_status === 'success';
+            if ($reservation->reservation_group_id) {
+                $reservations = Reservation::query()
+                    ->where('reservation_group_id', $reservation->reservation_group_id)
+                    ->whereIn('reservation_status', ['pending', 'success'])
+                    ->lockForUpdate()
+                    ->get();
+            } else {
+                $reservations = collect([$reservation]);
+            }
 
-            $reservation->update([
-                'reservation_status' => 'cancelled',
-            ]);
+            foreach ($reservations as $item) {
+                $wasSuccess = $item->reservation_status === 'success';
 
-            if ($wasSuccess) {
-                $this->releaseRoomSection($reservation);
+                $item->update([
+                    'reservation_status' => 'cancelled',
+                ]);
+
+                if ($wasSuccess) {
+                    $this->releaseRoomSection($item);
+                }
             }
         });
 
         return $reservation->fresh('room');
+    }
+
+    public function hasPendingSlotForUser(int $userId, int $roomId, string $date, string $timeSlotId): bool
+    {
+        return Reservation::query()
+            ->where('user_id', $userId)
+            ->where('room_id', $roomId)
+            ->whereDate('reservation_date', $date)
+            ->where('time_slot_id', $timeSlotId)
+            ->where('reservation_status', 'pending')
+            ->lockForUpdate()
+            ->exists();
     }
 
     public function hasConflict(int $roomId, string $startTime, string $endTime): bool
@@ -266,8 +307,10 @@ class ReservationService
 
     private function releaseRoomSection(Reservation $reservation): void
     {
-        $date = Carbon::parse($reservation->start_time)->format('Y-m-d');
-        $timeSlotIds = $this->timeSlotIdsForStartTime($reservation->start_time);
+        $date = $reservation->reservation_date?->format('Y-m-d') ?? Carbon::parse($reservation->start_time)->format('Y-m-d');
+        $timeSlotIds = $reservation->time_slot_id
+            ? [(string) $reservation->time_slot_id]
+            : $this->timeSlotIdsForStartTime($reservation->start_time);
 
         if (empty($timeSlotIds)) {
             return;
@@ -309,7 +352,42 @@ class ReservationService
         $payment = Payment::firstOrNew(['reservation_id' => $reservation->id]);
         $payment->amount = $amount;
 
-        if (!$payment->exists) {
+        if (! $payment->exists) {
+            $payment->payment_status = 'unpaid';
+        }
+
+        $payment->save();
+    }
+
+    /**
+     * @param  array<int, Reservation>  $reservations
+     */
+    private function createGroupPaymentIfNeeded(array $reservations): void
+    {
+        $reservations = collect($reservations)->filter();
+
+        if ($reservations->isEmpty()) {
+            return;
+        }
+
+        /** @var Reservation $representative */
+        $representative = $reservations->sortBy('start_time')->first();
+        $amount = (int) $reservations->sum(fn (Reservation $reservation): int => $this->feeService->calculateAmount($reservation));
+
+        Payment::whereIn('reservation_id', $reservations->pluck('id')->filter()->values())
+            ->where('reservation_id', '!=', $representative->id)
+            ->delete();
+
+        if ($amount <= 0) {
+            Payment::where('reservation_id', $representative->id)->delete();
+
+            return;
+        }
+
+        $payment = Payment::firstOrNew(['reservation_id' => $representative->id]);
+        $payment->amount = $amount;
+
+        if (! $payment->exists) {
             $payment->payment_status = 'unpaid';
         }
 

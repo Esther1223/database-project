@@ -12,9 +12,8 @@ use Illuminate\Support\Facades\DB;
 
 class ApprovalService
 {
-    public function __construct(private readonly FeeService $feeService)
-    {
-    }
+    public function __construct(private readonly FeeService $feeService) {}
+
     /**
      * Approve a pending reservation: create approval record, set reservation_status to 'success',
      * and mark related room sections as 'reserved'.
@@ -23,9 +22,16 @@ class ApprovalService
     {
         return DB::transaction(function () use ($reservationId, $approverId) {
             $reservation = Reservation::lockForUpdate()->findOrFail($reservationId);
+            $reservations = $this->reservationsInReviewGroup($reservation);
 
-            if ($reservation->reservation_status !== 'pending') {
+            if ($reservations->isEmpty() || $reservations->contains(fn (Reservation $item): bool => $item->reservation_status !== 'pending')) {
                 abort(422, '此預約目前不能被審核');
+            }
+
+            foreach ($reservations as $item) {
+                if ($this->slotAlreadyReserved($item)) {
+                    abort(422, '此時段已被其他預約核准。');
+                }
             }
 
             Approval::create([
@@ -35,11 +41,13 @@ class ApprovalService
                 'decision_time' => Carbon::now(),
             ]);
 
-            $reservation->update(['reservation_status' => 'success']);
+            foreach ($reservations as $item) {
+                $item->update(['reservation_status' => 'success']);
 
-            // mark room sections as reserved
-            $this->reserveRoomSections($reservation);
-            $this->createPaymentIfNeeded($reservation);
+                $this->reserveRoomSections($item);
+            }
+
+            $this->createGroupPaymentIfNeeded($reservations);
 
             return $reservation->fresh(['room', 'payment']);
         });
@@ -52,8 +60,9 @@ class ApprovalService
     {
         return DB::transaction(function () use ($reservationId, $approverId) {
             $reservation = Reservation::lockForUpdate()->findOrFail($reservationId);
+            $reservations = $this->reservationsInReviewGroup($reservation);
 
-            if ($reservation->reservation_status !== 'pending') {
+            if ($reservations->isEmpty() || $reservations->contains(fn (Reservation $item): bool => $item->reservation_status !== 'pending')) {
                 abort(422, '此預約目前不能被審核');
             }
 
@@ -64,17 +73,32 @@ class ApprovalService
                 'decision_time' => Carbon::now(),
             ]);
 
-            $reservation->update(['reservation_status' => 'rejected']);
+            foreach ($reservations as $item) {
+                $item->update(['reservation_status' => 'rejected']);
+            }
 
             return $reservation->fresh('room');
         });
     }
 
+    private function reservationsInReviewGroup(Reservation $reservation)
+    {
+        if (! $reservation->reservation_group_id) {
+            return collect([$reservation]);
+        }
+
+        return Reservation::query()
+            ->where('reservation_group_id', $reservation->reservation_group_id)
+            ->lockForUpdate()
+            ->get();
+    }
+
     private function reserveRoomSections(Reservation $reservation): void
     {
-        $date = Carbon::parse($reservation->start_time)->format('Y-m-d');
-        $hour = Carbon::parse($reservation->start_time)->hour;
-        $timeSlotIds = $this->timeSlotIdsForStartTime($reservation->start_time);
+        $date = $reservation->reservation_date?->format('Y-m-d') ?? Carbon::parse($reservation->start_time)->format('Y-m-d');
+        $timeSlotIds = $reservation->time_slot_id
+            ? [(string) $reservation->time_slot_id]
+            : $this->timeSlotIdsForStartTime($reservation->start_time);
 
         if (empty($timeSlotIds)) {
             return;
@@ -101,6 +125,18 @@ class ApprovalService
                 ],
             );
         }
+    }
+
+    private function slotAlreadyReserved(Reservation $reservation): bool
+    {
+        return Reservation::query()
+            ->whereKeyNot($reservation->id)
+            ->where('room_id', $reservation->room_id)
+            ->where('reservation_status', 'success')
+            ->where('start_time', '<', $reservation->end_time)
+            ->where('end_time', '>', $reservation->start_time)
+            ->lockForUpdate()
+            ->exists();
     }
 
     /**
@@ -134,7 +170,39 @@ class ApprovalService
         $payment = Payment::firstOrNew(['reservation_id' => $reservation->id]);
         $payment->amount = $amount;
 
-        if (!$payment->exists) {
+        if (! $payment->exists) {
+            $payment->payment_status = 'unpaid';
+        }
+
+        $payment->save();
+    }
+
+    private function createGroupPaymentIfNeeded($reservations): void
+    {
+        $reservations = collect($reservations)->filter();
+
+        if ($reservations->isEmpty()) {
+            return;
+        }
+
+        /** @var Reservation $representative */
+        $representative = $reservations->sortBy('start_time')->first();
+        $amount = (int) $reservations->sum(fn (Reservation $reservation): int => $this->feeService->calculateAmount($reservation));
+
+        Payment::whereIn('reservation_id', $reservations->pluck('id')->filter()->values())
+            ->where('reservation_id', '!=', $representative->id)
+            ->delete();
+
+        if ($amount <= 0) {
+            Payment::where('reservation_id', $representative->id)->delete();
+
+            return;
+        }
+
+        $payment = Payment::firstOrNew(['reservation_id' => $representative->id]);
+        $payment->amount = $amount;
+
+        if (! $payment->exists) {
             $payment->payment_status = 'unpaid';
         }
 

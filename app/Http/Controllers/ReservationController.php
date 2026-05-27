@@ -5,9 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Reservation\StoreReservationRequest;
 use App\Models\Reservation;
 use App\Models\Room;
-use App\Models\RoomSection;
 use App\Services\ReservationService;
-use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -60,7 +58,7 @@ class ReservationController extends Controller
         $validated = $request->validated();
         $reservations = null;
 
-        if (! empty($validated['time_slot_ids'] ?? [])) {
+        if (! empty($validated['selected_slots'] ?? []) || ! empty($validated['time_slot_ids'] ?? [])) {
             $reservations = $this->reservationService->createMany($validated, Auth::id());
         } else {
             $reservations = [$this->reservationService->create($validated, Auth::id())];
@@ -72,7 +70,7 @@ class ReservationController extends Controller
             : '預約成功！';
 
         if (count($reservations) > 1) {
-            $message = $message.' 已建立 '.count($reservations).' 筆預約。';
+            $message = $message.' 已包含 '.count($reservations).' 個時段。';
         }
 
         return response()->json([
@@ -101,30 +99,9 @@ class ReservationController extends Controller
             ->where('user_id', Auth::id())
             ->latest('start_time')
             ->get()
-            ->map(fn (Reservation $reservation): array => [
-                'id' => $reservation->id,
-                'start_time' => $reservation->start_time?->toDateTimeString(),
-                'end_time' => $reservation->end_time?->toDateTimeString(),
-                'reservation_status' => $reservation->reservation_status,
-                'created_at' => $reservation->created_at?->toDateTimeString(),
-                'room' => $reservation->room
-                    ? [
-                        'id' => $reservation->room->id,
-                        'name' => $reservation->room->name,
-                        'type' => $reservation->room->type,
-                        'building' => $reservation->room->building,
-                    ]
-                    : null,
-                'approval' => $reservation->approval ? [
-                    'id' => $reservation->approval->id,
-                    'status' => $reservation->approval->status,
-                ] : null,
-                'payment' => $reservation->payment ? [
-                    'id' => $reservation->payment->id,
-                    'amount' => $reservation->payment->amount,
-                    'payment_status' => $reservation->payment->payment_status,
-                ] : null,
-            ]);
+            ->groupBy(fn (Reservation $reservation): string => $reservation->reservation_group_id ?: (string) $reservation->id)
+            ->map(fn ($group): array => $this->reservationGroupPayload($group))
+            ->values();
 
         return response()->json([
             'data' => $reservations,
@@ -193,5 +170,61 @@ class ReservationController extends Controller
         return response()->json([
             'data' => $reservation->load(['room', 'approval', 'payment']),
         ]);
+    }
+
+    private function reservationGroupPayload($group): array
+    {
+        $sorted = $group->sortBy('start_time')->values();
+        /** @var Reservation $first */
+        $first = $sorted->first();
+        /** @var Reservation $last */
+        $last = $sorted->last();
+        $payments = $sorted->pluck('payment')->filter();
+
+        return [
+            'id' => $first->id,
+            'reservation_group_id' => $first->reservation_group_id,
+            'start_time' => $first->start_time?->toDateTimeString(),
+            'end_time' => $last->end_time?->toDateTimeString(),
+            'reservation_status' => $this->groupStatus($sorted),
+            'created_at' => $first->created_at?->toDateTimeString(),
+            'room' => $first->room ? [
+                'id' => $first->room->id,
+                'name' => $first->room->name,
+                'type' => $first->room->type,
+                'building' => $first->room->building,
+            ] : null,
+            'approval' => $first->approval ? [
+                'id' => $first->approval->id,
+                'status' => $first->approval->status,
+            ] : null,
+            'payment' => $payments->isEmpty() ? null : [
+                'amount' => $payments->sum('amount'),
+                'payment_status' => $payments->contains(fn ($payment): bool => $payment->payment_status === 'unpaid') ? 'unpaid' : 'paid',
+            ],
+            'slots' => $sorted
+                ->map(fn (Reservation $reservation): array => [
+                    'id' => $reservation->id,
+                    'date' => $reservation->reservation_date?->format('Y-m-d') ?? $reservation->start_time?->format('Y-m-d'),
+                    'time_slot_id' => $reservation->time_slot_id,
+                    'start_time' => $reservation->start_time?->toDateTimeString(),
+                    'end_time' => $reservation->end_time?->toDateTimeString(),
+                    'reservation_status' => $reservation->reservation_status,
+                ])
+                ->all(),
+        ];
+    }
+
+    private function groupStatus($reservations): string
+    {
+        $statuses = $reservations->pluck('reservation_status');
+
+        foreach (['pending', 'success', 'cancelled', 'rejected'] as $status) {
+            if ($statuses->contains($status)) {
+                return $status;
+            }
+        }
+
+        return (string) ($statuses->first() ?? '-');
     }
 }

@@ -218,6 +218,12 @@ const addOpenDepartment = () => {
     if (!val) return;
 
     const id = Number(val);
+    const departmentId = Number(roomForm.department_id);
+
+    if (id === departmentId) {
+        roomForm._temp_open_department_id = "";
+        return;
+    }
 
     if (!roomForm.open_access_departments.includes(id)) {
         roomForm.open_access_departments.push(id);
@@ -234,7 +240,7 @@ const removeOpenDepartment = (id) => {
 
 const getDepartmentName = (id) => {
     const d = props.departments.find((item) => item.id === id);
-    return d ? d.name : "未知系所";
+    return d ? d.name : "未知單位";
 };
 
 const openDeptSelectRef = ref(null);
@@ -243,6 +249,18 @@ const onToggleOpenAccess = async () => {
     if (roomForm.is_open_access) {
         await nextTick();
         openDeptSelectRef.value?.focus?.();
+    }
+};
+
+const syncOpenDepartments = () => {
+    const departmentId = Number(roomForm.department_id);
+
+    roomForm.open_access_departments = roomForm.open_access_departments.filter(
+        (id) => Number(id) !== departmentId,
+    );
+
+    if (Number(roomForm._temp_open_department_id) === departmentId) {
+        roomForm._temp_open_department_id = "";
     }
 };
 
@@ -271,15 +289,11 @@ const deleteRoom = async (room) => {
 };
 
 const departmentName = (room) => {
-    if (!room.department_id) {
-        return "非系所空間";
-    }
-
     const department = props.departments.find(
         (item) => item.id === room.department_id,
     );
 
-    return department?.name || "未知系所";
+    return department?.name || "未知單位";
 };
 </script>
 
@@ -393,7 +407,7 @@ const departmentName = (room) => {
                     >
                         <div>空間資料</div>
                         <div>容量 / 費率</div>
-                        <div>建築 / 系所</div>
+                        <div>建築 / 單位</div>
                         <div class="text-right">操作</div>
                     </div>
 
@@ -454,7 +468,7 @@ const departmentName = (room) => {
                                         "
                                         class="inline-flex rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700"
                                     >
-                                        跨系開放
+                                        白名單開放
                                     </span>
                                 </div>
                             </div>
@@ -652,9 +666,12 @@ const departmentName = (room) => {
                                 <select
                                     id="department"
                                     v-model="roomForm.department_id"
+                                    @change="syncOpenDepartments"
                                     class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900"
                                 >
-                                    <option value="">非系所空間</option>
+                                    <option value="" disabled>
+                                        請選擇所屬單位
+                                    </option>
                                     <option
                                         v-for="department in departments"
                                         :key="department.id"
@@ -767,7 +784,7 @@ const departmentName = (room) => {
                                     class="h-4 w-4 rounded border-slate-300 text-slate-900"
                                 />
                                 <span class="text-sm font-medium text-slate-700"
-                                    >系所空間跨系開放</span
+                                    >開放白名單單位借用</span
                                 >
                             </label>
                             <p
@@ -778,14 +795,14 @@ const departmentName = (room) => {
                             </p>
 
                             <div v-show="roomForm.is_open_access" class="space-y-3">
-                                <p class="text-sm text-slate-600">選擇可跨系使用的系所：</p>
+                                <p class="text-sm text-slate-600">選擇可借用此空間的其他單位：</p>
                                 <div class="flex items-center gap-2">
                                     <select
                                         ref="openDeptSelectRef"
                                         v-model="roomForm._temp_open_department_id"
                                         class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900"
                                     >
-                                        <option value="">請選擇系所</option>
+                                        <option value="">請選擇單位</option>
                                         <option
                                             v-for="department in departments.filter(d => String(d.id) !== String(roomForm.department_id))"
                                             :key="department.id"
@@ -820,7 +837,7 @@ const departmentName = (room) => {
                                             ×
                                         </button>
                                     </span>
-                                    <p v-if="roomForm.open_access_departments.length === 0" class="text-sm text-slate-500">尚未選擇其他系所</p>
+                                    <p v-if="roomForm.open_access_departments.length === 0" class="text-sm text-slate-500">尚未選擇其他單位</p>
                                 </div>
                                 <p v-if="roomErrors.open_access_departments" class="mt-2 text-sm text-rose-700">{{ roomErrors.open_access_departments[0] }}</p>
                             </div>

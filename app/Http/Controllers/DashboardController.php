@@ -32,12 +32,12 @@ class DashboardController extends Controller
         $canViewManagementStats = $canViewOperations;
         $canManageUsers = in_array('管理員', $roles, true);
 
-        $todayEnd = today()->endOfDay();
         $now = now();
         $monthStart = $now->copy()->startOfMonth();
         $monthEnd = $now->copy()->endOfMonth();
 
         $reservationScope = $this->reservationScope($user, $canViewOperations || $canReviewApprovals);
+        $personalReservationScope = $this->reservationScope($user, false);
 
         return response()->json([
             'roles' => $roles,
@@ -49,10 +49,10 @@ class DashboardController extends Controller
                 'can_manage_users' => $canManageUsers,
             ],
             'today' => [
-                'reservations' => (clone $reservationScope)->where('start_time', '<=', $todayEnd)->count(),
-                'pending' => (clone $reservationScope)->where('start_time', '<=', $todayEnd)->where('reservation_status', 'pending')->count(),
-                'approved' => (clone $reservationScope)->where('start_time', '<=', $todayEnd)->where('reservation_status', 'success')->count(),
-                'cancelled' => (clone $reservationScope)->where('start_time', '<=', $todayEnd)->where('reservation_status', 'cancelled')->count(),
+                'reservations' => (clone $reservationScope)->count(),
+                'pending' => (clone $reservationScope)->where('reservation_status', 'pending')->count(),
+                'approved' => (clone $reservationScope)->where('reservation_status', 'success')->count(),
+                'cancelled' => (clone $reservationScope)->where('reservation_status', 'cancelled')->count(),
             ],
             'tasks' => [
                 'pending_reservations' => $canReviewApprovals
@@ -61,13 +61,13 @@ class DashboardController extends Controller
                 'unpaid_orders' => $canViewRevenue
                     ? Payment::where('payment_status', 'unpaid')->count()
                     : $this->scopedUnpaidPaymentCount($reservationScope),
-                'upcoming_reservations' => (clone $reservationScope)
+                'upcoming_reservations' => (clone $personalReservationScope)
                     ->whereIn('reservation_status', ['pending', 'success'])
                     ->whereBetween('start_time', [$now, $now->copy()->addDay()])
                     ->count(),
                 // Provide lists for frontend display
                 'unpaid_orders_list' => $this->unpaidOrdersList($reservationScope, $canViewRevenue),
-                'upcoming_reservations_list' => $this->upcomingReservationsList($reservationScope, $now),
+                'upcoming_reservations_list' => $this->upcomingReservationsList($personalReservationScope, $now),
                 'inactive_accounts' => $canManageUsers
                     ? User::where('is_active', false)->count()
                     : null,

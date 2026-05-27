@@ -20,7 +20,7 @@ const dateOnly = (value) => String(value || "").slice(0, 10);
 
 const selectedRoomId = ref(props.rooms[0]?.id ?? "");
 const selectedDate = ref(dateOnly(props.initialDate));
-const selectedSectionKeys = ref([]);
+const selectedSectionsData = ref([]);
 const sections = ref([]);
 const loadingSections = ref(false);
 const submitting = ref(false);
@@ -33,11 +33,7 @@ const selectedRoom = computed(() =>
     props.rooms.find((room) => room.id === Number(selectedRoomId.value)),
 );
 
-const selectedSections = computed(() =>
-    sections.value.filter((section) =>
-        selectedSectionKeys.value.includes(sectionKey(section)),
-    ),
-);
+const selectedSections = computed(() => selectedSectionsData.value);
 
 const bookableSections = computed(() =>
     sections.value.filter((section) => isSelectableSection(section)),
@@ -62,10 +58,10 @@ const formatTimeSlot = (section) => {
 const isSelectableSection = (section) => section.is_bookable;
 
 const sectionKey = (section) =>
-    section.id ?? `${section.room_id}-${section.date}-${section.time_slot_id}`;
+    `${section.room_id}-${section.date}-${section.time_slot_id}`;
 
 const isSelectedSection = (section) =>
-    selectedSectionKeys.value.includes(sectionKey(section));
+    selectedSectionsData.value.some((selected) => sectionKey(selected) === sectionKey(section));
 
 const toggleSection = (section) => {
     if (!isSelectableSection(section)) {
@@ -73,25 +69,34 @@ const toggleSection = (section) => {
     }
 
     const key = sectionKey(section);
-    if (selectedSectionKeys.value.includes(key)) {
-        selectedSectionKeys.value = selectedSectionKeys.value.filter(
-            (value) => value !== key,
+    if (isSelectedSection(section)) {
+        selectedSectionsData.value = selectedSectionsData.value.filter(
+            (selected) => sectionKey(selected) !== key,
         );
         return;
     }
 
-    selectedSectionKeys.value = [...selectedSectionKeys.value, key];
+    selectedSectionsData.value = [
+        ...selectedSectionsData.value,
+        {
+            ...section,
+            room_id: Number(selectedRoomId.value),
+            date: selectedDate.value,
+        },
+    ].sort((a, b) =>
+        `${a.date} ${a.time_slot_id}`.localeCompare(`${b.date} ${b.time_slot_id}`),
+    );
 };
 
 const removeSelected = (section) => {
     const key = sectionKey(section);
-    selectedSectionKeys.value = selectedSectionKeys.value.filter(
-        (value) => value !== key,
+    selectedSectionsData.value = selectedSectionsData.value.filter(
+        (selected) => sectionKey(selected) !== key,
     );
 };
 
 const clearSelected = () => {
-    selectedSectionKeys.value = [];
+    selectedSectionsData.value = [];
 };
 
 const sectionStatusText = (section) => {
@@ -106,11 +111,14 @@ const sectionStatusText = (section) => {
         return "已被預約";
     }
 
+    if (section.state === "expired") {
+        return "已過時";
+    }
+
     return "可預約";
 };
 
 const loadSections = async () => {
-    selectedSectionKeys.value = [];
     message.value = "";
     errorMessage.value = "";
     sections.value = [];
@@ -156,10 +164,10 @@ const submitReservation = async () => {
     try {
         const payload = {
             room_id: selectedRoomId.value,
-            date: selectedDate.value,
-            time_slot_ids: selectedSections.value.map(
-                (section) => section.time_slot_id,
-            ),
+            selected_slots: selectedSections.value.map((section) => ({
+                date: section.date,
+                time_slot_id: section.time_slot_id,
+            })),
         };
 
         const response = await axios.post("/reservations", payload);
@@ -171,9 +179,11 @@ const submitReservation = async () => {
         successDialog.value = {
             message: response.data.message || "預約已送出。",
             roomName: selectedRoom.value?.name || "已選空間",
-            date: selectedDate.value,
+            date: [
+                ...new Set(selectedSections.value.map((section) => section.date)),
+            ].join("、"),
             times: selectedSections.value.map((section) =>
-                formatTimeSlot(section),
+                `${section.date} ${formatTimeSlot(section)}`,
             ),
             status: created[0]?.reservation_status || null,
         };
@@ -192,7 +202,12 @@ const closeSuccessDialog = () => {
     successDialog.value = null;
 };
 
-watch([selectedRoomId, selectedDate], loadSections);
+watch(selectedRoomId, () => {
+    clearSelected();
+    loadSections();
+});
+
+watch(selectedDate, loadSections);
 
 onMounted(loadSections);
 </script>

@@ -120,7 +120,7 @@ class RoomController extends Controller
             ->get()
             ->map(function (TimeSlot $timeSlot) use ($reservedSections, $room, $selectedDate): array {
                 $reservedSection = $reservedSections->get($timeSlot->time_slot_id);
-                $state = $this->sectionState($timeSlot->status, $reservedSection?->status);
+                $state = $this->sectionState($timeSlot->status, $reservedSection?->status, $selectedDate, $timeSlot->time_slot_id);
 
                 return [
                     'id' => $reservedSection?->id,
@@ -156,10 +156,7 @@ class RoomController extends Controller
         $validated = $request->validated();
         $room = Room::create($this->roomStoragePayload($validated));
 
-        // sync open access departments if provided
-        if (! empty($validated['open_access_departments'])) {
-            $room->openDepartments()->sync($validated['open_access_departments']);
-        }
+        $room->openDepartments()->sync($validated['open_access_departments'] ?? []);
 
         return response()->json([
             'message' => '空間已建立',
@@ -177,10 +174,7 @@ class RoomController extends Controller
         $validated = $request->validated();
         $room->forceFill($this->roomStoragePayload($validated))->save();
 
-        // sync open access departments
-        if (array_key_exists('open_access_departments', $validated)) {
-            $room->openDepartments()->sync($validated['open_access_departments'] ?? []);
-        }
+        $room->openDepartments()->sync($validated['open_access_departments'] ?? []);
 
         return response()->json([
             'message' => '空間已更新',
@@ -234,7 +228,7 @@ class RoomController extends Controller
             'type' => $validated['type'],
             'capacity' => (int) $validated['capacity'],
             'building' => $validated['building'],
-            'department_id' => $validated['department_id'] ?? null,
+            'department_id' => $validated['department_id'],
             'information' => $validated['information'] ?? null,
             'rate' => (int) $validated['hourly_rate'],
             'need_approval' => (bool) $validated['need_approval'],
@@ -242,7 +236,7 @@ class RoomController extends Controller
         ];
     }
 
-    private function sectionState(?string $timeSlotStatus, ?string $sectionStatus): string
+    private function sectionState(?string $timeSlotStatus, ?string $sectionStatus, ?string $date = null, ?string $timeSlotId = null): string
     {
         if ($timeSlotStatus === 'disable') {
             return 'disabled';
@@ -250,6 +244,10 @@ class RoomController extends Controller
 
         if ($sectionStatus === 'reserved') {
             return 'reserved';
+        }
+
+        if ($date !== null && $timeSlotId !== null && $this->slotStartsInPast($date, $timeSlotId)) {
+            return 'expired';
         }
 
         return 'available';
@@ -270,5 +268,22 @@ class RoomController extends Controller
         }
 
         return $timeSlotId;
+    }
+
+    private function slotStartsInPast(string $date, string $timeSlotId): bool
+    {
+        $startHour = null;
+
+        if (ctype_digit($timeSlotId)) {
+            $startHour = (int) $timeSlotId;
+        } elseif (preg_match('/^TS_(\d{2})00$/', $timeSlotId, $matches) === 1) {
+            $startHour = 8 + (int) $matches[1];
+        }
+
+        if ($startHour === null) {
+            return false;
+        }
+
+        return Carbon::parse(sprintf('%s %02d:00:00', $date, $startHour % 24))->lessThanOrEqualTo(now());
     }
 }

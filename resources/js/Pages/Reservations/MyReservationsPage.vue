@@ -59,6 +59,20 @@ const slotRangeLabel = (startValue, endValue) => {
     return `${sTime} - ${eTime}`;
 };
 
+const reservationSlotLabels = (reservation) => {
+    if (!reservation.slots?.length) {
+        return [slotRangeLabel(reservation.start_time, reservation.end_time)];
+    }
+
+    return reservation.slots.map(
+        (slot) =>
+            `${String(slot.date || "").replaceAll("-", "/")} ${slotRangeLabel(
+                slot.start_time,
+                slot.end_time,
+            )}`,
+    );
+};
+
 const roomName = (reservation) =>
     reservation.room?.name || reservation.room?.room_name || "未知空間";
 
@@ -240,12 +254,16 @@ onMounted(loadReservations);
                             </div>
 
                             <div class="text-sm text-slate-700">
-                                <p>
-                                        {{ dateOnly(reservation.start_time) }}
-                                    </p>
-                                    <p class="mt-1 text-slate-500">
-                                        {{ slotRangeLabel(reservation.start_time, reservation.end_time) }}
-                                    </p>
+                                <p>{{ dateOnly(reservation.start_time) }}</p>
+                                <div class="mt-1 flex flex-wrap gap-2">
+                                    <span
+                                        v-for="slot in reservationSlotLabels(reservation)"
+                                        :key="slot"
+                                        class="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600"
+                                    >
+                                        {{ slot }}
+                                    </span>
+                                </div>
                             </div>
 
                             <div>

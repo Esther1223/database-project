@@ -34,31 +34,8 @@ const slotOrder = (slot) => {
     return Number.isFinite(numericId) ? numericId : Number.MAX_SAFE_INTEGER;
 };
 
-const buildFallbackSlots = () => {
-    return Array.from({ length: 13 }, (_, index) => {
-        const hour = index + 8;
-
-        return {
-            id: null,
-            room_id: selectedRoomId.value,
-            date: selectedDate.value,
-            time_slot_id: String(hour),
-            status: 'available',
-            state: 'available',
-            time_slot: {
-                id: null,
-                time_slot_id: String(hour),
-                status: 'enable',
-                label: `${String(hour).padStart(2, '0')}:00 - ${String(hour + 1).padStart(2, '0')}:00`,
-            },
-        };
-    });
-};
-
 const orderedSlots = computed(() => {
-    const source = slots.value.length > 0 ? slots.value : buildFallbackSlots();
-
-    return [...source].sort((left, right) => slotOrder(left) - slotOrder(right));
+    return [...slots.value].sort((left, right) => slotOrder(left) - slotOrder(right));
 });
 
 const counts = computed(() => ({
@@ -78,11 +55,11 @@ const loadSlots = async () => {
     try {
         const response = await axios.get(`/rooms/${selectedRoomId.value}/available-sections`, { params: { date: selectedDate.value } });
 
-        slots.value = response.data.data || buildFallbackSlots();
+        slots.value = response.data.data || [];
     } catch (error) {
         console.error('讀取可借時段失敗：', error);
         errorMessage.value = error.response?.data?.message || '讀取可借時段失敗，請稍後再試。';
-        slots.value = buildFallbackSlots();
+        slots.value = [];
     } finally {
         loading.value = false;
     }
@@ -169,7 +146,11 @@ watch([selectedRoomId, selectedDate], loadSlots, { immediate: true });
                     讀取中...
                 </div>
 
-                <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                <div v-if="!orderedSlots.length" class="mt-6 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-12 text-center text-sm text-slate-500">
+                    目前沒有時段資料。
+                </div>
+
+                <div v-else class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                     <AvailabilitySlot v-for="slot in orderedSlots" :key="slot.time_slot_id" :slot="slot" />
                 </div>
             </div>

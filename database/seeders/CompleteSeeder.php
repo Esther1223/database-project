@@ -15,6 +15,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class CompleteSeeder extends Seeder
 {
@@ -22,7 +23,6 @@ class CompleteSeeder extends Seeder
 
     public function run(): void
     {
-        // Roles
         $roles = collect([
             '管理員',
             '行政人員',
@@ -32,7 +32,6 @@ class CompleteSeeder extends Seeder
             $roleType => Role::updateOrCreate(['role_type' => $roleType]),
         ]);
 
-        // Departments
         $departments = collect([
             '資訊工程學系',
             '資訊中心',
@@ -43,7 +42,6 @@ class CompleteSeeder extends Seeder
             $name => Department::updateOrCreate(['name' => $name]),
         ]);
 
-        // Users
         $usersData = [
             ['role' => '管理員', 'name' => 'Admin User', 'email' => 'admin@example.com', 'password' => 'admin', 'affiliation' => '資訊中心'],
             ['role' => '行政人員', 'name' => 'Staff User', 'email' => 'staff@example.com', 'password' => 'staff', 'affiliation' => '總務處'],
@@ -65,24 +63,18 @@ class CompleteSeeder extends Seeder
 
             $user->roles()->syncWithoutDetaching([$roles[$u['role']]->id]);
 
-            // key by email to avoid duplicate-role overwrite
             return [$u['email'] => $user];
         });
 
-        // helper variables for clarity
         $admin = $users['admin@example.com'];
         $staff = $users['staff@example.com'];
         $professor = $users['wu@example.com'];
-        $studentA = $users['KaBuo@example.com'];
         $studentB = $users['Omuba@example.com'];
 
-        // Rooms
         $roomsData = [
             ['room_name' => 'A101 會議室', 'room_type' => '會議室', 'capacity' => 30, 'building' => '科教大樓', 'department_id' => $departments['資訊工程學系']->id, 'information' => '含投影機、白板。', 'hourly_rate' => 500, 'need_approval' => true, 'is_open_access' => false],
-            ['room_name' => 'B201 教室', 'room_type' => '教室', 'capacity' => 60, 'building' => '教學大樓', 'department_id' => null, 'information' => '適合課程與講座。', 'hourly_rate' => 0, 'need_approval' => false, 'is_open_access' => false],
-            ['room_name' => 'C301 多功能廳', 'room_type' => '多功能廳', 'capacity' => 120, 'building' => '活動中心', 'department_id' => null, 'information' => '大型活動、表演。', 'hourly_rate' => 1500, 'need_approval' => true, 'is_open_access' => false],
-            // B1 is open-access across departments — associate with 光電工程學系 as requested
-            // B1 is owned by 資訊工程學系 but open to other departments (e.g. 光電工程學系)
+            ['room_name' => 'B201 教室', 'room_type' => '教室', 'capacity' => 60, 'building' => '教學大樓', 'department_id' => $departments['資訊中心']->id, 'information' => '適合課程與講座。', 'hourly_rate' => 0, 'need_approval' => false, 'is_open_access' => false],
+            ['room_name' => 'C301 多功能廳', 'room_type' => '多功能廳', 'capacity' => 120, 'building' => '活動中心', 'department_id' => $departments['總務處']->id, 'information' => '大型活動、表演。', 'hourly_rate' => 1500, 'need_approval' => true, 'is_open_access' => false],
             ['room_name' => 'B1 多功能教室', 'room_type' => '教室', 'capacity' => 60, 'building' => '科教大樓', 'department_id' => $departments['資訊工程學系']->id, 'information' => '開放式空間，資工系擁有，光電系可借用。', 'hourly_rate' => 0, 'need_approval' => false, 'is_open_access' => true],
         ];
 
@@ -90,23 +82,19 @@ class CompleteSeeder extends Seeder
             $r['room_name'] => Room::updateOrCreate(['room_name' => $r['room_name']], $r),
         ]);
 
-        // Make B1 available to 光電工程學系 as an open department
-        if (isset($rooms['B1 多功能教室']) && isset($departments['光電工程學系'])) {
-            $rooms['B1 多功能教室']->openDepartments()->syncWithoutDetaching([$departments['光電工程學系']->id]);
-        }
+        $rooms['B1 多功能教室']->openDepartments()->syncWithoutDetaching([
+            $departments['光電工程學系']->id,
+        ]);
 
-        // Time slots (8..20)
         $timeSlots = collect(range(8, 20))->mapWithKeys(fn (int $h): array => [
             (string) $h => TimeSlot::updateOrCreate(['time_slot_id' => (string) $h], ['status' => 'enable']),
         ]);
 
-        // Prepare dates
         $today = Carbon::today();
         $tomorrow = Carbon::today()->addDay();
         $dayAfter = Carbon::today()->addDays(2);
 
-        // Helper to create room sections for a date
-        $createSectionsForDate = function (Room $room, Carbon $date) use ($timeSlots) {
+        $createSectionsForDate = function (Room $room, Carbon $date) use ($timeSlots): void {
             foreach ($timeSlots as $slotId => $ts) {
                 RoomSection::updateOrCreate(
                     ['room_id' => $room->id, 'date' => $date->toDateString(), 'time_slot_id' => $slotId],
@@ -115,29 +103,52 @@ class CompleteSeeder extends Seeder
             }
         };
 
-        // Create sections for rooms for next 3 days
         foreach ($rooms as $room) {
             $createSectionsForDate($room, $today);
             $createSectionsForDate($room, $tomorrow);
             $createSectionsForDate($room, $dayAfter);
         }
 
-        // Create a multi-slot reservation (教授) spanning 09:00-12:00 tomorrow (slots 9,10,11)
-        $multiDate = $tomorrow->toDateString();
-        $multiStart = "{$multiDate} 09:00:00";
-        $multiEnd = "{$multiDate} 12:00:00";
+        $singleDate = $today->toDateString();
+        Reservation::query()
+            ->where('room_id', $rooms['B201 教室']->id)
+            ->where('start_time', "{$singleDate} 13:00:00")
+            ->where('end_time', "{$singleDate} 14:00:00")
+            ->delete();
 
-        $multiRes = Reservation::updateOrCreate(
-            [
-                'user_id' => $professor->id,
-                'room_id' => $rooms['A101 會議室']->id,
-                'start_time' => $multiStart,
-                'end_time' => $multiEnd,
-            ],
-            ['reservation_status' => 'success'],
+        RoomSection::updateOrCreate(
+            ['room_id' => $rooms['B201 教室']->id, 'date' => $singleDate, 'time_slot_id' => '13'],
+            ['status' => 'available'],
         );
 
-        // mark sections reserved
+        $multiDate = $tomorrow->toDateString();
+        Reservation::query()
+            ->where('user_id', $professor->id)
+            ->where('room_id', $rooms['A101 會議室']->id)
+            ->where('start_time', "{$multiDate} 09:00:00")
+            ->where('end_time', "{$multiDate} 12:00:00")
+            ->delete();
+
+        $multiGroupId = (string) Str::uuid();
+        $multiReservations = collect(['9', '10', '11'])->map(function (string $slotId) use ($multiDate, $multiGroupId, $rooms, $professor): Reservation {
+            $startHour = (int) $slotId;
+
+            return Reservation::updateOrCreate(
+                [
+                    'user_id' => $professor->id,
+                    'room_id' => $rooms['A101 會議室']->id,
+                    'reservation_date' => $multiDate,
+                    'time_slot_id' => $slotId,
+                    'start_time' => sprintf('%s %02d:00:00', $multiDate, $startHour),
+                    'end_time' => sprintf('%s %02d:00:00', $multiDate, $startHour + 1),
+                ],
+                [
+                    'reservation_group_id' => $multiGroupId,
+                    'reservation_status' => 'success',
+                ],
+            );
+        });
+
         foreach (['9', '10', '11'] as $slotId) {
             RoomSection::updateOrCreate(
                 ['room_id' => $rooms['A101 會議室']->id, 'date' => $multiDate, 'time_slot_id' => $slotId],
@@ -145,77 +156,63 @@ class CompleteSeeder extends Seeder
             );
         }
 
-        // Payment for multi reservation
-        $hours = 3;
-        $amount = $rooms['A101 會議室']->hourly_rate * $hours;
-        if ($amount > 0) {
-            Payment::updateOrCreate(
-                ['reservation_id' => $multiRes->id],
-                ['amount' => $amount, 'payment_status' => 'unpaid'],
+        $firstMultiRes = $multiReservations->first();
+
+        if ($firstMultiRes !== null) {
+            $amount = $rooms['A101 會議室']->hourly_rate * $multiReservations->count();
+
+            if ($amount > 0) {
+                Payment::updateOrCreate(
+                    ['reservation_id' => $firstMultiRes->id],
+                    ['amount' => $amount, 'payment_status' => 'unpaid'],
+                );
+
+                Payment::whereIn('reservation_id', $multiReservations->pluck('id')->filter()->values())
+                    ->where('reservation_id', '!=', $firstMultiRes->id)
+                    ->delete();
+            }
+
+            Approval::updateOrCreate(
+                ['reservation_id' => $firstMultiRes->id],
+                ['approver_id' => $staff->id, 'decision' => 'approved', 'decision_time' => Carbon::now()->subDays(1)->toDateTimeString()],
             );
         }
 
-        // Single-slot reservation (學生) today 13:00-14:00 (slot 13)
-        $singleDate = $today->toDateString();
-        $singleStart = "{$singleDate} 13:00:00";
-        $singleEnd = "{$singleDate} 14:00:00";
-
-        // use student A for the single-slot reservation
-        $singleRes = Reservation::updateOrCreate(
-            [
-                'user_id' => $studentA->id,
-                'room_id' => $rooms['B201 教室']->id,
-                'start_time' => $singleStart,
-                'end_time' => $singleEnd,
-            ],
-            ['reservation_status' => 'success'],
-        );
-
-        RoomSection::updateOrCreate(
-            ['room_id' => $rooms['B201 教室']->id, 'date' => $singleDate, 'time_slot_id' => '13'],
-            ['status' => 'reserved'],
-        );
-
-        // Cancelled reservation (admin) day after tomorrow 10:00-11:00
         $cancelDate = $dayAfter->toDateString();
         $cancelStart = "{$cancelDate} 10:00:00";
         $cancelEnd = "{$cancelDate} 11:00:00";
 
-        $cancelRes = Reservation::updateOrCreate(
+        Reservation::updateOrCreate(
             [
                 'user_id' => $admin->id,
                 'room_id' => $rooms['C301 多功能廳']->id,
+                'reservation_date' => $cancelDate,
+                'time_slot_id' => '10',
                 'start_time' => $cancelStart,
                 'end_time' => $cancelEnd,
             ],
-            ['reservation_status' => 'cancelled'],
+            [
+                'reservation_group_id' => (string) Str::uuid(),
+                'reservation_status' => 'cancelled',
+            ],
         );
 
-        // Pending reservation requiring approval (學生) tomorrow 14:00-15:00 for A101
         $pendingStart = "{$multiDate} 14:00:00";
         $pendingEnd = "{$multiDate} 15:00:00";
 
-        // use student B for pending reservation
-        $pendingRes = Reservation::updateOrCreate(
+        Reservation::updateOrCreate(
             [
                 'user_id' => $studentB->id,
                 'room_id' => $rooms['A101 會議室']->id,
+                'reservation_date' => $multiDate,
+                'time_slot_id' => '14',
                 'start_time' => $pendingStart,
                 'end_time' => $pendingEnd,
             ],
-            ['reservation_status' => 'pending'],
-        );
-
-        // Create an approval for the multi reservation (approved)
-        Approval::updateOrCreate(
-            ['reservation_id' => $multiRes->id],
-            ['approver_id' => $staff->id, 'decision' => 'approved', 'decision_time' => Carbon::now()->subDays(1)->toDateTimeString()],
-        );
-
-        // Create a paid payment for singleRes
-        Payment::updateOrCreate(
-            ['reservation_id' => $singleRes->id],
-            ['amount' => 0, 'payment_status' => 'paid'],
+            [
+                'reservation_group_id' => (string) Str::uuid(),
+                'reservation_status' => 'pending',
+            ],
         );
     }
 }

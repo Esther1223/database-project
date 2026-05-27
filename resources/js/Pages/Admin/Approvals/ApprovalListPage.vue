@@ -11,6 +11,8 @@ const activeTab = ref("pending");
 const loading = ref(false);
 const message = ref("");
 const errorMessage = ref("");
+const detailItem = ref(null);
+const detailMode = ref("pending");
 
 const formatDateTime = (value) => {
     if (!value) return "-";
@@ -52,6 +54,33 @@ const decisionClass = (decision) => {
     return decision === "approved"
         ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
         : "bg-rose-50 text-rose-700 ring-rose-200";
+};
+
+const statusLabel = (status) => {
+    const labels = {
+        pending: "待審核",
+        success: "已核准",
+        cancelled: "已取消",
+        rejected: "已拒絕",
+    };
+
+    return labels[status] || status || "-";
+};
+
+const slotRangeLabel = (slot) => {
+    const start = formatDateTime(slot.start_time);
+    const end = formatDateTime(slot.end_time);
+
+    return `${start} 至 ${end}`;
+};
+
+const openDetail = (item, mode) => {
+    detailItem.value = item;
+    detailMode.value = mode;
+};
+
+const closeDetail = () => {
+    detailItem.value = null;
 };
 
 const loadPending = async () => {
@@ -188,11 +217,12 @@ onMounted(loadPending);
                     class="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm"
                 >
                     <div
-                        class="hidden gap-4 border-b border-slate-200 bg-slate-50 px-6 py-4 text-sm font-semibold text-slate-600 lg:grid lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_180px]"
+                        class="hidden gap-4 border-b border-slate-200 bg-slate-50 px-6 py-4 text-sm font-semibold text-slate-600 lg:grid lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.85fr)_minmax(0,0.85fr)_120px_180px]"
                     >
                         <div>空間 / 申請者</div>
                         <div>時段</div>
                         <div>申請時間</div>
+                        <div class="text-center">詳細資料</div>
                         <div class="text-center">操作</div>
                     </div>
 
@@ -214,7 +244,7 @@ onMounted(loadPending);
                         <div
                             v-for="reservation in approvals"
                             :key="reservation.id"
-                            class="grid grid-cols-1 gap-4 px-6 py-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_180px] lg:items-center"
+                            class="grid grid-cols-1 gap-4 px-6 py-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.85fr)_minmax(0,0.85fr)_120px_180px] lg:items-center"
                         >
                             <div>
                                 <p class="text-lg font-semibold text-slate-950">
@@ -249,6 +279,9 @@ onMounted(loadPending);
                                     至
                                     {{ formatDateTime(reservation.end_time) }}
                                 </p>
+                                <p class="mt-1 text-slate-500">
+                                    共 {{ reservation.slot_count || 1 }} 個時段
+                                </p>
                             </div>
 
                             <div class="text-sm text-slate-700">
@@ -258,6 +291,16 @@ onMounted(loadPending);
                                 <p class="mt-1 text-sm text-slate-500">
                                     狀態：{{ reservation.reservation_status }}
                                 </p>
+                            </div>
+
+                            <div class="flex justify-start lg:justify-center">
+                                <button
+                                    type="button"
+                                    class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                                    @click="openDetail(reservation, 'pending')"
+                                >
+                                    詳細資料
+                                </button>
                             </div>
 
                             <div class="flex justify-start lg:justify-center">
@@ -375,11 +418,99 @@ onMounted(loadPending);
                                         )
                                     }}
                                 </p>
+                                <button
+                                    type="button"
+                                    class="mt-3 rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                                    @click="openDetail(approval, 'history')"
+                                >
+                                    詳細資料
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
             </section>
+
+            <teleport to="body">
+                <div
+                    v-if="detailItem"
+                    class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-8"
+                    @click.self="closeDetail"
+                >
+                    <div class="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500">
+                                    Approval Detail
+                                </p>
+                                <h3 class="mt-2 text-2xl font-semibold text-slate-950">
+                                    預約詳細資料
+                                </h3>
+                            </div>
+                            <button
+                                type="button"
+                                class="rounded-full border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                                @click="closeDetail"
+                            >
+                                關閉
+                            </button>
+                        </div>
+
+                        <div class="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <p class="text-lg font-semibold text-slate-950">
+                                {{
+                                    (detailMode === "history"
+                                        ? detailItem.reservation?.room?.name || detailItem.reservation?.room?.room_name
+                                        : detailItem.room?.name || detailItem.room?.room_name) || "未知空間"
+                                }}
+                            </p>
+                            <p class="mt-1 text-sm text-slate-600">
+                                申請者：{{
+                                    (detailMode === "history"
+                                        ? detailItem.reservation?.user?.name || detailItem.reservation?.user?.email
+                                        : detailItem.user?.name || detailItem.user?.email) || "-"
+                                }}
+                            </p>
+                            <p class="mt-1 text-sm text-slate-600">
+                                共 {{ detailItem.slot_count || detailItem.slots?.length || 1 }} 個時段
+                            </p>
+                        </div>
+
+                        <div v-if="detailMode === 'history'" class="mt-4 rounded-2xl border border-slate-200 p-4 text-sm text-slate-700">
+                            <p>
+                                審核結果：{{ decisionLabel(detailItem.decision) }}
+                            </p>
+                            <p class="mt-1">
+                                審核者：{{ detailItem.approver?.name || detailItem.approver?.email || "-" }}
+                            </p>
+                            <p class="mt-1">
+                                審核時間：{{ formatDateTime(detailItem.decision_time) }}
+                            </p>
+                        </div>
+
+                        <div class="mt-4 overflow-hidden rounded-2xl border border-slate-200">
+                            <div class="grid grid-cols-[1fr_100px] gap-4 border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600">
+                                <div>時段</div>
+                                <div>狀態</div>
+                            </div>
+                            <div class="divide-y divide-slate-200">
+                                <div
+                                    v-for="slot in detailItem.slots || []"
+                                    :key="slot.id"
+                                    class="grid grid-cols-[1fr_100px] gap-4 px-4 py-3 text-sm"
+                                >
+                                    <div class="text-slate-800">
+                                        {{ slotRangeLabel(slot) }}
+                                    </div>
+                                    <div class="font-semibold text-slate-600">
+                                        {{ statusLabel(slot.reservation_status) }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </teleport>
         </AuthenticatedLayout>
     </div>
 </template>

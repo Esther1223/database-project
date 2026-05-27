@@ -102,16 +102,11 @@ class Room extends Model
 
         return $query->where(function (Builder $builder) use ($user): void {
             $builder
-                ->whereNull('department_id')
-                ->orWhere('department_id', $user->department_id)
+                ->where('department_id', $user->department_id)
                 ->orWhere(function (Builder $openBuilder) use ($user): void {
                     $openBuilder
                         ->where('is_open_access', true)
-                        ->where(function (Builder $departmentBuilder) use ($user): void {
-                            $departmentBuilder
-                                ->whereDoesntHave('openDepartments')
-                                ->orWhereHas('openDepartments', fn (Builder $query) => $query->where('departments.id', $user->department_id));
-                        });
+                        ->whereHas('openDepartments', fn (Builder $query) => $query->where('departments.id', $user->department_id));
                 });
         });
     }
@@ -122,20 +117,12 @@ class Room extends Model
             return true;
         }
 
-        if ($this->department_id === null) {
-            return true;
-        }
-
         if ((int) $this->department_id === (int) $user->department_id) {
             return true;
         }
 
         if (! $this->is_open_access) {
             return false;
-        }
-
-        if ($this->relationLoaded('openDepartments') && $this->openDepartments->isEmpty()) {
-            return true;
         }
 
         return $this->openDepartments()

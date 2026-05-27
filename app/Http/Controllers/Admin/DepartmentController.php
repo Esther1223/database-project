@@ -76,6 +76,12 @@ class DepartmentController extends Controller
      */
     public function destroy(Department $department): JsonResponse
     {
+        if ($department->users()->exists() || $department->rooms()->exists()) {
+            return response()->json([
+                'message' => '此單位仍有使用者或空間，不可刪除。',
+            ], 422);
+        }
+
         $department->delete();
 
         return response()->json([

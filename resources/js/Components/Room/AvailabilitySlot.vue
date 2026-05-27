@@ -8,7 +8,7 @@ const props = defineProps({
     },
 });
 
-const slotState = computed(() => props.slot.state || 'available');
+const slotState = computed(() => props.slot.state || 'unknown');
 
 const slotStyles = computed(() => {
     if (slotState.value === 'reserved') {
@@ -17,6 +17,14 @@ const slotStyles = computed(() => {
 
     if (slotState.value === 'disabled') {
         return 'border-slate-200 bg-slate-100 text-slate-400';
+    }
+
+    if (slotState.value === 'expired') {
+        return 'border-slate-200 bg-slate-50 text-slate-400';
+    }
+
+    if (slotState.value !== 'available') {
+        return 'border-slate-200 bg-white text-slate-500';
     }
 
     return 'border-emerald-200 bg-emerald-50 text-emerald-950';
@@ -31,6 +39,14 @@ const slotBadgeStyles = computed(() => {
         return 'bg-slate-200 text-slate-500';
     }
 
+    if (slotState.value === 'expired') {
+        return 'bg-slate-200 text-slate-500';
+    }
+
+    if (slotState.value !== 'available') {
+        return 'bg-slate-100 text-slate-500';
+    }
+
     return 'bg-emerald-100 text-emerald-700';
 });
 
@@ -43,6 +59,14 @@ const statusLabel = computed(() => {
 
     if (slotState.value === 'disabled') {
         return '不可借用';
+    }
+
+    if (slotState.value === 'expired') {
+        return '已過時';
+    }
+
+    if (slotState.value !== 'available') {
+        return '未知狀態';
     }
 
     return '可借用';

@@ -244,6 +244,9 @@ onMounted(loadPayments);
                                         )
                                     }}
                                 </p>
+                                <p class="mt-1 text-slate-500">
+                                    共 {{ payment.slot_count || 1 }} 個時段
+                                </p>
                             </div>
 
                             <div class="text-sm text-slate-700">

@@ -42,31 +42,24 @@ const emit = defineEmits([
     "update:date",
 ]);
 
-const timeSlotMap = {
-    TS_0000: "08:00 - 09:00",
-    TS_0100: "09:00 - 10:00",
-    TS_0200: "10:00 - 11:00",
-    TS_0300: "11:00 - 12:00",
-    TS_0400: "12:00 - 13:00",
-    TS_0500: "13:00 - 14:00",
-    TS_0600: "14:00 - 15:00",
-    TS_0700: "15:00 - 16:00",
-    TS_0800: "16:00 - 17:00",
-    TS_0900: "17:00 - 18:00",
-    TS_1000: "18:00 - 19:00",
-    TS_1100: "19:00 - 20:00",
-    TS_1200: "20:00 - 21:00",
-    TS_1300: "21:00 - 22:00",
-    TS_1400: "22:00 - 23:00",
-    TS_1500: "23:00 - 00:00",
-    TS_1600: "00:00 - 01:00",
-};
+const today = (() => {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+})();
 
 const formatTimeSlot = (section) =>
     section?.time_slot?.label ||
-    timeSlotMap[section?.time_slot_id] ||
     section?.time_slot_id ||
     "-";
+
+const selectedDatesLabel = (sections) =>
+    [...new Set(sections.map((section) => section.date))]
+        .filter(Boolean)
+        .join("、");
 </script>
 
 <template>
@@ -104,6 +97,7 @@ const formatTimeSlot = (section) =>
                     id="date"
                     :value="date"
                     type="date"
+                    :min="today"
                     class="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900"
                     @input="emit('update:date', $event.target.value)"
                 />
@@ -136,7 +130,7 @@ const formatTimeSlot = (section) =>
                             已選時段（{{ selectedSections.length }}）
                         </p>
                         <p class="mt-1">
-                            {{ selectedSections[0].date }}
+                            {{ selectedDatesLabel(selectedSections) }}
                         </p>
                     </div>
                     <button
@@ -159,6 +153,7 @@ const formatTimeSlot = (section) =>
                         @click="emit('remove-selected', section)"
                     >
                         {{ formatTimeSlot(section) }}
+                        <span class="text-blue-500">{{ section.date }}</span>
                         <span class="text-sm leading-none">×</span>
                     </button>
                 </div>

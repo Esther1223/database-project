@@ -30,12 +30,15 @@ class StoreReservationRequest extends FormRequest
         return [
             'room_id' => ['required', 'exists:rooms,id'],
             'section_id' => ['nullable', 'exists:room_sections,id'],
-            'date' => ['required_without_all:section_id,dates', 'date_format:Y-m-d'],
-            'dates' => ['required_without_all:section_id,date', 'array', 'min:1'],
+            'date' => ['required_without_all:section_id,dates,selected_slots', 'date_format:Y-m-d'],
+            'dates' => ['required_without_all:section_id,date,selected_slots', 'array', 'min:1'],
             'dates.*' => ['date_format:Y-m-d'],
-            'time_slot_id' => ['required_without_all:section_id,time_slot_ids', 'exists:time_slots,time_slot_id'],
-            'time_slot_ids' => ['required_without_all:section_id,time_slot_id', 'array', 'min:1'],
+            'time_slot_id' => ['required_without_all:section_id,time_slot_ids,selected_slots', 'exists:time_slots,time_slot_id'],
+            'time_slot_ids' => ['required_without_all:section_id,time_slot_id,selected_slots', 'array', 'min:1'],
             'time_slot_ids.*' => ['string', 'distinct', 'exists:time_slots,time_slot_id'],
+            'selected_slots' => ['required_without_all:section_id,time_slot_id,time_slot_ids', 'array', 'min:1'],
+            'selected_slots.*.date' => ['required_with:selected_slots', 'date_format:Y-m-d'],
+            'selected_slots.*.time_slot_id' => ['required_with:selected_slots', 'string', 'exists:time_slots,time_slot_id'],
         ];
     }
 
@@ -59,46 +62,51 @@ class StoreReservationRequest extends FormRequest
                 }
 
                 if (! $room->isBookableBy($user)) {
-                    $validator->errors()->add('room_id', '僅可借用所屬單位或非單位空間。');
+                    $validator->errors()->add('room_id', '僅可借用所屬單位或白名單開放的空間。');
 
                     return;
                 }
             }
 
-            if ($this->filled('time_slot_ids')) {
-                $timeSlotIds = array_values(array_unique($this->input('time_slot_ids', [])));
-                $dates = $this->input('dates') ?? [(string) $this->input('date')];
+            $now = now();
 
-                foreach ($dates as $date) {
-                    foreach ($timeSlotIds as $timeSlotId) {
-                        $timeSlot = TimeSlot::where('time_slot_id', $timeSlotId)->first();
+            if ($this->filled('selected_slots') || $this->filled('time_slot_ids')) {
+                foreach ($this->selectedSlotsForValidation() as $slot) {
+                    $timeSlotId = $slot['time_slot_id'];
+                    $date = $slot['date'];
+                    $timeSlot = TimeSlot::where('time_slot_id', $timeSlotId)->first();
 
-                        if ($timeSlot?->status === 'disable') {
-                            $validator->errors()->add('time_slot_ids', '選擇的時段包含已停用時段。');
+                    if ($timeSlot?->status === 'disable') {
+                        $validator->errors()->add('time_slot_ids', '選擇的時段包含已停用時段。');
 
-                            return;
-                        }
+                        return;
+                    }
 
-                        $timeRange = $this->timeRangeForSlot($timeSlotId);
+                    $timeRange = $this->timeRangeForSlot($timeSlotId);
 
-                        if ($timeRange === null) {
-                            $validator->errors()->add('time_slot_ids', '預約時段格式錯誤。');
+                    if ($timeRange === null) {
+                        $validator->errors()->add('time_slot_ids', '預約時段格式錯誤。');
 
-                            return;
-                        }
+                        return;
+                    }
 
-                        $startTime = Carbon::parse("{$date} {$timeRange[0]}");
-                        $endTime = Carbon::parse("{$date} {$timeRange[1]}");
+                    $startTime = Carbon::parse("{$date} {$timeRange[0]}");
+                    $endTime = Carbon::parse("{$date} {$timeRange[1]}");
 
-                        if ($endTime->lessThanOrEqualTo($startTime)) {
-                            $endTime->addDay();
-                        }
+                    if ($endTime->lessThanOrEqualTo($startTime)) {
+                        $endTime->addDay();
+                    }
 
-                        if ($startTime->diffInMinutes($endTime, false) < 60) {
-                            $validator->errors()->add('time_slot_ids', '預約時間最少需要 1 小時。');
+                    if ($startTime->lessThanOrEqualTo($now)) {
+                        $validator->errors()->add('time_slot_ids', '不可預約現在以前的時段。');
 
-                            return;
-                        }
+                        return;
+                    }
+
+                    if ($startTime->diffInMinutes($endTime, false) < 60) {
+                        $validator->errors()->add('time_slot_ids', '預約時間最少需要 1 小時。');
+
+                        return;
                     }
                 }
 
@@ -151,10 +159,47 @@ class StoreReservationRequest extends FormRequest
                 $endTime->addDay();
             }
 
+            if ($startTime->lessThanOrEqualTo($now)) {
+                $validator->errors()->add('time_slot_id', '不可預約現在以前的時段。');
+
+                return;
+            }
+
             if ($startTime->diffInMinutes($endTime, false) < 60) {
                 $validator->errors()->add('section_id', '預約時間最少需要 1 小時。');
             }
         });
+    }
+
+    /**
+     * @return array<int, array{date: string, time_slot_id: string}>
+     */
+    private function selectedSlotsForValidation(): array
+    {
+        if ($this->filled('selected_slots')) {
+            return collect($this->input('selected_slots', []))
+                ->map(fn (array $slot): array => [
+                    'date' => (string) ($slot['date'] ?? ''),
+                    'time_slot_id' => (string) ($slot['time_slot_id'] ?? ''),
+                ])
+                ->unique(fn (array $slot): string => $slot['date'].'|'.$slot['time_slot_id'])
+                ->values()
+                ->all();
+        }
+
+        $dates = $this->input('dates') ?? [(string) $this->input('date')];
+        $timeSlotIds = array_values(array_unique($this->input('time_slot_ids', [])));
+
+        return collect($dates)
+            ->flatMap(fn (string $date): array => collect($timeSlotIds)
+                ->map(fn (string $timeSlotId): array => [
+                    'date' => $date,
+                    'time_slot_id' => $timeSlotId,
+                ])
+                ->all())
+            ->unique(fn (array $slot): string => $slot['date'].'|'.$slot['time_slot_id'])
+            ->values()
+            ->all();
     }
 
     /**
