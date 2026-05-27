@@ -7,6 +7,7 @@ import AuthenticatedLayout from "../../Layouts/AuthenticatedLayout.vue";
 const summary = ref(null);
 const loading = ref(true);
 const errorMessage = ref("");
+const upcomingDetail = ref(null);
 
 const todayCards = computed(() => [
     {
@@ -154,6 +155,31 @@ const approvalDecisionLabel = (decision) => {
     return labels[decision] || decision || "-";
 };
 
+const slotRangeLabel = (startValue, endValue) => {
+    if (!startValue || !endValue) return "-";
+
+    const clean = (value) =>
+        String(value).trim().replace(/(Z|[+-]\d{2}:?\d{2})$/i, "").trim();
+    const start = clean(startValue).replace(" ", "T");
+    const end = clean(endValue).replace(" ", "T");
+    const startParts = start.split("T");
+    const endParts = end.split("T");
+    const startTime = startParts[1] ? startParts[1].slice(0, 5) : "";
+    const endTime = endParts[1] ? endParts[1].slice(0, 5) : "";
+
+    if (!startTime || !endTime) return `${start} - ${end}`;
+
+    return `${startTime} - ${endTime}`;
+};
+
+const openUpcomingDetail = (reservation) => {
+    upcomingDetail.value = reservation;
+};
+
+const closeUpcomingDetail = () => {
+    upcomingDetail.value = null;
+};
+
 const loadSummary = async () => {
     loading.value = true;
     errorMessage.value = "";
@@ -232,7 +258,7 @@ onMounted(loadSummary);
                                     <a
                                         v-for="payment in summary.tasks.unpaid_orders_list"
                                         :key="payment.id"
-                                        :href="`/payments/${payment.id}`"
+                                        href="/admin/payments"
                                         class="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition hover:bg-white"
                                     >
                                         <div class="min-w-0">
@@ -271,7 +297,13 @@ onMounted(loadSummary);
                                                 {{ res.date }} · {{ formatDateTime(res.start_time) }} - {{ formatDateTime(res.end_time) }}
                                             </p>
                                         </div>
-                                        <a :href="`/reservations/${res.id}`" class="shrink-0 text-sm font-semibold text-slate-600">詳情</a>
+                                        <button
+                                            type="button"
+                                            class="shrink-0 text-sm font-semibold text-slate-600 transition hover:text-slate-950"
+                                            @click="openUpcomingDetail(res)"
+                                        >
+                                            詳情
+                                        </button>
                                     </div>
                                 </div>
                                 <p v-else class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
@@ -470,6 +502,79 @@ onMounted(loadSummary);
                         </div>
                     </div>
                 </template>
+
+                <teleport to="body">
+                    <div
+                        v-if="upcomingDetail"
+                        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-8"
+                        @click.self="closeUpcomingDetail"
+                    >
+                        <div
+                            class="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl"
+                        >
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <p class="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500">
+                                        Reservation Detail
+                                    </p>
+                                    <h3 class="mt-3 text-2xl font-semibold text-slate-950">
+                                        預約詳細資料
+                                    </h3>
+                                </div>
+                                <button
+                                    type="button"
+                                    class="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-lg font-semibold leading-none text-slate-600 transition hover:bg-slate-100"
+                                    aria-label="關閉"
+                                    @click="closeUpcomingDetail"
+                                >
+                                    ×
+                                </button>
+                            </div>
+
+                            <div class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                                <p class="text-lg font-semibold text-slate-950">
+                                    {{ upcomingDetail.room?.name || "未知教室" }}
+                                </p>
+                                <p class="mt-1">
+                                    {{ upcomingDetail.room?.type || "-" }} ·
+                                    {{ upcomingDetail.room?.building || "-" }}
+                                </p>
+                                <p class="mt-3">
+                                    狀態：{{ reservationStatusLabel(upcomingDetail.reservation_status) }}
+                                </p>
+                                <p class="mt-1">
+                                    共 {{ upcomingDetail.slots?.length || upcomingDetail.slot_count || 1 }} 個時段
+                                </p>
+                            </div>
+
+                            <div class="mt-5 overflow-hidden rounded-2xl border border-slate-200">
+                                <div class="grid grid-cols-[1fr_110px] gap-4 border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600">
+                                    <div>時段</div>
+                                    <div>狀態</div>
+                                </div>
+                                <div class="divide-y divide-slate-200">
+                                    <div
+                                        v-for="slot in upcomingDetail.slots || []"
+                                        :key="slot.id"
+                                        class="grid grid-cols-[1fr_110px] gap-4 px-4 py-3 text-sm"
+                                    >
+                                        <div class="text-slate-800">
+                                            {{
+                                                `${String(slot.date || "").replaceAll("-", "/")} ${slotRangeLabel(
+                                                    slot.start_time,
+                                                    slot.end_time,
+                                                )}`
+                                            }}
+                                        </div>
+                                        <div class="font-semibold text-slate-600">
+                                            {{ reservationStatusLabel(slot.reservation_status) }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </teleport>
             </section>
         </AuthenticatedLayout>
     </div>

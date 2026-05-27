@@ -327,22 +327,50 @@ class DashboardController extends Controller
             ->whereIn('reservation_status', ['pending', 'success'])
             ->whereBetween('start_time', [$now, $now->copy()->addDay()])
             ->orderBy('start_time')
-            ->limit(10)
             ->get()
-            ->map(fn (Reservation $reservation): array => [
-                'id' => $reservation->id,
-                'date' => $reservation->start_time?->toDateString(),
-                'start_time' => $reservation->start_time?->toDateTimeString(),
-                'end_time' => $reservation->end_time?->toDateTimeString(),
-                'room' => $reservation->room
-                    ? [
-                        'id' => $reservation->room->id,
-                        'name' => $reservation->room->name,
-                        'building' => $reservation->room->building,
-                    ]
-                    : null,
-            ])
+            ->groupBy(fn (Reservation $reservation): string => $reservation->reservation_group_id ?: (string) $reservation->id)
+            ->map(fn (Collection $group): array => $this->upcomingReservationGroupPayload($group))
+            ->sortBy('start_time')
+            ->take(10)
+            ->values()
             ->all();
+    }
+
+    private function upcomingReservationGroupPayload(Collection $group): array
+    {
+        $sorted = $group->sortBy('start_time')->values();
+        /** @var Reservation $first */
+        $first = $sorted->first();
+        /** @var Reservation $last */
+        $last = $sorted->last();
+
+        return [
+            'id' => $first->id,
+            'reservation_group_id' => $first->reservation_group_id,
+            'date' => $first->start_time?->toDateString(),
+            'start_time' => $first->start_time?->toDateTimeString(),
+            'end_time' => $last->end_time?->toDateTimeString(),
+            'reservation_status' => $this->groupStatus($sorted),
+            'slot_count' => $sorted->count(),
+            'room' => $first->room
+                ? [
+                    'id' => $first->room->id,
+                    'name' => $first->room->name,
+                    'type' => $first->room->type,
+                    'building' => $first->room->building,
+                ]
+                : null,
+            'slots' => $sorted
+                ->map(fn (Reservation $reservation): array => [
+                    'id' => $reservation->id,
+                    'date' => $reservation->reservation_date?->format('Y-m-d') ?? $reservation->start_time?->format('Y-m-d'),
+                    'time_slot_id' => $reservation->time_slot_id,
+                    'start_time' => $reservation->start_time?->toDateTimeString(),
+                    'end_time' => $reservation->end_time?->toDateTimeString(),
+                    'reservation_status' => $reservation->reservation_status,
+                ])
+                ->all(),
+        ];
     }
 
     private function groupStatus(Collection $reservations): string
