@@ -29,11 +29,6 @@ class RoomController extends Controller
 
         $query = Room::query()->orderBy('room_name');
 
-        $user = $request->user();
-        if ($user !== null) {
-            $query->bookableForUser($user);
-        }
-
         $query->when($filters['search'] !== '', function ($builder) use ($filters): void {
             $builder->where(function ($searchBuilder) use ($filters): void {
                 $searchBuilder

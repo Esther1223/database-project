@@ -47,17 +47,9 @@ class StoreReservationRequest extends FormRequest
             $user = $this->user();
             $room = Room::find($this->integer('room_id'));
 
-            if ($user !== null && $room !== null && (
-                $user->hasRole('學生') || $user->hasRole('教授') || $user->hasRole('行政人員')
-            )) {
-                if ($room->type === '實驗室') {
-                    $validator->errors()->add('room_id', '學生無法借用實驗室空間。');
-
-                    return;
-                }
-
+            if ($user !== null && $room !== null) {
                 if (! $room->isBookableBy($user)) {
-                    $validator->errors()->add('room_id', '僅可借用所屬單位或白名單開放的空間。');
+                    $validator->errors()->add('room_id', '此角色無法借用該空間類型，或該空間未開放給所屬 Afflication。');
 
                     return;
                 }

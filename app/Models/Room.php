@@ -122,6 +122,12 @@ class Room extends Model
                                 ->orWhereHas('openAfflications', fn (Builder $query) => $query->where('afflications.id', $user->afflication_id));
                         });
                 });
+        })->where(function (Builder $builder) use ($user): void {
+            $allowedTypes = $this->bookableRoomTypesFor($user);
+
+            if ($allowedTypes !== []) {
+                $builder->whereIn('room_type', $allowedTypes);
+            }
         });
     }
 
@@ -129,6 +135,10 @@ class Room extends Model
     {
         if ($user->isAdmin()) {
             return true;
+        }
+
+        if (! in_array($this->type, $this->bookableRoomTypesFor($user), true)) {
+            return false;
         }
 
         if ((int) $this->afflication_id === (int) $user->afflication_id) {
@@ -146,5 +156,21 @@ class Room extends Model
         return $this->openAfflications()
             ->where('afflications.id', $user->afflication_id)
             ->exists();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function bookableRoomTypesFor(User $user): array
+    {
+        if ($user->hasRole('學生')) {
+            return ['教室', '會議室'];
+        }
+
+        if ($user->hasRole('教授') || $user->hasRole('行政人員')) {
+            return ['教室', '會議室', '實驗室'];
+        }
+
+        return [];
     }
 }
