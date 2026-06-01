@@ -22,7 +22,9 @@ const todayCards = computed(() =>
             label: "待審核",
             value: summary.value?.today?.pending,
             tone: "text-amber-700",
-            show: permissions.value.can_reserve || permissions.value.can_review_approvals,
+            show:
+                permissions.value.can_reserve ||
+                permissions.value.can_review_approvals,
         },
         {
             label: "已核准",
