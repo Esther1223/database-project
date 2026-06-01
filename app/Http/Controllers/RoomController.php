@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Room\StoreRoomRequest;
 use App\Http\Requests\Room\UpdateRoomRequest;
 use App\Models\Afflication;
+use App\Models\Reservation;
 use App\Models\Room;
 use App\Models\TimeSlot;
 use Illuminate\Http\JsonResponse;
@@ -110,13 +111,26 @@ class RoomController extends Controller
             ->where('date', $selectedDate)
             ->get()
             ->keyBy('time_slot_id');
+        $pendingTimeSlotIds = Reservation::query()
+            ->where('user_id', $request->user()?->id)
+            ->where('room_id', $room->id)
+            ->whereDate('reservation_date', $selectedDate)
+            ->where('reservation_status', 'pending')
+            ->pluck('time_slot_id')
+            ->map(fn ($timeSlotId): int => (int) $timeSlotId)
+            ->flip();
 
         $sections = $room->timeSlots()
             ->orderBy('period')
             ->get()
-            ->map(function (TimeSlot $timeSlot) use ($reservedSections, $room, $selectedDate): array {
+            ->map(function (TimeSlot $timeSlot) use ($reservedSections, $pendingTimeSlotIds, $room, $selectedDate): array {
                 $reservedSection = $reservedSections->get($timeSlot->id);
-                $state = $this->sectionState($reservedSection?->status, $selectedDate, $timeSlot);
+                $state = $this->sectionState(
+                    $reservedSection?->status,
+                    $selectedDate,
+                    $timeSlot,
+                    $pendingTimeSlotIds->has($timeSlot->id),
+                );
 
                 return [
                     'id' => $reservedSection?->id,
@@ -246,7 +260,7 @@ class RoomController extends Controller
         }
     }
 
-    private function sectionState(?string $sectionStatus, ?string $date = null, ?TimeSlot $timeSlot = null): string
+    private function sectionState(?string $sectionStatus, ?string $date = null, ?TimeSlot $timeSlot = null, bool $hasPendingReservation = false): string
     {
         if ($sectionStatus === 'reserved') {
             return 'reserved';
@@ -254,6 +268,10 @@ class RoomController extends Controller
 
         if ($sectionStatus === 'unavailable') {
             return 'disabled';
+        }
+
+        if ($hasPendingReservation) {
+            return 'pending';
         }
 
         if ($date !== null && $timeSlot !== null && $this->slotStartsInPast($date, $timeSlot)) {

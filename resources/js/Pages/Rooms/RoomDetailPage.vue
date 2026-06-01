@@ -121,6 +121,7 @@ watch(selectedDate, (newDate) => {
                          :class="{
                             'border-slate-200 bg-slate-50 text-slate-500': section.state === 'disabled',
                             'border-slate-200 bg-slate-50 text-slate-500': section.state === 'reserved',
+                            'border-orange-200 bg-orange-50 text-orange-900': section.state === 'pending',
                             'border-blue-100 bg-blue-50/50': section.state === 'available'
                         }">
                         
@@ -134,6 +135,9 @@ watch(selectedDate, (newDate) => {
                             
                             <span v-else-if="section.state === 'reserved'"
                                 class="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-500">已被預約</span>
+
+                            <span v-else-if="section.state === 'pending'"
+                                class="rounded-full bg-orange-100 px-3 py-1 text-xs font-bold text-orange-700">審核中</span>
 
                             <span v-else-if="section.state === 'expired'"
                                 class="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-500">已過時</span>

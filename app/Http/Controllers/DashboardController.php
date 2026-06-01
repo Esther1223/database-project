@@ -27,9 +27,9 @@ class DashboardController extends Controller
         $user = $request->user();
         $roles = $user->roles()->pluck('role_type')->values()->all();
 
-        $canViewOperations = $this->hasAnyRole($roles, ['管理員', '行政人員']);
-        $canReviewApprovals = $this->hasAnyRole($roles, ['管理員', '行政人員']);
-        $canViewRevenue = $this->hasAnyRole($roles, ['管理員', '行政人員']);
+        $canViewOperations = $this->hasAnyRole($roles, ['行政人員']);
+        $canReviewApprovals = $this->hasAnyRole($roles, ['行政人員']);
+        $canViewRevenue = $this->hasAnyRole($roles, ['行政人員']);
         $canViewManagementStats = $canViewOperations;
         $canManageUsers = in_array('管理員', $roles, true);
 
@@ -380,6 +380,14 @@ class DashboardController extends Controller
                     'start_time' => $reservation->start_time?->toDateTimeString(),
                     'end_time' => $reservation->end_time?->toDateTimeString(),
                     'reservation_status' => $reservation->reservation_status,
+                    'room' => $reservation->room
+                        ? [
+                            'id' => $reservation->room->id,
+                            'name' => $reservation->room->name,
+                            'type' => $reservation->room->type,
+                            'building' => $reservation->room->building,
+                        ]
+                        : null,
                 ])
                 ->all(),
         ];

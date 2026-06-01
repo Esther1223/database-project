@@ -51,15 +51,27 @@ const today = (() => {
     return `${year}-${month}-${day}`;
 })();
 
-const formatTimeSlot = (section) =>
-    section?.time_slot?.label ||
-    section?.time_slot?.period ||
-    "-";
+const formatTimeSlot = (section) => {
+    if (section?.time_slot?.label) return section.time_slot.label;
+
+    const period = section?.time_slot?.period;
+    if (period === null || period === undefined) return "-";
+
+    const startHour = Number(period);
+    const endHour = startHour + 1;
+    const pad = (n) => String(n).padStart(2, "0");
+
+    return `${pad(startHour)}:00 - ${pad(endHour)}:00`;
+};
 
 const selectedDatesLabel = (sections) =>
     [...new Set(sections.map((section) => section.date))]
         .filter(Boolean)
         .join("、");
+
+const sectionRoomLabel = (section) =>
+    [section.room_name, section.room_building].filter(Boolean).join(" · ") ||
+    "已選空間";
 </script>
 
 <template>
@@ -152,6 +164,7 @@ const selectedDatesLabel = (sections) =>
                         class="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white px-3 py-1 text-xs font-semibold text-blue-800"
                         @click="emit('remove-selected', section)"
                     >
+                        {{ sectionRoomLabel(section) }}
                         {{ formatTimeSlot(section) }}
                         <span class="text-blue-500">{{ section.date }}</span>
                         <span class="text-sm leading-none">×</span>

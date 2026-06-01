@@ -41,6 +41,7 @@ const orderedSlots = computed(() => {
 const counts = computed(() => ({
     available: orderedSlots.value.filter((slot) => slot.state === 'available').length,
     reserved: orderedSlots.value.filter((slot) => slot.state === 'reserved').length,
+    pending: orderedSlots.value.filter((slot) => slot.state === 'pending').length,
 }));
 
 const loadSlots = async () => {
@@ -110,7 +111,7 @@ watch([selectedRoomId, selectedDate], loadSlots, { immediate: true });
                 </div>
             </div>
 
-            <div class="grid gap-4 md:grid-cols-2">
+            <div class="grid gap-4 md:grid-cols-3">
                 <div class="rounded-[2rem] border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
                     <p class="text-sm text-emerald-700">可借用</p>
                     <p class="mt-2 text-3xl font-semibold text-emerald-950">{{ counts.available }}</p>
@@ -119,6 +120,11 @@ watch([selectedRoomId, selectedDate], loadSlots, { immediate: true });
                 <div class="rounded-[2rem] border border-amber-200 bg-amber-50 p-5 shadow-sm">
                     <p class="text-sm text-amber-700">已預約</p>
                     <p class="mt-2 text-3xl font-semibold text-amber-950">{{ counts.reserved }}</p>
+                </div>
+
+                <div class="rounded-[2rem] border border-orange-200 bg-orange-50 p-5 shadow-sm">
+                    <p class="text-sm text-orange-700">審核中</p>
+                    <p class="mt-2 text-3xl font-semibold text-orange-950">{{ counts.pending }}</p>
                 </div>
             </div>
 
@@ -134,6 +140,7 @@ watch([selectedRoomId, selectedDate], loadSlots, { immediate: true });
                     <div class="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
                         <span class="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">可借用</span>
                         <span class="rounded-full bg-amber-100 px-3 py-1 text-amber-700">已預約</span>
+                        <span class="rounded-full bg-orange-100 px-3 py-1 text-orange-700">審核中</span>
                         <span class="rounded-full bg-slate-200 px-3 py-1 text-slate-500">不可借用</span>
                     </div>
                 </div>

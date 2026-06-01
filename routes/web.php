@@ -30,11 +30,6 @@ Route::middleware(['auth', 'role:管理員'])->prefix('admin')->name('admin.')->
     Route::put('/afflications/{afflication}', [AdminAfflicationController::class, 'update'])->name('afflications.update');
     Route::delete('/afflications/{afflication}', [AdminAfflicationController::class, 'destroy'])->name('afflications.destroy');
 
-    Route::get('/rooms', [RoomController::class, 'index'])->name('rooms.index');
-    Route::post('/rooms', [RoomController::class, 'store'])->name('rooms.store');
-    Route::put('/rooms/{room}', [RoomController::class, 'update'])->name('rooms.update');
-    Route::delete('/rooms/{room}', [RoomController::class, 'destroy'])->name('rooms.destroy');
-
     Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
     Route::post('/users', [AdminUserController::class, 'store'])->name('users.store');
     Route::put('/users/{user}', [AdminUserController::class, 'update'])->name('users.update');
@@ -44,6 +39,13 @@ Route::middleware(['auth', 'role:管理員'])->prefix('admin')->name('admin.')->
 });
 
 Route::middleware(['auth', 'role:管理員,行政人員'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/rooms', [RoomController::class, 'index'])->name('rooms.index');
+    Route::post('/rooms', [RoomController::class, 'store'])->name('rooms.store');
+    Route::put('/rooms/{room}', [RoomController::class, 'update'])->name('rooms.update');
+    Route::delete('/rooms/{room}', [RoomController::class, 'destroy'])->name('rooms.destroy');
+});
+
+Route::middleware(['auth', 'role:行政人員'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
     Route::get('/payments/list', [PaymentController::class, 'list'])->name('payments.list');
     Route::patch('/payments/{payment}/status', [PaymentController::class, 'updateStatus'])->name('payments.status');
@@ -60,11 +62,15 @@ Route::prefix('api')->group(function () {
     Route::get('/user', [AuthController::class, 'user'])->middleware('auth');
 });
 
-Route::get('/rooms/{room}/available-sections', [RoomSectionController::class, 'getAvailable']);
-Route::get('/rooms/{room}/disabled-sections', [RoomSectionController::class, 'getDisabled']);
+Route::middleware('auth')->group(function () {
+    Route::get('/rooms/{room}/available-sections', [RoomSectionController::class, 'getAvailable']);
+    Route::get('/rooms/{room}/disabled-sections', [RoomSectionController::class, 'getDisabled']);
+});
 
-Route::patch('/room-sections/{roomSection}/status', [RoomSectionController::class, 'updateAvailability']);
-Route::patch('/time-slots/{timeSlot}/status', [RoomSectionController::class, 'updateAdminDisable']);
+Route::middleware(['auth', 'role:管理員,行政人員'])->group(function () {
+    Route::patch('/room-sections/{roomSection}/status', [RoomSectionController::class, 'updateAvailability']);
+    Route::patch('/time-slots/{timeSlot}/status', [RoomSectionController::class, 'updateAdminDisable']);
+});
 
 Route::middleware('auth')->group(function () {
     Route::get('/reservations', [ReservationController::class, 'index']);
@@ -73,9 +79,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/reservations/my', [ReservationController::class, 'myReservations']);
     Route::get('/reservations/{reservation}', [ReservationController::class, 'show']);
     Route::patch('/reservations/{reservation}/cancel', [ReservationController::class, 'cancel']);
+    Route::patch('/reservations/{reservation}/cancel-single', [ReservationController::class, 'cancelSingle']);
 });
 
-Route::middleware(['auth', 'role:管理員,行政人員'])->prefix('approvals')->name('approvals.')->group(function () {
+Route::middleware(['auth', 'role:行政人員'])->prefix('approvals')->name('approvals.')->group(function () {
     Route::get('/', [ApprovalController::class, 'index'])->name('index');
     Route::get('/pending', [ApprovalController::class, 'pending'])->name('pending');
     Route::get('/history', [ApprovalController::class, 'history'])->name('history');

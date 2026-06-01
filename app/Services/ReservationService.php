@@ -33,11 +33,16 @@ class ReservationService
                 return [];
             }
 
-            $room = Room::findOrFail($data['room_id']);
+            $rooms = Room::query()
+                ->whereIn('id', collect($selectedSlots)->pluck('room_id')->unique()->values())
+                ->get()
+                ->keyBy('id');
             $reservations = [];
             $groupId = (string) Str::uuid();
 
             foreach ($selectedSlots as $slot) {
+                /** @var Room $room */
+                $room = $rooms->get($slot['room_id']) ?? Room::findOrFail($slot['room_id']);
                 $slotData = [
                     'room_id' => $room->id,
                     'date' => $slot['date'],
@@ -76,31 +81,31 @@ class ReservationService
                 $reservations[] = $reservation->fresh(['room', 'timeSlot', 'payment']);
             }
 
-            if (($reservations[0]?->reservation_status ?? null) === 'success') {
-                $this->createGroupPaymentIfNeeded($reservations);
-            }
+            $this->createGroupPaymentIfNeeded($reservations);
 
             return $reservations;
         });
     }
 
     /**
-     * @return array<int, array{date: string, time_slot_id: int}>
+     * @return array<int, array{room_id: int, date: string, time_slot_id: int}>
      */
     private function selectedSlotsFromData(array $data): array
     {
         if (! empty($data['selected_slots'] ?? [])) {
             return collect($data['selected_slots'])
                 ->map(fn (array $slot): array => [
+                    'room_id' => (int) $slot['room_id'],
                     'date' => (string) $slot['date'],
                     'time_slot_id' => (int) $slot['time_slot_id'],
                 ])
-                ->unique(fn (array $slot): string => $slot['date'].'|'.$slot['time_slot_id'])
-                ->sortBy(fn (array $slot): string => $slot['date'].' '.$slot['time_slot_id'])
+                ->unique(fn (array $slot): string => $slot['room_id'].'|'.$slot['date'].'|'.$slot['time_slot_id'])
+                ->sortBy(fn (array $slot): string => $slot['date'].' '.$slot['room_id'].' '.$slot['time_slot_id'])
                 ->values()
                 ->all();
         }
 
+        $roomId = (int) ($data['room_id'] ?? 0);
         $dates = $data['dates'] ?? [$data['date'] ?? null];
         $timeSlotIds = array_values(array_unique(array_map('intval', $data['time_slot_ids'] ?? [])));
 
@@ -108,12 +113,13 @@ class ReservationService
             ->filter()
             ->flatMap(fn (string $date): array => collect($timeSlotIds)
                 ->map(fn (int $timeSlotId): array => [
+                    'room_id' => $roomId,
                     'date' => $date,
                     'time_slot_id' => $timeSlotId,
                 ])
                 ->all())
-            ->unique(fn (array $slot): string => $slot['date'].'|'.$slot['time_slot_id'])
-            ->sortBy(fn (array $slot): string => $slot['date'].' '.$slot['time_slot_id'])
+            ->unique(fn (array $slot): string => $slot['room_id'].'|'.$slot['date'].'|'.$slot['time_slot_id'])
+            ->sortBy(fn (array $slot): string => $slot['date'].' '.$slot['room_id'].' '.$slot['time_slot_id'])
             ->values()
             ->all();
     }
@@ -189,14 +195,24 @@ class ReservationService
 
     public function cancel(Reservation $reservation): Reservation
     {
-        DB::transaction(function () use ($reservation): void {
+        return $this->cancelReservations($reservation, true);
+    }
+
+    public function cancelSingle(Reservation $reservation): Reservation
+    {
+        return $this->cancelReservations($reservation, false);
+    }
+
+    private function cancelReservations(Reservation $reservation, bool $cancelGroup): Reservation
+    {
+        DB::transaction(function () use ($reservation, $cancelGroup): void {
             $reservation->refresh();
 
             if (! in_array($reservation->reservation_status, ['pending', 'success'], true)) {
                 abort(422, '此預約目前不能取消');
             }
 
-            $reservations = $reservation->reservation_group_id
+            $reservations = $cancelGroup && $reservation->reservation_group_id
                 ? Reservation::query()
                     ->where('reservation_group_id', $reservation->reservation_group_id)
                     ->whereIn('reservation_status', ['pending', 'success'])
@@ -220,6 +236,16 @@ class ReservationService
 
             if ($reservationIds->isNotEmpty()) {
                 Payment::whereIn('reservation_id', $reservationIds)->delete();
+            }
+
+            if (! $cancelGroup && $reservation->reservation_group_id) {
+                $this->createGroupPaymentIfNeeded(
+                    Reservation::query()
+                        ->where('reservation_group_id', $reservation->reservation_group_id)
+                        ->where('reservation_status', 'success')
+                        ->get()
+                        ->all(),
+                );
             }
         });
 
@@ -286,7 +312,9 @@ class ReservationService
      */
     private function createGroupPaymentIfNeeded(array $reservations): void
     {
-        $reservations = collect($reservations)->filter();
+        $reservations = collect($reservations)
+            ->filter(fn (Reservation $reservation): bool => $reservation->reservation_status === 'success')
+            ->values();
 
         if ($reservations->isEmpty()) {
             return;

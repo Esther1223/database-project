@@ -168,6 +168,12 @@ class ApprovalController extends Controller
                 'start_time' => $reservation->start_time?->toDateTimeString(),
                 'end_time' => $reservation->end_time?->toDateTimeString(),
                 'reservation_status' => $reservation->reservation_status,
+                'room' => $reservation->room ? [
+                    'id' => $reservation->room->id,
+                    'name' => $reservation->room->name,
+                    'type' => $reservation->room->type,
+                    'building' => $reservation->room->building,
+                ] : null,
             ])
             ->all();
     }

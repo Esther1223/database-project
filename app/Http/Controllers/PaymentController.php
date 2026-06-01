@@ -117,6 +117,7 @@ class PaymentController extends Controller
                     'start_time' => $reservation->start_time?->toDateTimeString(),
                     'end_time' => $reservation->end_time?->toDateTimeString(),
                     'reservation_status' => $reservation->reservation_status,
+                    'room' => $this->roomPayload($reservation),
                 ])
                 ->values()
                 ->all(),

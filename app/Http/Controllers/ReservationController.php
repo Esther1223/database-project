@@ -64,10 +64,12 @@ class ReservationController extends Controller
             $reservations = [$this->reservationService->create($validated, Auth::id())];
         }
 
-        $status = $reservations[0]->reservation_status ?? 'success';
-        $message = $status === 'pending'
-            ? '申請已送出，等待行政人員審核'
-            : '預約成功！';
+        $statuses = collect($reservations)->pluck('reservation_status');
+        $message = $statuses->contains('pending') && $statuses->contains('success')
+            ? '部分預約成功，部分申請已送出等待行政人員審核'
+            : ($statuses->contains('pending')
+                ? '申請已送出，等待行政人員審核'
+                : '預約成功！');
 
         if (count($reservations) > 1) {
             $message = $message.' 已包含 '.count($reservations).' 個時段。';
@@ -87,6 +89,18 @@ class ReservationController extends Controller
 
         return response()->json([
             'message' => '預約已取消',
+            'data' => $reservation,
+        ]);
+    }
+
+    public function cancelSingle(Reservation $reservation): JsonResponse
+    {
+        $this->authorize('delete', $reservation);
+
+        $reservation = $this->reservationService->cancelSingle($reservation);
+
+        return response()->json([
+            'message' => '此時段已取消',
             'data' => $reservation,
         ]);
     }
@@ -181,10 +195,13 @@ class ReservationController extends Controller
         $first = $sorted->first();
         /** @var Reservation $last */
         $last = $sorted->last();
+        $actionReservation = $sorted
+            ->first(fn (Reservation $reservation): bool => in_array($reservation->reservation_status, ['pending', 'success'], true))
+            ?? $first;
         $payments = $sorted->pluck('payment')->filter();
 
         return [
-            'id' => $first->id,
+            'id' => $actionReservation->id,
             'reservation_group_id' => $first->reservation_group_id,
             'start_time' => $first->start_time?->toDateTimeString(),
             'end_time' => $last->end_time?->toDateTimeString(),
@@ -212,6 +229,12 @@ class ReservationController extends Controller
                     'start_time' => $reservation->start_time?->toDateTimeString(),
                     'end_time' => $reservation->end_time?->toDateTimeString(),
                     'reservation_status' => $reservation->reservation_status,
+                    'room' => $reservation->room ? [
+                        'id' => $reservation->room->id,
+                        'name' => $reservation->room->name,
+                        'type' => $reservation->room->type,
+                        'building' => $reservation->room->building,
+                    ] : null,
                 ])
                 ->all(),
         ];

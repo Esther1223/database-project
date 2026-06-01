@@ -46,7 +46,7 @@ class ApprovalService
                 $this->reserveRoomSections($item);
             }
 
-            $this->createGroupPaymentIfNeeded($reservations);
+            $this->createGroupPaymentIfNeeded($this->successReservationsInPaymentGroup($reservation));
 
             return $reservation->fresh(['room', 'payment']);
         });
@@ -88,6 +88,24 @@ class ApprovalService
 
         return Reservation::query()
             ->where('reservation_group_id', $reservation->reservation_group_id)
+            ->where('reservation_status', 'pending')
+            ->lockForUpdate()
+            ->get();
+    }
+
+    private function successReservationsInPaymentGroup(Reservation $reservation)
+    {
+        if (! $reservation->reservation_group_id) {
+            return Reservation::query()
+                ->whereKey($reservation->id)
+                ->where('reservation_status', 'success')
+                ->lockForUpdate()
+                ->get();
+        }
+
+        return Reservation::query()
+            ->where('reservation_group_id', $reservation->reservation_group_id)
+            ->where('reservation_status', 'success')
             ->lockForUpdate()
             ->get();
     }
@@ -144,7 +162,9 @@ class ApprovalService
 
     private function createGroupPaymentIfNeeded($reservations): void
     {
-        $reservations = collect($reservations)->filter();
+        $reservations = collect($reservations)
+            ->filter(fn (Reservation $reservation): bool => $reservation->reservation_status === 'success')
+            ->values();
 
         if ($reservations->isEmpty()) {
             return;

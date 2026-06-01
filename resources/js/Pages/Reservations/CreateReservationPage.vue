@@ -34,6 +34,8 @@ const selectedRoom = computed(() =>
 );
 
 const selectedSections = computed(() => selectedSectionsData.value);
+const roomLabel = (room) =>
+    [room?.name, room?.building].filter(Boolean).join(" · ") || "已選空間";
 
 const bookableSections = computed(() =>
     sections.value.filter((section) => isSelectableSection(section)),
@@ -78,9 +80,16 @@ const toggleSection = (section) => {
         {
             ...section,
             room_id: Number(selectedRoomId.value),
+            room_name: selectedRoom.value?.name || "",
+            room_building: selectedRoom.value?.building || "",
+            room_type: selectedRoom.value?.type || "",
             date: selectedDate.value,
         },
-    ].sort((a, b) => `${a.date} ${a.time_slot?.period ?? 0}`.localeCompare(`${b.date} ${b.time_slot?.period ?? 0}`));
+    ].sort((a, b) =>
+        `${a.date} ${a.room_name || ""} ${a.time_slot?.period ?? 0}`.localeCompare(
+            `${b.date} ${b.room_name || ""} ${b.time_slot?.period ?? 0}`,
+        ),
+    );
 };
 
 const removeSelected = (section) => {
@@ -101,6 +110,10 @@ const sectionStatusText = (section) => {
 
     if (section.status === "reserved") {
         return "已被預約";
+    }
+
+    if (section.state === "pending") {
+        return "審核中";
     }
 
     if (section.state === "expired") {
@@ -146,7 +159,7 @@ const submitReservation = async () => {
     errorMessage.value = "";
     successDialog.value = null;
 
-    if (!selectedRoomId.value || selectedSections.value.length === 0) {
+    if (selectedSections.value.length === 0) {
         errorMessage.value = "請選擇教室與時段。";
         return;
     }
@@ -155,8 +168,8 @@ const submitReservation = async () => {
 
     try {
         const payload = {
-            room_id: selectedRoomId.value,
             selected_slots: selectedSections.value.map((section) => ({
+                room_id: section.room_id,
                 date: section.date,
                 time_slot_id: section.time_slot_id,
             })),
@@ -167,17 +180,29 @@ const submitReservation = async () => {
         const created = Array.isArray(response.data.data)
             ? response.data.data
             : [response.data.data];
+        const createdStatuses = created.map((reservation) => reservation?.reservation_status);
 
         successDialog.value = {
             message: response.data.message || "預約已送出。",
-            roomName: selectedRoom.value?.name || "已選空間",
+            roomName: [
+                ...new Set(
+                    selectedSections.value.map((section) =>
+                        roomLabel({
+                            name: section.room_name,
+                            building: section.room_building,
+                        }),
+                    ),
+                ),
+            ].join("、"),
             date: [
                 ...new Set(selectedSections.value.map((section) => section.date)),
             ].join("、"),
             times: selectedSections.value.map((section) =>
-                `${section.date} ${formatTimeSlot(section)}`,
+                `${section.room_name || "已選空間"} ${section.date} ${formatTimeSlot(section)}`,
             ),
-            status: created[0]?.reservation_status || null,
+            status: createdStatuses.includes("pending")
+                ? "pending"
+                : created[0]?.reservation_status || null,
         };
         await loadSections();
         clearSelected();
@@ -194,10 +219,7 @@ const closeSuccessDialog = () => {
     successDialog.value = null;
 };
 
-watch(selectedRoomId, () => {
-    clearSelected();
-    loadSections();
-});
+watch(selectedRoomId, loadSections);
 
 watch(selectedDate, loadSections);
 
@@ -304,6 +326,8 @@ onMounted(loadSections);
                                 :class="
                                     isSelectedSection(section)
                                         ? 'border-slate-900 bg-slate-900 text-white'
+                                        : section.state === 'pending'
+                                          ? 'border-orange-200 bg-orange-50 text-orange-900'
                                         : isSelectableSection(section)
                                           ? 'border-blue-100 bg-blue-50 text-slate-900 hover:border-blue-300 hover:shadow-sm'
                                           : 'border-slate-200 bg-slate-50 text-slate-500'
@@ -321,6 +345,8 @@ onMounted(loadSections);
                                     :class="
                                         isSelectedSection(section)
                                             ? 'bg-white text-slate-900'
+                                            : section.state === 'pending'
+                                              ? 'bg-orange-100 text-orange-700'
                                             : isSelectableSection(section)
                                               ? 'bg-blue-100 text-blue-700'
                                               : 'bg-slate-200 text-slate-500'

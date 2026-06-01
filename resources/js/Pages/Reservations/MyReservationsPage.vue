@@ -60,17 +60,24 @@ const slotRangeLabel = (startValue, endValue) => {
     return `${sTime} - ${eTime}`;
 };
 
+const slotRoomLabel = (slot) =>
+    [slot?.room?.name, slot?.room?.building].filter(Boolean).join(" · ");
+
 const reservationSlotLabels = (reservation) => {
     if (!reservation.slots?.length) {
         return [slotRangeLabel(reservation.start_time, reservation.end_time)];
     }
 
     return reservation.slots.map(
-        (slot) =>
-            `${String(slot.date || "").replaceAll("-", "/")} ${slotRangeLabel(
+        (slot) => {
+            const room = slotRoomLabel(slot);
+            const dateTime = `${String(slot.date || "").replaceAll("-", "/")} ${slotRangeLabel(
                 slot.start_time,
                 slot.end_time,
-            )}`,
+            )}`;
+
+            return room ? `${room} ${dateTime}` : dateTime;
+        },
     );
 };
 
@@ -85,7 +92,16 @@ const reservationSlotSummary = (reservation) => {
 };
 
 const roomName = (reservation) =>
-    reservation.room?.name || reservation.room?.room_name || "未知空間";
+    [
+        ...new Set(
+            (reservation.slots || [])
+                .map((slot) => slot?.room?.name)
+                .filter(Boolean),
+        ),
+    ].join("、") ||
+    reservation.room?.name ||
+    reservation.room?.room_name ||
+    "未知空間";
 
 const roomType = (reservation) =>
     reservation.room?.type || reservation.room?.room_type || "-";
@@ -93,14 +109,19 @@ const roomType = (reservation) =>
 const roomBuilding = (reservation) => reservation.room?.building || "-";
 
 const canCancel = (reservation) =>
-    ["pending", "success"].includes(reservation.reservation_status);
+    (reservation?.slots?.length
+        ? reservation.slots.some((slot) => canCancelSlot(slot))
+        : ["pending", "success"].includes(reservation?.reservation_status));
 
-const openCancelDialog = (reservation) => {
+const canCancelSlot = (slot) =>
+    ["pending", "success"].includes(slot?.reservation_status);
+
+const openCancelDialog = (reservation, slot = null) => {
     if (!canCancel(reservation) || cancellingId.value !== null) {
         return;
     }
 
-    reservationToCancel.value = reservation;
+    reservationToCancel.value = { reservation, slot };
 };
 
 const closeCancelDialog = () => {
@@ -137,22 +158,28 @@ const loadReservations = async () => {
 };
 
 const cancelReservation = async () => {
-    const reservation = reservationToCancel.value;
+    const target = reservationToCancel.value;
+    const reservation = target?.reservation;
+    const slot = target?.slot;
 
     if (!canCancel(reservation) || cancellingId.value !== null) {
         return;
     }
 
-    cancellingId.value = reservation.id;
+    const cancelId = slot?.id ?? reservation.id;
+    cancellingId.value = cancelId;
     message.value = "";
     errorMessage.value = "";
 
     try {
         const response = await axios.patch(
-            `/reservations/${reservation.id}/cancel`,
+            slot
+                ? `/reservations/${slot.id}/cancel-single`
+                : `/reservations/${reservation.id}/cancel`,
         );
         message.value = response.data.message || "預約已取消。";
         reservationToCancel.value = null;
+        detailReservation.value = null;
         await loadReservations();
     } catch (error) {
         console.error("取消預約失敗：", error.response?.data || error.message);
@@ -313,7 +340,7 @@ onMounted(loadReservations);
                                     {{
                                         cancellingId === reservation.id
                                             ? "取消中..."
-                                            : "取消"
+                                            : "全部取消"
                                     }}
                                 </button>
 
@@ -386,32 +413,66 @@ onMounted(loadReservations);
                                 class="mt-5 overflow-hidden rounded-2xl border border-slate-200"
                             >
                                 <div
-                                    class="grid grid-cols-[1fr_110px] gap-4 border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600"
+                                    class="grid grid-cols-[1fr_100px_110px] gap-4 border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600"
                                 >
                                     <div>時段</div>
                                     <div>狀態</div>
+                                    <div>操作</div>
                                 </div>
                                 <div class="divide-y divide-slate-200">
                                     <div
                                         v-for="slot in detailReservation.slots || []"
                                         :key="slot.id"
-                                        class="grid grid-cols-[1fr_110px] gap-4 px-4 py-3 text-sm"
+                                        class="grid grid-cols-[1fr_100px_110px] gap-4 px-4 py-3 text-sm"
                                     >
                                         <div class="text-slate-800">
-                                            {{
-                                                `${String(slot.date || "").replaceAll("-", "/")} ${slotRangeLabel(
-                                                    slot.start_time,
-                                                    slot.end_time,
-                                                )}`
-                                            }}
+                                            <p
+                                                v-if="slotRoomLabel(slot)"
+                                                class="font-semibold text-slate-950"
+                                            >
+                                                {{ slotRoomLabel(slot) }}
+                                            </p>
+                                            <p>
+                                                {{
+                                                    `${String(slot.date || "").replaceAll("-", "/")} ${slotRangeLabel(
+                                                        slot.start_time,
+                                                        slot.end_time,
+                                                    )}`
+                                                }}
+                                            </p>
                                         </div>
                                         <div class="font-semibold text-slate-600">
                                             {{ slot.reservation_status }}
                                         </div>
+                                        <div>
+                                            <button
+                                                v-if="canCancelSlot(slot)"
+                                                type="button"
+                                                class="rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                                :disabled="cancellingId === slot.id"
+                                                @click="
+                                                    openCancelDialog(
+                                                        detailReservation,
+                                                        slot,
+                                                    )
+                                                "
+                                            >
+                                                {{
+                                                    cancellingId === slot.id
+                                                        ? "取消中..."
+                                                        : "取消"
+                                                }}
+                                            </button>
+                                            <span
+                                                v-else
+                                                class="text-sm font-medium text-slate-400"
+                                                >-</span
+                                            >
+                                        </div>
                                     </div>
                                     <div
                                         v-if="!detailReservation.slots?.length"
-                                        class="grid grid-cols-[1fr_110px] gap-4 px-4 py-3 text-sm"
+                                        class="grid grid-cols-[1fr_100px_110px] gap-4 px-4 py-3 text-sm"
                                     >
                                         <div class="text-slate-800">
                                             {{
@@ -425,6 +486,29 @@ onMounted(loadReservations);
                                             {{
                                                 detailReservation.reservation_status
                                             }}
+                                        </div>
+                                        <div>
+                                            <button
+                                                v-if="canCancel(detailReservation)"
+                                                type="button"
+                                                class="rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                                :disabled="
+                                                    cancellingId ===
+                                                    detailReservation.id
+                                                "
+                                                @click="
+                                                    openCancelDialog(
+                                                        detailReservation,
+                                                    )
+                                                "
+                                            >
+                                                取消
+                                            </button>
+                                            <span
+                                                v-else
+                                                class="text-sm font-medium text-slate-400"
+                                                >-</span
+                                            >
                                         </div>
                                     </div>
                                 </div>
@@ -468,27 +552,57 @@ onMounted(loadReservations);
                                 class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700"
                             >
                                 <p class="font-semibold text-slate-950">
-                                    {{ roomName(reservationToCancel) }}
+                                    {{
+                                        reservationToCancel.slot
+                                            ? slotRoomLabel(
+                                                  reservationToCancel.slot,
+                                              )
+                                            : roomName(
+                                                  reservationToCancel.reservation,
+                                              )
+                                    }}
                                 </p>
                                 <p class="mt-2">
                                     {{
-                                        formatDateTime(
-                                            reservationToCancel.start_time,
-                                        )
+                                        reservationToCancel.slot
+                                            ? `${String(
+                                                  reservationToCancel.slot
+                                                      .date || "",
+                                              ).replaceAll(
+                                                  "-",
+                                                  "/",
+                                              )} ${slotRangeLabel(
+                                                  reservationToCancel.slot
+                                                      .start_time,
+                                                  reservationToCancel.slot
+                                                      .end_time,
+                                              )}`
+                                            : formatDateTime(
+                                                  reservationToCancel
+                                                      .reservation.start_time,
+                                              )
                                     }}
                                 </p>
-                                <p class="mt-1 text-slate-500">
+                                <p
+                                    v-if="!reservationToCancel.slot"
+                                    class="mt-1 text-slate-500"
+                                >
                                     至
                                     {{
                                         formatDateTime(
-                                            reservationToCancel.end_time,
+                                            reservationToCancel.reservation
+                                                .end_time,
                                         )
                                     }}
                                 </p>
                             </div>
 
                             <p class="mt-4 text-sm leading-6 text-slate-600">
-                                取消後，這筆預約狀態會改為已取消；若已預約成功，該時段會重新開放。
+                                {{
+                                    reservationToCancel.slot
+                                        ? "取消後，只有這個時段會改為已取消；若已預約成功，該時段會重新開放。"
+                                        : "取消後，這筆預約底下所有可取消時段都會改為已取消；若已預約成功，時段會重新開放。"
+                                }}
                             </p>
 
                             <div

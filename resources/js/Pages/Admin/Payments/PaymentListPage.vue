@@ -108,7 +108,14 @@ const toggleStatus = async (payment) => {
     }
 };
 
-const roomName = (payment) => payment.reservation?.room?.name || "未知空間";
+const roomName = (payment) =>
+    [
+        ...new Set(
+            (payment.slots || []).map((slot) => slot?.room?.name).filter(Boolean),
+        ),
+    ].join("、") ||
+    payment.reservation?.room?.name ||
+    "未知空間";
 
 const roomInfo = (payment) => {
     const room = payment.reservation?.room;

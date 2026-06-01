@@ -16,20 +16,20 @@ const isNavOpen = ref(true);
 const isAdmin = computed(() =>
     currentUser.value?.roles?.some((role) => role.role_type === "管理員"),
 );
-const canReviewApprovals = computed(() =>
+const isStaff = computed(() =>
+    currentUser.value?.roles?.some((role) => role.role_type === "行政人員"),
+);
+const canReserve = computed(() =>
     currentUser.value?.roles?.some((role) =>
-        ["管理員", "行政人員"].includes(role.role_type),
+        ["行政人員", "教授", "學生"].includes(role.role_type),
     ),
+);
+const canManageRooms = computed(() => isAdmin.value || isStaff.value);
+const canReviewApprovals = computed(() =>
+    isStaff.value,
 );
 const canManagePayments = computed(() =>
-    currentUser.value?.roles?.some((role) =>
-        ["管理員", "行政人員"].includes(role.role_type),
-    ),
-);
-const canViewReports = computed(() =>
-    currentUser.value?.roles?.some((role) =>
-        ["管理員", "行政人員"].includes(role.role_type),
-    ),
+    isStaff.value,
 );
 
 const loadCurrentUser = async () => {
@@ -145,7 +145,7 @@ const toggleNavigation = () => {
                         單位管理
                     </a>
                     <a
-                        v-if="isAdmin"
+                        v-if="canManageRooms"
                         href="/admin/rooms"
                         class="flex items-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                     >
@@ -166,25 +166,20 @@ const toggleNavigation = () => {
                         付款管理
                     </a>
                     <a
-                        v-if="canViewReports"
-                        href="/admin/reports/reservations"
-                        class="flex items-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-                    >
-                        使用紀錄
-                    </a>
-                    <a
                         href="/rooms"
                         class="flex items-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                     >
                         空間列表
                     </a>
                     <a
+                        v-if="canReserve"
                         href="/reservations/create"
                         class="flex items-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                     >
                         建立預約
                     </a>
                     <a
+                        v-if="canReserve"
                         href="/reservations"
                         class="flex items-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                     >

@@ -19,6 +19,10 @@ const slotStyles = computed(() => {
         return 'border-slate-200 bg-slate-100 text-slate-400';
     }
 
+    if (slotState.value === 'pending') {
+        return 'border-orange-200 bg-orange-50 text-orange-950';
+    }
+
     if (slotState.value === 'expired') {
         return 'border-slate-200 bg-slate-50 text-slate-400';
     }
@@ -37,6 +41,10 @@ const slotBadgeStyles = computed(() => {
 
     if (slotState.value === 'disabled') {
         return 'bg-slate-200 text-slate-500';
+    }
+
+    if (slotState.value === 'pending') {
+        return 'bg-orange-100 text-orange-700';
     }
 
     if (slotState.value === 'expired') {
@@ -59,6 +67,10 @@ const statusLabel = computed(() => {
 
     if (slotState.value === 'disabled') {
         return '不可借用';
+    }
+
+    if (slotState.value === 'pending') {
+        return '審核中';
     }
 
     if (slotState.value === 'expired') {

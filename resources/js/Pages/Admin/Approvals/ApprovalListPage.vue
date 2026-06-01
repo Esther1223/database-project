@@ -74,6 +74,21 @@ const slotRangeLabel = (slot) => {
     return `${start} 至 ${end}`;
 };
 
+const slotRoomLabel = (slot) =>
+    [slot?.room?.name, slot?.room?.building].filter(Boolean).join(" · ");
+
+const reservationRoomsLabel = (item) =>
+    [
+        ...new Set(
+            (item?.slots || []).map((slot) => slot?.room?.name).filter(Boolean),
+        ),
+    ].join("、") ||
+    item?.room?.name ||
+    item?.room?.room_name ||
+    item?.reservation?.room?.name ||
+    item?.reservation?.room?.room_name ||
+    "未知空間";
+
 const openDetail = (item, mode) => {
     detailItem.value = item;
     detailMode.value = mode;
@@ -248,11 +263,7 @@ onMounted(loadPending);
                         >
                             <div>
                                 <p class="text-lg font-semibold text-slate-950">
-                                    {{
-                                        reservation.room?.name ||
-                                        reservation.room?.room_name ||
-                                        "未知空間"
-                                    }}
+                                    {{ reservationRoomsLabel(reservation) }}
                                 </p>
                                 <p class="mt-1 text-sm text-slate-500">
                                     {{
@@ -350,11 +361,7 @@ onMounted(loadPending);
                         >
                             <div>
                                 <p class="text-lg font-semibold text-slate-950">
-                                    {{
-                                        approval.reservation?.room?.name ||
-                                        approval.reservation?.room?.room_name ||
-                                        "未知空間"
-                                    }}
+                                    {{ reservationRoomsLabel(approval) }}
                                 </p>
                                 <p class="mt-1 text-sm text-slate-500">
                                     {{
@@ -491,7 +498,13 @@ onMounted(loadPending);
                                     class="grid grid-cols-[1fr_100px] gap-4 px-4 py-3 text-sm"
                                 >
                                     <div class="text-slate-800">
-                                        {{ slotRangeLabel(slot) }}
+                                        <p
+                                            v-if="slotRoomLabel(slot)"
+                                            class="font-semibold text-slate-950"
+                                        >
+                                            {{ slotRoomLabel(slot) }}
+                                        </p>
+                                        <p>{{ slotRangeLabel(slot) }}</p>
                                     </div>
                                     <div class="font-semibold text-slate-600">
                                         {{ statusLabel(slot.reservation_status) }}

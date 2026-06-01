@@ -175,6 +175,9 @@ const slotRangeLabel = (startValue, endValue) => {
     return `${startTime} - ${endTime}`;
 };
 
+const slotRoomLabel = (slot) =>
+    [slot?.room?.name, slot?.room?.building].filter(Boolean).join(" · ");
+
 const openUpcomingDetail = (reservation) => {
     upcomingDetail.value = reservation;
 };
@@ -793,12 +796,20 @@ onMounted(loadSummary);
                                         class="grid grid-cols-[1fr_110px] gap-4 px-4 py-3 text-sm"
                                     >
                                         <div class="text-slate-800">
-                                            {{
-                                                `${String(slot.date || "").replaceAll("-", "/")} ${slotRangeLabel(
-                                                    slot.start_time,
-                                                    slot.end_time,
-                                                )}`
-                                            }}
+                                            <p
+                                                v-if="slotRoomLabel(slot)"
+                                                class="font-semibold text-slate-950"
+                                            >
+                                                {{ slotRoomLabel(slot) }}
+                                            </p>
+                                            <p>
+                                                {{
+                                                    `${String(slot.date || "").replaceAll("-", "/")} ${slotRangeLabel(
+                                                        slot.start_time,
+                                                        slot.end_time,
+                                                    )}`
+                                                }}
+                                            </p>
                                         </div>
                                         <div
                                             class="font-semibold text-slate-600"
