@@ -225,6 +225,17 @@ class RoomController extends Controller
             'is_open_access' => (bool) $room->is_open_access,
             'open_access_all' => (bool) $room->open_access_all,
             'open_access_afflications' => $room->openAfflications()->get()->map(fn (Afflication $d): array => ['id' => $d->id, 'name' => $d->name])->values()->all(),
+            'time_slots' => $room->timeSlots()
+                ->orderBy('period')
+                ->get()
+                ->map(fn (TimeSlot $timeSlot): array => [
+                    'id' => $timeSlot->id,
+                    'period' => $timeSlot->period,
+                    'price' => $timeSlot->price,
+                    'label' => $timeSlot->label(),
+                ])
+                ->values()
+                ->all(),
             'information' => $room->information,
             'created_at' => $room->created_at?->toDateTimeString(),
             'updated_at' => $room->updated_at?->toDateTimeString(),
@@ -253,7 +264,7 @@ class RoomController extends Controller
     private function syncDefaultTimeSlots(Room $room): void
     {
         foreach (range(8, 21) as $period) {
-            $room->timeSlots()->updateOrCreate(
+            $room->timeSlots()->firstOrCreate(
                 ['period' => $period],
                 ['price' => (int) $room->hourly_rate],
             );

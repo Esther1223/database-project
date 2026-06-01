@@ -54,6 +54,9 @@ const roomSubmitting = ref(false);
 const busyKey = ref("");
 const notice = ref("");
 const showFormModal = ref(false);
+const priceModalRoom = ref(null);
+const slotPrices = reactive({});
+const slotPriceErrors = reactive({});
 
 const pageNumbers = computed(() => {
     const lastPage = props.rooms.meta.last_page || 1;
@@ -173,6 +176,57 @@ const openRoomForm = (room = null) => {
 const closeRoomForm = () => {
     showFormModal.value = false;
     resetRoomForm();
+};
+
+const openSlotPriceModal = (room) => {
+    priceModalRoom.value = room;
+    Object.keys(slotPrices).forEach((key) => delete slotPrices[key]);
+    clearErrors(slotPriceErrors);
+
+    (room.time_slots || []).forEach((slot) => {
+        slotPrices[slot.id] = slot.price ?? 0;
+    });
+};
+
+const closeSlotPriceModal = () => {
+    if (busyKey.value.startsWith("slot-price-")) {
+        return;
+    }
+
+    priceModalRoom.value = null;
+    Object.keys(slotPrices).forEach((key) => delete slotPrices[key]);
+    clearErrors(slotPriceErrors);
+};
+
+const saveSlotPrice = async (slot) => {
+    if (!slot?.id) {
+        return;
+    }
+
+    const price = Number(slotPrices[slot.id] ?? 0);
+
+    if (!Number.isInteger(price) || price < 0) {
+        slotPriceErrors[slot.id] = "價格必須是 0 以上整數";
+        return;
+    }
+
+    busyKey.value = `slot-price-${slot.id}`;
+    delete slotPriceErrors[slot.id];
+    notice.value = "";
+
+    try {
+        const response = await axios.patch(`/time-slots/${slot.id}/status`, {
+            price,
+        });
+        slot.price = response.data.data?.price ?? price;
+        slotPrices[slot.id] = slot.price;
+        notice.value = "時段價格已更新";
+    } catch (error) {
+        slotPriceErrors[slot.id] =
+            error.response?.data?.message || "時段價格更新失敗";
+    } finally {
+        busyKey.value = "";
+    }
 };
 
 const saveRoom = async () => {
@@ -317,6 +371,17 @@ const afflicationName = (room) => {
 
     return afflication?.name || "未知單位";
 };
+
+const slotPriceSummary = (room) => {
+    const prices = [
+        ...new Set((room.time_slots || []).map((slot) => Number(slot.price || 0))),
+    ];
+
+    if (prices.length === 0) return "尚未建立時段";
+    if (prices.length === 1) return `每時段 NT$ ${prices[0]}`;
+
+    return `NT$ ${Math.min(...prices)} - ${Math.max(...prices)}`;
+};
 </script>
 
 <template>
@@ -425,7 +490,7 @@ const afflicationName = (room) => {
                     class="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm"
                 >
                     <div
-                        class="grid grid-cols-[1.4fr_1fr_1fr_180px] gap-4 border-b border-slate-200 bg-slate-50 px-6 py-4 text-sm font-semibold text-slate-600"
+                        class="grid grid-cols-[1.4fr_1fr_1fr_260px] gap-4 border-b border-slate-200 bg-slate-50 px-6 py-4 text-sm font-semibold text-slate-600"
                     >
                         <div>空間資料</div>
                         <div>容量 / 費率</div>
@@ -440,7 +505,7 @@ const afflicationName = (room) => {
                         <div
                             v-for="room in rooms.data"
                             :key="room.id"
-                            class="grid grid-cols-1 gap-4 px-6 py-5 lg:grid-cols-[1.4fr_1fr_1fr_180px] lg:items-center"
+                            class="grid grid-cols-1 gap-4 px-6 py-5 lg:grid-cols-[1.4fr_1fr_1fr_260px] lg:items-center"
                         >
                             <div>
                                 <p class="text-lg font-semibold text-slate-950">
@@ -460,6 +525,9 @@ const afflicationName = (room) => {
                                 <p>容量：{{ room.capacity }} 人</p>
                                 <p class="mt-1">
                                     費率：NT$ {{ room.rate }} / 小時
+                                </p>
+                                <p class="mt-1 text-slate-500">
+                                    時段價格：{{ slotPriceSummary(room) }}
                                 </p>
                             </div>
 
@@ -504,8 +572,15 @@ const afflicationName = (room) => {
                             </div>
 
                             <div
-                                class="flex justify-start gap-2 lg:justify-end"
+                                class="flex flex-nowrap justify-start gap-2 lg:justify-end"
                             >
+                                <button
+                                    type="button"
+                                    class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                                    @click="openSlotPriceModal(room)"
+                                >
+                                    時段價格
+                                </button>
                                 <button
                                     type="button"
                                     class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
@@ -589,6 +664,107 @@ const afflicationName = (room) => {
             </section>
 
             <teleport to="body">
+                <div
+                    v-if="priceModalRoom"
+                    class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-8"
+                    @click.self="closeSlotPriceModal"
+                >
+                    <div
+                        class="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl"
+                    >
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p
+                                    class="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500"
+                                >
+                                    Time Slot Prices
+                                </p>
+                                <h3
+                                    class="mt-2 text-2xl font-semibold text-slate-950"
+                                >
+                                    {{ priceModalRoom.name }} 時段價格
+                                </h3>
+                            </div>
+                            <button
+                                type="button"
+                                class="rounded-full border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                :disabled="busyKey.startsWith('slot-price-')"
+                                @click="closeSlotPriceModal"
+                            >
+                                關閉
+                            </button>
+                        </div>
+
+                        <div
+                            class="mt-5 overflow-hidden rounded-2xl border border-slate-200"
+                        >
+                            <div
+                                class="grid grid-cols-[1fr_160px_96px] gap-4 border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600"
+                            >
+                                <div>時段</div>
+                                <div>價格</div>
+                                <div class="text-right">操作</div>
+                            </div>
+
+                            <div class="divide-y divide-slate-200">
+                                <div
+                                    v-for="slot in priceModalRoom.time_slots || []"
+                                    :key="slot.id"
+                                    class="grid grid-cols-[1fr_160px_96px] gap-4 px-4 py-3 text-sm md:items-center"
+                                >
+                                    <div>
+                                        <p class="font-semibold text-slate-950">
+                                            {{ slot.label }}
+                                        </p>
+                                        <p class="mt-1 text-xs text-slate-500">
+                                            period {{ slot.period }}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <input
+                                            v-model.number="slotPrices[slot.id]"
+                                            type="number"
+                                            min="0"
+                                            class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-slate-900"
+                                        />
+                                        <p
+                                            v-if="slotPriceErrors[slot.id]"
+                                            class="mt-1 text-xs font-semibold text-rose-700"
+                                        >
+                                            {{ slotPriceErrors[slot.id] }}
+                                        </p>
+                                    </div>
+                                    <div class="text-right">
+                                        <button
+                                            type="button"
+                                            class="rounded-xl border border-slate-900 bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                            :disabled="
+                                                busyKey ===
+                                                `slot-price-${slot.id}`
+                                            "
+                                            @click="saveSlotPrice(slot)"
+                                        >
+                                            {{
+                                                busyKey ===
+                                                `slot-price-${slot.id}`
+                                                    ? "儲存中"
+                                                    : "儲存"
+                                            }}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div
+                                    v-if="!priceModalRoom.time_slots?.length"
+                                    class="px-4 py-10 text-center text-sm text-slate-500"
+                                >
+                                    尚未建立時段資料。
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div
                     v-if="showFormModal"
                     class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-8"
