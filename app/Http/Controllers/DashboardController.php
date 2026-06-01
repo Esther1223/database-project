@@ -64,8 +64,12 @@ class DashboardController extends Controller
                     ? Payment::where('payment_status', 'unpaid')->count()
                     : $this->scopedUnpaidPaymentCount($reservationScope),
                 'upcoming_reservations' => (clone $personalReservationScope)
+                    ->with('timeSlot')
                     ->whereIn('reservation_status', ['pending', 'success'])
-                    ->whereBetween('start_time', [$now, $now->copy()->addDay()])
+                    ->whereDate('reservation_date', '>=', $now->toDateString())
+                    ->whereDate('reservation_date', '<=', $now->copy()->addDay()->toDateString())
+                    ->get()
+                    ->filter(fn (Reservation $reservation): bool => $reservation->start_time >= $now && $reservation->start_time <= $now->copy()->addDay())
                     ->count(),
                 // Provide lists for frontend display
                 'unpaid_orders_list' => $this->unpaidOrdersList($reservationScope, $canViewRevenue),
@@ -77,7 +81,8 @@ class DashboardController extends Controller
             'month' => [
                 'borrow_count' => $canViewManagementStats
                     ? (clone $reservationScope)
-                        ->whereBetween('start_time', [$monthStart, $monthEnd])
+                        ->whereDate('reservation_date', '>=', $monthStart->toDateString())
+                        ->whereDate('reservation_date', '<=', $monthEnd->toDateString())
                         ->count()
                     : null,
                 'revenue' => $canViewRevenue
@@ -123,7 +128,9 @@ class DashboardController extends Controller
     private function paymentAmountForMonth(Carbon $monthStart, Carbon $monthEnd, ?string $status = null): int
     {
         return (int) Payment::query()
-            ->whereHas('reservation', fn (Builder $query) => $query->whereBetween('start_time', [$monthStart, $monthEnd]))
+            ->whereHas('reservation', fn (Builder $query) => $query
+                ->whereDate('reservation_date', '>=', $monthStart->toDateString())
+                ->whereDate('reservation_date', '<=', $monthEnd->toDateString()))
             ->when($status, fn (Builder $query, string $status) => $query->where('payment_status', $status))
             ->sum('amount');
     }
@@ -142,7 +149,8 @@ class DashboardController extends Controller
     {
         $row = (clone $reservationScope)
             ->selectRaw('room_id, COUNT(*) as borrow_count')
-            ->whereBetween('start_time', [$monthStart, $monthEnd])
+            ->whereDate('reservation_date', '>=', $monthStart->toDateString())
+            ->whereDate('reservation_date', '<=', $monthEnd->toDateString())
             ->groupBy('room_id')
             ->orderByDesc('borrow_count')
             ->first();
@@ -165,7 +173,7 @@ class DashboardController extends Controller
     private function recentReservations(Builder $reservationScope): array
     {
         return (clone $reservationScope)
-            ->with(['room', 'user'])
+            ->with(['room', 'user', 'timeSlot'])
             ->latest('created_at')
             ->limit(50)
             ->get()
@@ -207,7 +215,7 @@ class DashboardController extends Controller
 
     private function recentReservationGroupPayload(Collection $group): array
     {
-        $sorted = $group->sortBy('start_time')->values();
+        $sorted = $group->sortBy(fn (Reservation $reservation): string => $reservation->start_time?->toDateTimeString() ?? '')->values();
         /** @var Reservation $first */
         $first = $sorted->first();
         /** @var Reservation $last */
@@ -273,7 +281,7 @@ class DashboardController extends Controller
     {
         return (clone $reservationScope)
             ->selectRaw('room_id, COUNT(*) as borrow_count')
-            ->where('start_time', '>=', now()->copy()->subDays(30))
+            ->whereDate('reservation_date', '>=', now()->copy()->subDays(30)->toDateString())
             ->groupBy('room_id')
             ->orderByDesc('borrow_count')
             ->limit(5)
@@ -296,7 +304,7 @@ class DashboardController extends Controller
     {
         $reservationIds = (clone $reservationScope)->select('id');
 
-        $payments = Payment::with(['reservation.room'])
+        $payments = Payment::with(['reservation.room', 'reservation.timeSlot'])
             ->where('payment_status', 'unpaid')
             ->when(! $canViewRevenue, fn ($query) => $query->whereIn('reservation_id', $reservationIds))
             ->latest('created_at')
@@ -324,10 +332,14 @@ class DashboardController extends Controller
     {
         return (clone $reservationScope)
             ->with('room')
+            ->with('timeSlot')
             ->whereIn('reservation_status', ['pending', 'success'])
-            ->whereBetween('start_time', [$now, $now->copy()->addDay()])
-            ->orderBy('start_time')
+            ->whereDate('reservation_date', '>=', $now->toDateString())
+            ->whereDate('reservation_date', '<=', $now->copy()->addDay()->toDateString())
+            ->orderBy('reservation_date')
+            ->orderBy('time_slot_id')
             ->get()
+            ->filter(fn (Reservation $reservation): bool => $reservation->start_time >= $now && $reservation->start_time <= $now->copy()->addDay())
             ->groupBy(fn (Reservation $reservation): string => $reservation->reservation_group_id ?: (string) $reservation->id)
             ->map(fn (Collection $group): array => $this->upcomingReservationGroupPayload($group))
             ->sortBy('start_time')
@@ -338,7 +350,7 @@ class DashboardController extends Controller
 
     private function upcomingReservationGroupPayload(Collection $group): array
     {
-        $sorted = $group->sortBy('start_time')->values();
+        $sorted = $group->sortBy(fn (Reservation $reservation): string => $reservation->start_time?->toDateTimeString() ?? '')->values();
         /** @var Reservation $first */
         $first = $sorted->first();
         /** @var Reservation $last */

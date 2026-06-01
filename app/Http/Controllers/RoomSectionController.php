@@ -52,20 +52,18 @@ class RoomSectionController extends Controller
     public function updateAdminDisable(Request $request, TimeSlot $timeSlot): JsonResponse
     {
         $validated = $request->validate([
-            'status' => 'required|in:enable,disable',
+            'price' => ['required', 'integer', 'min:0'],
         ]);
 
-        $timeSlot->update(['status' => $validated['status']]);
-
-        $statusText = $validated['status'] === 'enable' ? '啟用' : '停用';
+        $timeSlot->update(['price' => $validated['price']]);
 
         return response()->json([
-            'message' => "全域時段 {$timeSlot->time_slot_id} 已成功 {$statusText}",
+            'message' => '時段價格已更新',
             'data' => [
                 'id' => $timeSlot->id,
-                'time_slot_id' => $timeSlot->time_slot_id,
-                'status' => $timeSlot->fresh()->status,
-                'label' => $this->formatTimeSlotLabel($timeSlot->time_slot_id),
+                'period' => $timeSlot->period,
+                'price' => $timeSlot->fresh()->price,
+                'label' => $timeSlot->label(),
             ],
         ]);
     }
@@ -90,42 +88,42 @@ class RoomSectionController extends Controller
             ->get()
             ->keyBy('time_slot_id');
 
-        return TimeSlot::query()
-            ->orderByRaw('CAST(time_slot_id AS UNSIGNED)')
+        return $room->timeSlots()
+            ->orderBy('period')
             ->get()
             ->map(function (TimeSlot $timeSlot) use ($reservedSections, $room, $selectedDate): array {
-                $reservedSection = $reservedSections->get($timeSlot->time_slot_id);
-                $state = $this->sectionState($timeSlot->status, $reservedSection?->status, $selectedDate, $timeSlot->time_slot_id);
+                $reservedSection = $reservedSections->get($timeSlot->id);
+                $state = $this->sectionState($reservedSection?->status, $selectedDate, $timeSlot);
 
                 return [
                     'id' => $reservedSection?->id,
                     'room_id' => $room->id,
                     'date' => $selectedDate,
-                    'time_slot_id' => $timeSlot->time_slot_id,
+                    'time_slot_id' => $timeSlot->id,
                     'status' => $reservedSection?->status ?? 'available',
                     'state' => $state,
                     'is_bookable' => $state === 'available',
                     'time_slot' => [
                         'id' => $timeSlot->id,
-                        'time_slot_id' => $timeSlot->time_slot_id,
-                        'status' => $timeSlot->status,
-                        'label' => $this->formatTimeSlotLabel($timeSlot->time_slot_id),
+                        'period' => $timeSlot->period,
+                        'price' => $timeSlot->price,
+                        'label' => $timeSlot->label(),
                     ],
                 ];
             });
     }
 
-    private function sectionState(?string $timeSlotStatus, ?string $sectionStatus, ?string $date = null, ?string $timeSlotId = null): string
+    private function sectionState(?string $sectionStatus, ?string $date = null, ?TimeSlot $timeSlot = null): string
     {
-        if ($timeSlotStatus === 'disable') {
-            return 'disabled';
-        }
-
         if ($sectionStatus === 'reserved') {
             return 'reserved';
         }
 
-        if ($date !== null && $timeSlotId !== null && $this->slotStartsInPast($date, $timeSlotId)) {
+        if ($sectionStatus === 'unavailable') {
+            return 'disabled';
+        }
+
+        if ($date !== null && $timeSlot !== null && $this->slotStartsInPast($date, $timeSlot)) {
             return 'expired';
         }
 
@@ -139,7 +137,7 @@ class RoomSectionController extends Controller
     {
         $timeSlot = $section->timeSlot;
         $date = Carbon::parse($section->date)->format('Y-m-d');
-        $state = $this->sectionState($timeSlot?->status, $section->status, $date, $section->time_slot_id);
+        $state = $this->sectionState($section->status, $date, $timeSlot);
 
         return [
             'id' => $section->id,
@@ -151,46 +149,15 @@ class RoomSectionController extends Controller
             'is_bookable' => $state === 'available',
             'time_slot' => $timeSlot === null ? null : [
                 'id' => $timeSlot->id,
-                'time_slot_id' => $timeSlot->time_slot_id,
-                'status' => $timeSlot->status,
-                'label' => $this->formatTimeSlotLabel($timeSlot->time_slot_id),
+                'period' => $timeSlot->period,
+                'price' => $timeSlot->price,
+                'label' => $timeSlot->label(),
             ],
         ];
     }
 
-    private function formatTimeSlotLabel(string $timeSlotId): string
+    private function slotStartsInPast(string $date, TimeSlot $timeSlot): bool
     {
-        if (ctype_digit($timeSlotId)) {
-            $startHour = (int) $timeSlotId;
-            $endHour = $startHour + 1;
-
-            return sprintf('%02d:00 - %02d:00', $startHour % 24, $endHour % 24);
-        }
-
-        if (preg_match('/^TS_(\d{2})00$/', $timeSlotId, $matches) !== 1) {
-            return $timeSlotId;
-        }
-
-        $startHour = 8 + (int) $matches[1];
-        $endHour = $startHour + 1;
-
-        return sprintf('%02d:00 - %02d:00', $startHour % 24, $endHour % 24);
-    }
-
-    private function slotStartsInPast(string $date, string $timeSlotId): bool
-    {
-        $startHour = null;
-
-        if (ctype_digit($timeSlotId)) {
-            $startHour = (int) $timeSlotId;
-        } elseif (preg_match('/^TS_(\d{2})00$/', $timeSlotId, $matches) === 1) {
-            $startHour = 8 + (int) $matches[1];
-        }
-
-        if ($startHour === null) {
-            return false;
-        }
-
-        return Carbon::parse(sprintf('%s %02d:00:00', $date, $startHour % 24))->lessThanOrEqualTo(now());
+        return Carbon::parse(sprintf('%s %02d:00:00', $date, $timeSlot->period))->lessThanOrEqualTo(now());
     }
 }

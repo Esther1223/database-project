@@ -33,9 +33,10 @@ class ApprovalController extends Controller
     {
         $this->authorize('approve', new Reservation);
 
-        $reservations = Reservation::with(['room', 'approval', 'user'])
+        $reservations = Reservation::with(['room', 'approval', 'user', 'timeSlot'])
             ->where('reservation_status', 'pending')
-            ->latest('start_time')
+            ->latest('reservation_date')
+            ->latest('time_slot_id')
             ->get()
             ->groupBy(fn (Reservation $reservation): string => $reservation->reservation_group_id ?: (string) $reservation->id)
             ->map(fn (Collection $group): array => $this->reservationGroupPayload($group))
@@ -93,7 +94,7 @@ class ApprovalController extends Controller
 
     private function reservationGroupPayload(Collection $group): array
     {
-        $sorted = $group->sortBy('start_time')->values();
+        $sorted = $group->sortBy(fn (Reservation $reservation): string => $reservation->start_time?->toDateTimeString() ?? '')->values();
         /** @var Reservation $first */
         $first = $sorted->first();
         /** @var Reservation $last */
@@ -119,13 +120,14 @@ class ApprovalController extends Controller
         $firstApproval = $group->sortByDesc('decision_time')->first();
         $reservation = $firstApproval->reservation;
         $reservations = $reservation
-            ? Reservation::with(['room', 'user'])
+            ? Reservation::with(['room', 'user', 'timeSlot'])
                 ->when(
                     $reservation->reservation_group_id,
                     fn ($query) => $query->where('reservation_group_id', $reservation->reservation_group_id),
                     fn ($query) => $query->whereKey($reservation->id),
                 )
-                ->orderBy('start_time')
+                ->orderBy('reservation_date')
+                ->orderBy('time_slot_id')
                 ->get()
             : collect();
 
@@ -133,7 +135,7 @@ class ApprovalController extends Controller
             $reservations = collect([$reservation]);
         }
 
-        $sortedReservations = $reservations->sortBy('start_time')->values();
+        $sortedReservations = $reservations->sortBy(fn (Reservation $reservation): string => $reservation->start_time?->toDateTimeString() ?? '')->values();
         $firstReservation = $sortedReservations->first();
         $lastReservation = $sortedReservations->last();
 

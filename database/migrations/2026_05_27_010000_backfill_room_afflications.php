@@ -10,18 +10,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        $fallbackDepartmentId = DB::table('departments')
+        $fallbackAfflicationId = DB::table('afflications')
             ->where('name', '總務處')
             ->value('id')
-            ?? DB::table('departments')->orderBy('id')->value('id');
+            ?? DB::table('afflications')->orderBy('id')->value('id');
 
-        if ($fallbackDepartmentId === null) {
+        if ($fallbackAfflicationId === null) {
             return;
         }
 
         DB::table('rooms')
-            ->whereNull('department_id')
-            ->update(['department_id' => $fallbackDepartmentId]);
+            ->whereNull('afflication_id')
+            ->update(['afflication_id' => $fallbackAfflicationId]);
     }
 
     /**

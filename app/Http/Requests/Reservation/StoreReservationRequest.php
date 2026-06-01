@@ -12,17 +12,12 @@ use Illuminate\Validation\Validator;
 
 class StoreReservationRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return $this->user()?->can('create', Reservation::class) ?? false;
     }
 
     /**
-     * Get the validation rules that apply to the request.
-     *
      * @return array<string, array<int, string>>
      */
     public function rules(): array
@@ -33,12 +28,12 @@ class StoreReservationRequest extends FormRequest
             'date' => ['required_without_all:section_id,dates,selected_slots', 'date_format:Y-m-d'],
             'dates' => ['required_without_all:section_id,date,selected_slots', 'array', 'min:1'],
             'dates.*' => ['date_format:Y-m-d'],
-            'time_slot_id' => ['required_without_all:section_id,time_slot_ids,selected_slots', 'exists:time_slots,time_slot_id'],
+            'time_slot_id' => ['required_without_all:section_id,time_slot_ids,selected_slots', 'integer', 'exists:time_slots,id'],
             'time_slot_ids' => ['required_without_all:section_id,time_slot_id,selected_slots', 'array', 'min:1'],
-            'time_slot_ids.*' => ['string', 'distinct', 'exists:time_slots,time_slot_id'],
+            'time_slot_ids.*' => ['integer', 'distinct', 'exists:time_slots,id'],
             'selected_slots' => ['required_without_all:section_id,time_slot_id,time_slot_ids', 'array', 'min:1'],
             'selected_slots.*.date' => ['required_with:selected_slots', 'date_format:Y-m-d'],
-            'selected_slots.*.time_slot_id' => ['required_with:selected_slots', 'string', 'exists:time_slots,time_slot_id'],
+            'selected_slots.*.time_slot_id' => ['required_with:selected_slots', 'integer', 'exists:time_slots,id'],
         ];
     }
 
@@ -68,43 +63,27 @@ class StoreReservationRequest extends FormRequest
                 }
             }
 
+            if ($room === null) {
+                return;
+            }
+
             $now = now();
 
             if ($this->filled('selected_slots') || $this->filled('time_slot_ids')) {
                 foreach ($this->selectedSlotsForValidation() as $slot) {
-                    $timeSlotId = $slot['time_slot_id'];
-                    $date = $slot['date'];
-                    $timeSlot = TimeSlot::where('time_slot_id', $timeSlotId)->first();
+                    $timeSlot = TimeSlot::query()
+                        ->whereKey($slot['time_slot_id'])
+                        ->where('room_id', $room->id)
+                        ->first();
 
-                    if ($timeSlot?->status === 'disable') {
-                        $validator->errors()->add('time_slot_ids', '選擇的時段包含已停用時段。');
-
-                        return;
-                    }
-
-                    $timeRange = $this->timeRangeForSlot($timeSlotId);
-
-                    if ($timeRange === null) {
-                        $validator->errors()->add('time_slot_ids', '預約時段格式錯誤。');
+                    if ($timeSlot === null) {
+                        $validator->errors()->add('time_slot_ids', '選擇的時段不屬於該教室。');
 
                         return;
                     }
 
-                    $startTime = Carbon::parse("{$date} {$timeRange[0]}");
-                    $endTime = Carbon::parse("{$date} {$timeRange[1]}");
-
-                    if ($endTime->lessThanOrEqualTo($startTime)) {
-                        $endTime->addDay();
-                    }
-
-                    if ($startTime->lessThanOrEqualTo($now)) {
+                    if ($this->slotStart($slot['date'], $timeSlot)->lessThanOrEqualTo($now)) {
                         $validator->errors()->add('time_slot_ids', '不可預約現在以前的時段。');
-
-                        return;
-                    }
-
-                    if ($startTime->diffInMinutes($endTime, false) < 60) {
-                        $validator->errors()->add('time_slot_ids', '預約時間最少需要 1 小時。');
 
                         return;
                     }
@@ -120,59 +99,42 @@ class StoreReservationRequest extends FormRequest
                     return;
                 }
 
-                if ($section->room_id !== $this->integer('room_id')) {
+                if ($section->room_id !== $room->id) {
                     $validator->errors()->add('section_id', '選擇的時段不屬於該教室。');
+
+                    return;
                 }
 
-                if ($section->date === null) {
-                    $validator->errors()->add('section_id', '預約日期不存在。');
+                if ($section->date === null || $section->timeSlot === null) {
+                    $validator->errors()->add('section_id', '預約時段不存在。');
+
+                    return;
                 }
 
-                if ($section->timeSlot?->status === 'disable') {
-                    $validator->errors()->add('section_id', '該時段已停用。');
-                }
-
-                $timeSlotId = $section->time_slot_id;
                 $date = Carbon::parse($section->date)->format('Y-m-d');
+                $timeSlot = $section->timeSlot;
             } else {
-                $timeSlotId = (string) $this->input('time_slot_id');
                 $date = (string) $this->input('date');
-                $timeSlot = TimeSlot::where('time_slot_id', $timeSlotId)->first();
+                $timeSlot = TimeSlot::query()
+                    ->whereKey($this->integer('time_slot_id'))
+                    ->where('room_id', $room->id)
+                    ->first();
 
-                if ($timeSlot?->status === 'disable') {
-                    $validator->errors()->add('time_slot_id', '該時段已停用。');
+                if ($timeSlot === null) {
+                    $validator->errors()->add('time_slot_id', '該時段不屬於該教室。');
+
+                    return;
                 }
             }
 
-            $timeRange = $this->timeRangeForSlot($timeSlotId);
-
-            if ($timeRange === null) {
-                $validator->errors()->add('time_slot_id', '預約時段格式錯誤。');
-
-                return;
-            }
-
-            $startTime = Carbon::parse("{$date} {$timeRange[0]}");
-            $endTime = Carbon::parse("{$date} {$timeRange[1]}");
-
-            if ($endTime->lessThanOrEqualTo($startTime)) {
-                $endTime->addDay();
-            }
-
-            if ($startTime->lessThanOrEqualTo($now)) {
+            if ($this->slotStart($date, $timeSlot)->lessThanOrEqualTo($now)) {
                 $validator->errors()->add('time_slot_id', '不可預約現在以前的時段。');
-
-                return;
-            }
-
-            if ($startTime->diffInMinutes($endTime, false) < 60) {
-                $validator->errors()->add('section_id', '預約時間最少需要 1 小時。');
             }
         });
     }
 
     /**
-     * @return array<int, array{date: string, time_slot_id: string}>
+     * @return array<int, array{date: string, time_slot_id: int}>
      */
     private function selectedSlotsForValidation(): array
     {
@@ -180,7 +142,7 @@ class StoreReservationRequest extends FormRequest
             return collect($this->input('selected_slots', []))
                 ->map(fn (array $slot): array => [
                     'date' => (string) ($slot['date'] ?? ''),
-                    'time_slot_id' => (string) ($slot['time_slot_id'] ?? ''),
+                    'time_slot_id' => (int) ($slot['time_slot_id'] ?? 0),
                 ])
                 ->unique(fn (array $slot): string => $slot['date'].'|'.$slot['time_slot_id'])
                 ->values()
@@ -188,11 +150,11 @@ class StoreReservationRequest extends FormRequest
         }
 
         $dates = $this->input('dates') ?? [(string) $this->input('date')];
-        $timeSlotIds = array_values(array_unique($this->input('time_slot_ids', [])));
+        $timeSlotIds = array_values(array_unique(array_map('intval', $this->input('time_slot_ids', []))));
 
         return collect($dates)
             ->flatMap(fn (string $date): array => collect($timeSlotIds)
-                ->map(fn (string $timeSlotId): array => [
+                ->map(fn (int $timeSlotId): array => [
                     'date' => $date,
                     'time_slot_id' => $timeSlotId,
                 ])
@@ -202,41 +164,8 @@ class StoreReservationRequest extends FormRequest
             ->all();
     }
 
-    /**
-     * @return array{0: string, 1: string}|null
-     */
-    private function timeRangeForSlot(string $timeSlotId): ?array
+    private function slotStart(string $date, TimeSlot $timeSlot): Carbon
     {
-        if (ctype_digit($timeSlotId)) {
-            $startHour = (int) $timeSlotId;
-            $endHour = $startHour + 1;
-
-            return [
-                sprintf('%02d:00:00', $startHour % 24),
-                sprintf('%02d:00:00', $endHour % 24),
-            ];
-        }
-
-        $timeMap = [
-            'TS_0000' => ['08:00:00', '09:00:00'],
-            'TS_0100' => ['09:00:00', '10:00:00'],
-            'TS_0200' => ['10:00:00', '11:00:00'],
-            'TS_0300' => ['11:00:00', '12:00:00'],
-            'TS_0400' => ['12:00:00', '13:00:00'],
-            'TS_0500' => ['13:00:00', '14:00:00'],
-            'TS_0600' => ['14:00:00', '15:00:00'],
-            'TS_0700' => ['15:00:00', '16:00:00'],
-            'TS_0800' => ['16:00:00', '17:00:00'],
-            'TS_0900' => ['17:00:00', '18:00:00'],
-            'TS_1000' => ['18:00:00', '19:00:00'],
-            'TS_1100' => ['19:00:00', '20:00:00'],
-            'TS_1200' => ['20:00:00', '21:00:00'],
-            'TS_1300' => ['21:00:00', '22:00:00'],
-            'TS_1400' => ['22:00:00', '23:00:00'],
-            'TS_1500' => ['23:00:00', '00:00:00'],
-            'TS_1600' => ['00:00:00', '01:00:00'],
-        ];
-
-        return $timeMap[$timeSlotId] ?? null;
+        return Carbon::parse(sprintf('%s %02d:00:00', $date, $timeSlot->period));
     }
 }

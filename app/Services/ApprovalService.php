@@ -6,7 +6,6 @@ use App\Models\Approval;
 use App\Models\Payment;
 use App\Models\Reservation;
 use App\Models\RoomSection;
-use App\Models\TimeSlot;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -95,36 +94,22 @@ class ApprovalService
 
     private function reserveRoomSections(Reservation $reservation): void
     {
-        $date = $reservation->reservation_date?->format('Y-m-d') ?? Carbon::parse($reservation->start_time)->format('Y-m-d');
-        $timeSlotIds = $reservation->time_slot_id
-            ? [(string) $reservation->time_slot_id]
-            : $this->timeSlotIdsForStartTime($reservation->start_time);
+        $date = $reservation->reservation_date?->format('Y-m-d');
 
-        if (empty($timeSlotIds)) {
+        if ($date === null || $reservation->time_slot_id === null) {
             return;
         }
 
-        $validTimeSlotIds = TimeSlot::query()
-            ->whereIn('time_slot_id', $timeSlotIds)
-            ->pluck('time_slot_id')
-            ->all();
-
-        if (empty($validTimeSlotIds)) {
-            return;
-        }
-
-        foreach ($validTimeSlotIds as $timeSlotId) {
-            RoomSection::updateOrCreate(
-                [
-                    'room_id' => $reservation->room_id,
-                    'date' => $date,
-                    'time_slot_id' => $timeSlotId,
-                ],
-                [
-                    'status' => 'reserved',
-                ],
-            );
-        }
+        RoomSection::updateOrCreate(
+            [
+                'room_id' => $reservation->room_id,
+                'date' => $date,
+                'time_slot_id' => $reservation->time_slot_id,
+            ],
+            [
+                'status' => 'reserved',
+            ],
+        );
     }
 
     private function slotAlreadyReserved(Reservation $reservation): bool
@@ -133,30 +118,10 @@ class ApprovalService
             ->whereKeyNot($reservation->id)
             ->where('room_id', $reservation->room_id)
             ->where('reservation_status', 'success')
-            ->where('start_time', '<', $reservation->end_time)
-            ->where('end_time', '>', $reservation->start_time)
+            ->whereDate('reservation_date', $reservation->reservation_date)
+            ->where('time_slot_id', $reservation->time_slot_id)
             ->lockForUpdate()
             ->exists();
-    }
-
-    /**
-     * Borrowed logic from ReservationService to compute time slot ids.
-     *
-     * @return array<int, string>
-     */
-    private function timeSlotIdsForStartTime(string $startTime): array
-    {
-        $hour = Carbon::parse($startTime)->hour;
-        $slotNumber = $hour - 8;
-
-        if ($slotNumber < 0 || $slotNumber > 12) {
-            return [(string) $hour];
-        }
-
-        return [
-            (string) $hour,
-            sprintf('TS_%04d', $slotNumber * 100),
-        ];
     }
 
     private function createPaymentIfNeeded(Reservation $reservation): void
@@ -186,7 +151,7 @@ class ApprovalService
         }
 
         /** @var Reservation $representative */
-        $representative = $reservations->sortBy('start_time')->first();
+        $representative = $reservations->sortBy(fn (Reservation $reservation): string => $reservation->start_time?->toDateTimeString() ?? '')->first();
         $amount = (int) $reservations->sum(fn (Reservation $reservation): int => $this->feeService->calculateAmount($reservation));
 
         Payment::whereIn('reservation_id', $reservations->pluck('id')->filter()->values())

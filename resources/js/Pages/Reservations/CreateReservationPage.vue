@@ -42,17 +42,14 @@ const bookableSections = computed(() =>
 const formatTimeSlot = (section) => {
     if (section?.time_slot?.label) return section.time_slot.label;
 
-    const id = section?.time_slot_id;
+    const id = section?.time_slot?.period;
     if (id === null || id === undefined) return "-";
 
-    if (/^\d+$/.test(String(id))) {
-        const startHour = Number(id) % 24;
-        const endHour = (startHour + 1) % 24;
-        const pad = (n) => String(n).padStart(2, "0");
-        return `${pad(startHour)}:00 - ${pad(endHour)}:00`;
-    }
-    
-    return id || "-";
+    const startHour = Number(id);
+    const endHour = startHour + 1;
+    const pad = (n) => String(n).padStart(2, "0");
+
+    return `${pad(startHour)}:00 - ${pad(endHour)}:00`;
 };
 
 const isSelectableSection = (section) => section.is_bookable;
@@ -83,9 +80,7 @@ const toggleSection = (section) => {
             room_id: Number(selectedRoomId.value),
             date: selectedDate.value,
         },
-    ].sort((a, b) =>
-        `${a.date} ${a.time_slot_id}`.localeCompare(`${b.date} ${b.time_slot_id}`),
-    );
+    ].sort((a, b) => `${a.date} ${a.time_slot?.period ?? 0}`.localeCompare(`${b.date} ${b.time_slot?.period ?? 0}`));
 };
 
 const removeSelected = (section) => {
@@ -100,10 +95,7 @@ const clearSelected = () => {
 };
 
 const sectionStatusText = (section) => {
-    if (
-        section.time_slot?.status === "disable" ||
-        section.status === "unavailable"
-    ) {
+    if (section.status === "unavailable") {
         return "暫停開放";
     }
 

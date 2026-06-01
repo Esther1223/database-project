@@ -13,10 +13,11 @@ return new class extends Migration
     {
         Schema::create('reservations', function (Blueprint $table) {
             $table->id();
+            $table->uuid('reservation_group_id')->nullable();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('room_id')->constrained()->cascadeOnDelete();
-            $table->dateTime('start_time');
-            $table->dateTime('end_time');
+            $table->date('reservation_date')->nullable();
+            $table->unsignedBigInteger('time_slot_id')->nullable();
             $table->string('reservation_status');
             $table->timestamps();
         });

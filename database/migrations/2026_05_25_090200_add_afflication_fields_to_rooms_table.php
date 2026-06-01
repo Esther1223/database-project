@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('rooms', function (Blueprint $table) {
-            $table->foreignId('department_id')->nullable()->after('building')
-                ->constrained('departments')
+            $table->foreignId('afflication_id')->nullable()->after('building')
+                ->constrained('afflications')
                 ->nullOnDelete();
             $table->boolean('is_open_access')->default(false)->after('need_approval');
         });
@@ -26,7 +26,7 @@ return new class extends Migration
     {
         Schema::table('rooms', function (Blueprint $table) {
             $table->dropColumn('is_open_access');
-            $table->dropConstrainedForeignId('department_id');
+            $table->dropConstrainedForeignId('afflication_id');
         });
     }
 };

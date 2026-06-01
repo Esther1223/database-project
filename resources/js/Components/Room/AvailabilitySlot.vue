@@ -88,10 +88,10 @@ const statusLabel = computed(() => {
 
         <div class="mt-4 space-y-2 text-sm">
             <p class="font-medium">
-                狀態：{{ slot.time_slot?.status === 'disable' ? '全域停用' : statusLabel }}
+                狀態：{{ statusLabel }}
             </p>
             <p class="text-xs opacity-70">
-                {{ slot.time_slot_id }}
+                NT$ {{ slot.time_slot?.price ?? 0 }}
             </p>
         </div>
     </article>

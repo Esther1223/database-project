@@ -36,13 +36,13 @@ class ReportController extends Controller
         [$startDate, $endDate] = $this->dateRange($filters);
 
         $reservations = $this->reservationQuery($filters, $startDate, $endDate)
-            ->with(['room'])
+            ->with(['room', 'timeSlot'])
             ->get();
 
         $monthly = $this->monthBuckets($startDate, $endDate)
             ->map(function (array $month) use ($reservations): array {
                 $count = $reservations
-                    ->filter(fn (Reservation $reservation): bool => $reservation->start_time?->format('Y-m') === $month['key'])
+                    ->filter(fn (Reservation $reservation): bool => $reservation->reservation_date?->format('Y-m') === $month['key'])
                     ->count();
 
                 return [
@@ -92,7 +92,7 @@ class ReportController extends Controller
         [$startDate, $endDate] = $this->dateRange($filters);
 
         $payments = Payment::query()
-            ->with(['reservation.room', 'reservation.user'])
+            ->with(['reservation.room', 'reservation.user', 'reservation.timeSlot'])
             ->whereHas('reservation', fn (Builder $query) => $this->applyReservationDateAndRoomFilters($query, $filters, $startDate, $endDate))
             ->when($filters['payment_status'] ?? null, fn (Builder $query, string $status) => $query->where('payment_status', $status))
             ->get();
@@ -100,7 +100,7 @@ class ReportController extends Controller
         $monthly = $this->monthBuckets($startDate, $endDate)
             ->map(function (array $month) use ($payments): array {
                 $monthPayments = $payments->filter(
-                    fn (Payment $payment): bool => $payment->reservation?->start_time?->format('Y-m') === $month['key'],
+                    fn (Payment $payment): bool => $payment->reservation?->reservation_date?->format('Y-m') === $month['key'],
                 );
 
                 return [
@@ -159,8 +159,8 @@ class ReportController extends Controller
     private function applyReservationDateAndRoomFilters(Builder $query, array $filters, Carbon $startDate, Carbon $endDate): Builder
     {
         return $query
-            ->whereDate('start_time', '>=', $startDate->toDateString())
-            ->whereDate('start_time', '<=', $endDate->toDateString())
+            ->whereDate('reservation_date', '>=', $startDate->toDateString())
+            ->whereDate('reservation_date', '<=', $endDate->toDateString())
             ->when($filters['room_id'] ?? null, fn (Builder $query, int|string $roomId) => $query->where('room_id', $roomId));
     }
 

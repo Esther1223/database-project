@@ -21,7 +21,7 @@ class Room extends Model
         'room_type',
         'capacity',
         'building',
-        'department_id',
+        'afflication_id',
         'information',
         'hourly_rate',
         'need_approval',
@@ -81,19 +81,27 @@ class Room extends Model
     }
 
     /**
-     * Departments that are allowed to access this room (cross-open).
+     * @return HasMany<TimeSlot, $this>
      */
-    public function openDepartments()
+    public function timeSlots(): HasMany
     {
-        return $this->belongsToMany(Department::class, 'department_room');
+        return $this->hasMany(TimeSlot::class);
     }
 
     /**
-     * @return BelongsTo<Department, $this>
+     * Afflications that are allowed to access this room (cross-open).
      */
-    public function department(): BelongsTo
+    public function openAfflications()
     {
-        return $this->belongsTo(Department::class);
+        return $this->belongsToMany(Afflication::class, 'afflication_room');
+    }
+
+    /**
+     * @return BelongsTo<Afflication, $this>
+     */
+    public function afflication(): BelongsTo
+    {
+        return $this->belongsTo(Afflication::class);
     }
 
     public function scopeBookableForUser(Builder $query, User $user): Builder
@@ -104,14 +112,14 @@ class Room extends Model
 
         return $query->where(function (Builder $builder) use ($user): void {
             $builder
-                ->where('department_id', $user->department_id)
+                ->where('afflication_id', $user->afflication_id)
                 ->orWhere(function (Builder $openBuilder) use ($user): void {
                     $openBuilder
                         ->where('is_open_access', true)
                         ->where(function (Builder $accessBuilder) use ($user): void {
                             $accessBuilder
                                 ->where('open_access_all', true)
-                                ->orWhereHas('openDepartments', fn (Builder $query) => $query->where('departments.id', $user->department_id));
+                                ->orWhereHas('openAfflications', fn (Builder $query) => $query->where('afflications.id', $user->afflication_id));
                         });
                 });
         });
@@ -123,7 +131,7 @@ class Room extends Model
             return true;
         }
 
-        if ((int) $this->department_id === (int) $user->department_id) {
+        if ((int) $this->afflication_id === (int) $user->afflication_id) {
             return true;
         }
 
@@ -135,8 +143,8 @@ class Room extends Model
             return true;
         }
 
-        return $this->openDepartments()
-            ->where('departments.id', $user->department_id)
+        return $this->openAfflications()
+            ->where('afflications.id', $user->afflication_id)
             ->exists();
     }
 }

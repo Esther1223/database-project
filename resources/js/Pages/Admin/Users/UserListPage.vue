@@ -13,7 +13,7 @@ const props = defineProps({
         type: Array,
         required: true,
     },
-    departments: {
+    afflications: {
         type: Array,
         required: true,
     },
@@ -22,7 +22,7 @@ const props = defineProps({
 const userForm = reactive({
     name: "",
     email: "",
-    department_id: "",
+    afflication_id: "",
     password: "",
     is_active: true,
     role_ids: [],
@@ -47,7 +47,7 @@ const filteredUsers = computed(() => {
         const haystack = [
             user.name,
             user.email,
-            user.department_name,
+            user.afflication_name,
             ...(user.roles || []).map((role) => role.role_type),
         ]
             .join(" ")
@@ -66,7 +66,7 @@ const clearErrors = (errors) => {
 const resetUserForm = () => {
     userForm.name = "";
     userForm.email = "";
-    userForm.department_id = "";
+    userForm.afflication_id = "";
     userForm.password = "";
     userForm.is_active = true;
     userForm.role_ids = [];
@@ -85,7 +85,7 @@ const openUserForm = (user = null) => {
 
     userForm.name = user.name;
     userForm.email = user.email;
-    userForm.department_id = user.department_id ?? "";
+    userForm.afflication_id = user.afflication_id ?? "";
     userForm.password = "";
     userForm.is_active = user.is_active;
     userForm.role_ids = user.roles.map((role) => role.id);
@@ -105,7 +105,7 @@ const saveUser = async () => {
     const payload = {
         name: userForm.name,
         email: userForm.email,
-        department_id: userForm.department_id,
+        afflication_id: userForm.afflication_id,
         is_active: userForm.is_active,
         role_ids: userForm.role_ids,
     };
@@ -294,7 +294,7 @@ const toggleStatus = async (user) => {
 
                             <div class="text-sm text-slate-700">
                                 {{
-                                    user.department_name ||
+                                    user.afflication_name ||
                                     user.affiliation ||
                                     "—"
                                 }}
@@ -466,12 +466,12 @@ const toggleStatus = async (user) => {
                             <div>
                                 <label
                                     class="mb-2 block text-sm font-medium text-slate-700"
-                                    for="department"
+                                    for="afflication"
                                     >所屬單位</label
                                 >
                                 <select
-                                    id="department"
-                                    v-model="userForm.department_id"
+                                    id="afflication"
+                                    v-model="userForm.afflication_id"
                                     required
                                     class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900"
                                 >
@@ -479,18 +479,18 @@ const toggleStatus = async (user) => {
                                         請選擇所屬單位（必填）
                                     </option>
                                     <option
-                                        v-for="department in departments"
-                                        :key="department.id"
-                                        :value="department.id"
+                                        v-for="afflication in afflications"
+                                        :key="afflication.id"
+                                        :value="afflication.id"
                                     >
-                                        {{ department.name }}
+                                        {{ afflication.name }}
                                     </option>
                                 </select>
                                 <p
-                                    v-if="userErrors.department_id"
+                                    v-if="userErrors.afflication_id"
                                     class="mt-2 text-sm text-rose-700"
                                 >
-                                    {{ userErrors.department_id[0] }}
+                                    {{ userErrors.afflication_id[0] }}
                                 </p>
                                 <p v-else class="mt-2 text-xs text-slate-500">
                                     此欄位為必填，將作為使用者的所屬單位。

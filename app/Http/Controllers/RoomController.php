@@ -4,9 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Room\StoreRoomRequest;
 use App\Http\Requests\Room\UpdateRoomRequest;
-use App\Models\Department;
+use App\Models\Afflication;
 use App\Models\Room;
-use Carbon\Carbon;
 use App\Models\TimeSlot;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -80,12 +79,12 @@ class RoomController extends Controller
             ->values()
             ->all();
 
-        $departments = Department::query()
+        $afflications = Afflication::query()
             ->orderBy('name')
             ->get()
-            ->map(fn (Department $department): array => [
-                'id' => $department->id,
-                'name' => $department->name,
+            ->map(fn (Afflication $afflication): array => [
+                'id' => $afflication->id,
+                'name' => $afflication->name,
             ])
             ->values()
             ->all();
@@ -97,7 +96,7 @@ class RoomController extends Controller
                 'filters' => $filters,
                 'roomTypes' => $roomTypes,
                 'buildings' => $buildings,
-                'departments' => $departments,
+                'afflications' => $afflications,
             ],
         );
     }
@@ -112,30 +111,31 @@ class RoomController extends Controller
         $selectedDate = $request->query('date', now()->toDateString());
 
         $reservedSections = $room->roomSections()
+            ->with('timeSlot')
             ->where('date', $selectedDate)
             ->get()
             ->keyBy('time_slot_id');
 
-        $sections = TimeSlot::query()
-            ->orderByRaw('CAST(time_slot_id AS UNSIGNED)')
+        $sections = $room->timeSlots()
+            ->orderBy('period')
             ->get()
             ->map(function (TimeSlot $timeSlot) use ($reservedSections, $room, $selectedDate): array {
-                $reservedSection = $reservedSections->get($timeSlot->time_slot_id);
-                $state = $this->sectionState($timeSlot->status, $reservedSection?->status, $selectedDate, $timeSlot->time_slot_id);
+                $reservedSection = $reservedSections->get($timeSlot->id);
+                $state = $this->sectionState($reservedSection?->status, $selectedDate, $timeSlot);
 
                 return [
                     'id' => $reservedSection?->id,
                     'room_id' => $room->id,
                     'date' => $selectedDate,
-                    'time_slot_id' => $timeSlot->time_slot_id,
+                    'time_slot_id' => $timeSlot->id,
                     'status' => $reservedSection?->status ?? 'available',
                     'state' => $state,
-                    'time_label' => $this->formatTimeSlotLabel($timeSlot->time_slot_id),
+                    'time_label' => $timeSlot->label(),
                     'time_slot' => [
                         'id' => $timeSlot->id,
-                        'time_slot_id' => $timeSlot->time_slot_id,
-                        'status' => $timeSlot->status,
-                        'label' => $this->formatTimeSlotLabel($timeSlot->time_slot_id),
+                        'period' => $timeSlot->period,
+                        'price' => $timeSlot->price,
+                        'label' => $timeSlot->label(),
                     ],
                 ];
             });
@@ -156,8 +156,9 @@ class RoomController extends Controller
 
         $validated = $request->validated();
         $room = Room::create($this->roomStoragePayload($validated));
+        $this->syncDefaultTimeSlots($room);
 
-        $room->openDepartments()->sync($validated['open_access_departments'] ?? []);
+        $room->openAfflications()->sync($validated['open_access_afflications'] ?? []);
 
         return response()->json([
             'message' => '空間已建立',
@@ -174,8 +175,9 @@ class RoomController extends Controller
 
         $validated = $request->validated();
         $room->forceFill($this->roomStoragePayload($validated))->save();
+        $this->syncDefaultTimeSlots($room);
 
-        $room->openDepartments()->sync($validated['open_access_departments'] ?? []);
+        $room->openAfflications()->sync($validated['open_access_afflications'] ?? []);
 
         return response()->json([
             'message' => '空間已更新',
@@ -208,12 +210,12 @@ class RoomController extends Controller
             'type' => $room->type,
             'capacity' => $room->capacity,
             'building' => $room->building,
-            'department_id' => $room->department_id,
+            'afflication_id' => $room->afflication_id,
             'rate' => $room->rate,
             'need_approval' => (bool) $room->need_approval,
             'is_open_access' => (bool) $room->is_open_access,
             'open_access_all' => (bool) $room->open_access_all,
-            'open_access_departments' => $room->openDepartments()->get()->map(fn (Department $d): array => ['id' => $d->id, 'name' => $d->name])->values()->all(),
+            'open_access_afflications' => $room->openAfflications()->get()->map(fn (Afflication $d): array => ['id' => $d->id, 'name' => $d->name])->values()->all(),
             'information' => $room->information,
             'created_at' => $room->created_at?->toDateTimeString(),
             'updated_at' => $room->updated_at?->toDateTimeString(),
@@ -230,7 +232,7 @@ class RoomController extends Controller
             'type' => $validated['type'],
             'capacity' => (int) $validated['capacity'],
             'building' => $validated['building'],
-            'department_id' => $validated['department_id'],
+            'afflication_id' => $validated['afflication_id'],
             'information' => $validated['information'] ?? null,
             'rate' => (int) $validated['hourly_rate'],
             'need_approval' => (bool) $validated['need_approval'],
@@ -239,54 +241,35 @@ class RoomController extends Controller
         ];
     }
 
-    private function sectionState(?string $timeSlotStatus, ?string $sectionStatus, ?string $date = null, ?string $timeSlotId = null): string
+    private function syncDefaultTimeSlots(Room $room): void
     {
-        if ($timeSlotStatus === 'disable') {
-            return 'disabled';
+        foreach (range(8, 21) as $period) {
+            $room->timeSlots()->updateOrCreate(
+                ['period' => $period],
+                ['price' => (int) $room->hourly_rate],
+            );
         }
+    }
 
+    private function sectionState(?string $sectionStatus, ?string $date = null, ?TimeSlot $timeSlot = null): string
+    {
         if ($sectionStatus === 'reserved') {
             return 'reserved';
         }
 
-        if ($date !== null && $timeSlotId !== null && $this->slotStartsInPast($date, $timeSlotId)) {
+        if ($sectionStatus === 'unavailable') {
+            return 'disabled';
+        }
+
+        if ($date !== null && $timeSlot !== null && $this->slotStartsInPast($date, $timeSlot)) {
             return 'expired';
         }
 
         return 'available';
     }
 
-    private function formatTimeSlotLabel(string $timeSlotId): string
+    private function slotStartsInPast(string $date, TimeSlot $timeSlot): bool
     {
-        if (ctype_digit($timeSlotId)) {
-            $startHour = (int) $timeSlotId;
-
-            return sprintf('%02d:00 - %02d:00', $startHour % 24, ($startHour + 1) % 24);
-        }
-
-        if (preg_match('/^TS_(\d{2})00$/', $timeSlotId, $matches) === 1) {
-            $startHour = 8 + (int) $matches[1];
-
-            return sprintf('%02d:00 - %02d:00', $startHour % 24, ($startHour + 1) % 24);
-        }
-
-        return $timeSlotId;
-    }
-
-    private function slotStartsInPast(string $date, string $timeSlotId): bool
-    {
-        $startHour = null;
-
-        if (ctype_digit($timeSlotId)) {
-            $startHour = (int) $timeSlotId;
-        } elseif (preg_match('/^TS_(\d{2})00$/', $timeSlotId, $matches) === 1) {
-            $startHour = 8 + (int) $matches[1];
-        }
-
-        if ($startHour === null) {
-            return false;
-        }
-
-        return Carbon::parse(sprintf('%s %02d:00:00', $date, $startHour % 24))->lessThanOrEqualTo(now());
+        return \Carbon\Carbon::parse(sprintf('%s %02d:00:00', $date, $timeSlot->period))->lessThanOrEqualTo(now());
     }
 }

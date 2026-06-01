@@ -26,6 +26,7 @@ class RoomSection extends Model
     {
         return [
             'date' => 'date:Y-m-d',
+            'time_slot_id' => 'integer',
         ];
     }
 
@@ -33,7 +34,7 @@ class RoomSection extends Model
     {
         return Attribute::make(
             get: function (): bool {
-                return $this->status === 'available' && $this->timeSlot?->status === 'enable';
+                return $this->status === 'available';
             }
         );
     }
@@ -51,6 +52,6 @@ class RoomSection extends Model
      */
     public function timeSlot(): BelongsTo
     {
-        return $this->belongsTo(TimeSlot::class, 'time_slot_id', 'time_slot_id');
+        return $this->belongsTo(TimeSlot::class);
     }
 }

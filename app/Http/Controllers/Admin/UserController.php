@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Department;
+use App\Models\Afflication;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -22,7 +22,7 @@ class UserController extends Controller
     public function index(): Response
     {
         $users = User::query()
-            ->with(['roles', 'department'])
+            ->with(['roles', 'afflication'])
             ->orderBy('name')
             ->get()
             ->map(fn (User $user): array => [
@@ -30,8 +30,8 @@ class UserController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'affiliation' => $user->affiliation,
-                'department_id' => $user->department_id,
-                'department_name' => $user->department?->name,
+                'afflication_id' => $user->afflication_id,
+                'afflication_name' => $user->afflication?->name,
                 'is_active' => (bool) ($user->is_active ?? true),
                 'roles' => $user->roles->map(fn (Role $role): array => [
                     'id' => $role->id,
@@ -47,12 +47,12 @@ class UserController extends Controller
                 'role_type' => $role->role_type,
             ]);
 
-        $departments = Department::query()
+        $afflications = Afflication::query()
             ->orderBy('name')
             ->get()
-            ->map(fn (Department $department): array => [
-                'id' => $department->id,
-                'name' => $department->name,
+            ->map(fn (Afflication $afflication): array => [
+                'id' => $afflication->id,
+                'name' => $afflication->name,
             ])
             ->values()
             ->all();
@@ -60,7 +60,7 @@ class UserController extends Controller
         return Inertia::render('Admin/Users/UserListPage', [
             'users' => $users,
             'roles' => $roles,
-            'departments' => $departments,
+            'afflications' => $afflications,
         ]);
     }
 
@@ -72,7 +72,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'department_id' => ['required', 'integer', 'exists:departments,id'],
+            'afflication_id' => ['required', 'integer', 'exists:afflications,id'],
             'password' => ['required', 'string', 'min:6'],
             'is_active' => ['sometimes', 'boolean'],
             'role_ids' => ['required', 'array', 'min:1'],
@@ -96,15 +96,15 @@ class UserController extends Controller
             }
         }
 
-        $department = Department::find($validated['department_id']);
+        $afflication = Afflication::find($validated['afflication_id']);
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'affiliation' => $department?->name ?? '未指定',
+            'affiliation' => $afflication?->name ?? '未指定',
             'password' => Hash::make($validated['password']),
             'is_active' => $validated['is_active'] ?? true,
-            'department_id' => $validated['department_id'],
+            'afflication_id' => $validated['afflication_id'],
         ]);
 
         $user->roles()->sync($roleIds);
@@ -123,7 +123,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'department_id' => ['required', 'integer', 'exists:departments,id'],
+            'afflication_id' => ['required', 'integer', 'exists:afflications,id'],
             'password' => ['nullable', 'string', 'min:6'],
             'is_active' => ['sometimes', 'boolean'],
             'role_ids' => ['required', 'array', 'min:1'],
@@ -176,13 +176,13 @@ class UserController extends Controller
             }
         }
 
-        $department = Department::find($validated['department_id']);
+        $afflication = Afflication::find($validated['afflication_id']);
 
         $payload = [
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'affiliation' => $department?->name ?? '未指定',
-            'department_id' => $validated['department_id'],
+            'affiliation' => $afflication?->name ?? '未指定',
+            'afflication_id' => $validated['afflication_id'],
         ];
 
         if (!empty($validated['password'] ?? null)) {

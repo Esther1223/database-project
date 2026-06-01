@@ -95,9 +95,10 @@ class ReservationController extends Controller
     {
         $this->authorize('viewAny', Reservation::class);
 
-        $reservations = Reservation::with(['room', 'approval', 'payment'])
+        $reservations = Reservation::with(['room', 'approval', 'payment', 'timeSlot'])
             ->where('user_id', Auth::id())
-            ->latest('start_time')
+            ->latest('reservation_date')
+            ->latest('time_slot_id')
             ->get()
             ->groupBy(fn (Reservation $reservation): string => $reservation->reservation_group_id ?: (string) $reservation->id)
             ->map(fn ($group): array => $this->reservationGroupPayload($group))
@@ -117,12 +118,13 @@ class ReservationController extends Controller
             'status' => ['nullable', 'string', 'in:pending,success,cancelled,rejected'],
         ]);
 
-        $reservations = Reservation::with(['room.department', 'user.department', 'payment'])
-            ->when($validated['start_date'] ?? null, fn ($query, string $date) => $query->whereDate('start_time', '>=', $date))
-            ->when($validated['end_date'] ?? null, fn ($query, string $date) => $query->whereDate('start_time', '<=', $date))
+        $reservations = Reservation::with(['room.afflication', 'user.afflication', 'payment', 'timeSlot'])
+            ->when($validated['start_date'] ?? null, fn ($query, string $date) => $query->whereDate('reservation_date', '>=', $date))
+            ->when($validated['end_date'] ?? null, fn ($query, string $date) => $query->whereDate('reservation_date', '<=', $date))
             ->when($validated['room_id'] ?? null, fn ($query, int|string $roomId) => $query->where('room_id', $roomId))
             ->when($validated['status'] ?? null, fn ($query, string $status) => $query->where('reservation_status', $status))
-            ->latest('start_time')
+            ->latest('reservation_date')
+            ->latest('time_slot_id')
             ->limit(200)
             ->get()
             ->map(fn (Reservation $reservation): array => [
@@ -137,7 +139,7 @@ class ReservationController extends Controller
                         'name' => $reservation->room->name,
                         'type' => $reservation->room->type,
                         'building' => $reservation->room->building,
-                        'department_name' => $reservation->room->department?->name,
+                        'afflication_name' => $reservation->room->afflication?->name,
                     ]
                     : null,
                 'user' => $reservation->user
@@ -145,7 +147,7 @@ class ReservationController extends Controller
                         'id' => $reservation->user->id,
                         'name' => $reservation->user->name,
                         'email' => $reservation->user->email,
-                        'department_name' => $reservation->user->department?->name,
+                        'afflication_name' => $reservation->user->afflication?->name,
                     ]
                     : null,
                 'payment' => $reservation->payment
@@ -168,13 +170,13 @@ class ReservationController extends Controller
         $this->authorize('view', $reservation);
 
         return response()->json([
-            'data' => $reservation->load(['room', 'approval', 'payment']),
+            'data' => $reservation->load(['room', 'approval', 'payment', 'timeSlot']),
         ]);
     }
 
     private function reservationGroupPayload($group): array
     {
-        $sorted = $group->sortBy('start_time')->values();
+        $sorted = $group->sortBy(fn (Reservation $reservation): string => $reservation->start_time?->toDateTimeString() ?? '')->values();
         /** @var Reservation $first */
         $first = $sorted->first();
         /** @var Reservation $last */

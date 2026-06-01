@@ -53,7 +53,7 @@ const today = (() => {
 
 const formatTimeSlot = (section) =>
     section?.time_slot?.label ||
-    section?.time_slot_id ||
+    section?.time_slot?.period ||
     "-";
 
 const selectedDatesLabel = (sections) =>

@@ -25,7 +25,7 @@ class PaymentController extends Controller
      */
     public function list(): JsonResponse
     {
-        $payments = Payment::with(['reservation.room', 'reservation.user'])
+        $payments = Payment::with(['reservation.room', 'reservation.user', 'reservation.timeSlot'])
             ->latest('created_at')
             ->get()
             ->groupBy(fn (Payment $payment): string => $payment->reservation?->reservation_group_id ?: (string) $payment->reservation_id)
@@ -72,13 +72,14 @@ class PaymentController extends Controller
         $firstPayment = $sortedPayments->first();
         $reservation = $firstPayment->reservation;
         $reservations = $reservation
-            ? Reservation::with(['room', 'user'])
+            ? Reservation::with(['room', 'user', 'timeSlot'])
                 ->when(
                     $reservation->reservation_group_id,
                     fn ($query) => $query->where('reservation_group_id', $reservation->reservation_group_id),
                     fn ($query) => $query->whereKey($reservation->id),
                 )
-                ->orderBy('start_time')
+                ->orderBy('reservation_date')
+                ->orderBy('time_slot_id')
                 ->get()
             : collect();
 

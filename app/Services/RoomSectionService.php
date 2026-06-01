@@ -19,7 +19,7 @@ class RoomSectionService
 
     public function ensureForRoomDate(Room $room, string $date): void
     {
-        Log::info("{$room->id} @ {$date} 的可借時段由 time_slots 即時推導");
+        Log::info("{$room->id} @ {$date} 的可借時段由該教室的 time_slots 即時推導");
     }
 
     public function initializeForRoom(Room $room, int $daysAhead = 30): void
@@ -41,18 +41,18 @@ class RoomSectionService
     /**
      * @return array<int, string>
      */
-    private function timeSlotIds(): array
+    private function timeSlotIds(Room $room): array
     {
-        return TimeSlot::query()
-            ->orderByRaw('CAST(time_slot_id AS UNSIGNED)')
-            ->pluck('time_slot_id')
+        return $room->timeSlots()
+            ->orderBy('period')
+            ->pluck('id')
             ->all();
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function sectionRow(int $roomId, string $date, string $timeSlotId): array
+    private function sectionRow(int $roomId, string $date, int $timeSlotId): array
     {
         return [
             'room_id' => $roomId,

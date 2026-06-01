@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'affiliation', 'department_id', 'is_active'])]
+#[Fillable(['name', 'email', 'password', 'affiliation', 'afflication_id', 'is_active'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -45,11 +45,11 @@ class User extends Authenticatable
     }
 
     /**
-     * @return BelongsTo<Department, $this>
+     * @return BelongsTo<Afflication, $this>
      */
-    public function department(): BelongsTo
+    public function afflication(): BelongsTo
     {
-        return $this->belongsTo(Department::class);
+        return $this->belongsTo(Afflication::class);
     }
 
 

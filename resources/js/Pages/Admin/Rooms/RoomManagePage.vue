@@ -21,7 +21,7 @@ const props = defineProps({
         type: Array,
         required: true,
     },
-    departments: {
+    afflications: {
         type: Array,
         required: true,
     },
@@ -38,14 +38,14 @@ const roomForm = reactive({
     type: "",
     capacity: 1,
     building: "",
-    department_id: "",
+    afflication_id: "",
     information: "",
     hourly_rate: 0,
     need_approval: false,
     is_open_access: false,
     open_access_all: false,
-    open_access_departments: [],
-    _temp_open_department_id: "",
+    open_access_afflications: [],
+    _temp_open_afflication_id: "",
 });
 
 const roomErrors = reactive({});
@@ -130,14 +130,14 @@ const resetRoomForm = () => {
     roomForm.type = "";
     roomForm.capacity = 1;
     roomForm.building = "";
-    roomForm.department_id = "";
+    roomForm.afflication_id = "";
     roomForm.information = "";
     roomForm.hourly_rate = 0;
     roomForm.need_approval = false;
     roomForm.is_open_access = false;
     roomForm.open_access_all = false;
-    roomForm.open_access_departments = [];
-    roomForm._temp_open_department_id = "";
+    roomForm.open_access_afflications = [];
+    roomForm._temp_open_afflication_id = "";
     roomEditingId.value = null;
     clearErrors(roomErrors);
 };
@@ -155,18 +155,18 @@ const openRoomForm = (room = null) => {
     roomForm.type = room.type;
     roomForm.capacity = room.capacity;
     roomForm.building = room.building;
-    roomForm.department_id = room.department_id ?? "";
+    roomForm.afflication_id = room.afflication_id ?? "";
     roomForm.information = room.information || "";
     roomForm.hourly_rate = room.rate;
     roomForm.need_approval = room.need_approval;
     roomForm.is_open_access = room.is_open_access;
     roomForm.open_access_all = room.open_access_all;
-    roomForm.open_access_departments = room.open_access_all
+    roomForm.open_access_afflications = room.open_access_all
         ? []
-        : (room.open_access_departments || []).map((d) =>
+        : (room.open_access_afflications || []).map((d) =>
               typeof d === "object" ? d.id : d,
           );
-    roomForm._temp_open_department_id = "";
+    roomForm._temp_open_afflication_id = "";
     roomEditingId.value = room.id;
 };
 
@@ -185,7 +185,7 @@ const saveRoom = async () => {
         type: roomForm.type,
         capacity: roomForm.capacity,
         building: roomForm.building,
-        department_id: roomForm.department_id || null,
+        afflication_id: roomForm.afflication_id || null,
         information: roomForm.information,
         hourly_rate: roomForm.hourly_rate,
         need_approval: roomForm.need_approval,
@@ -193,9 +193,9 @@ const saveRoom = async () => {
         open_access_all: roomForm.is_open_access
             ? roomForm.open_access_all
             : false,
-        open_access_departments:
+        open_access_afflications:
             roomForm.is_open_access && !roomForm.open_access_all
-                ? roomForm.open_access_departments || []
+                ? roomForm.open_access_afflications || []
                 : [],
     };
 
@@ -221,36 +221,36 @@ const saveRoom = async () => {
     }
 };
 
-const addOpenDepartment = () => {
+const addOpenAfflication = () => {
     if (roomForm.open_access_all) return;
 
-    const val = roomForm._temp_open_department_id;
+    const val = roomForm._temp_open_afflication_id;
 
     if (!val) return;
 
     const id = Number(val);
-    const departmentId = Number(roomForm.department_id);
+    const afflicationId = Number(roomForm.afflication_id);
 
-    if (id === departmentId) {
-        roomForm._temp_open_department_id = "";
+    if (id === afflicationId) {
+        roomForm._temp_open_afflication_id = "";
         return;
     }
 
-    if (!roomForm.open_access_departments.includes(id)) {
-        roomForm.open_access_departments.push(id);
+    if (!roomForm.open_access_afflications.includes(id)) {
+        roomForm.open_access_afflications.push(id);
     }
 
-    roomForm._temp_open_department_id = "";
+    roomForm._temp_open_afflication_id = "";
 };
 
-const removeOpenDepartment = (id) => {
-    roomForm.open_access_departments = roomForm.open_access_departments.filter(
+const removeOpenAfflication = (id) => {
+    roomForm.open_access_afflications = roomForm.open_access_afflications.filter(
         (x) => x !== id,
     );
 };
 
-const getDepartmentName = (id) => {
-    const d = props.departments.find((item) => item.id === id);
+const getAfflicationName = (id) => {
+    const d = props.afflications.find((item) => item.id === id);
     return d ? d.name : "未知單位";
 };
 
@@ -262,27 +262,27 @@ const onToggleOpenAccess = async () => {
         openDeptSelectRef.value?.focus?.();
     } else {
         roomForm.open_access_all = false;
-        roomForm.open_access_departments = [];
-        roomForm._temp_open_department_id = "";
+        roomForm.open_access_afflications = [];
+        roomForm._temp_open_afflication_id = "";
     }
 };
 
 const onToggleOpenAccessAll = () => {
     if (roomForm.open_access_all) {
-        roomForm.open_access_departments = [];
-        roomForm._temp_open_department_id = "";
+        roomForm.open_access_afflications = [];
+        roomForm._temp_open_afflication_id = "";
     }
 };
 
-const syncOpenDepartments = () => {
-    const departmentId = Number(roomForm.department_id);
+const syncOpenAfflications = () => {
+    const afflicationId = Number(roomForm.afflication_id);
 
-    roomForm.open_access_departments = roomForm.open_access_departments.filter(
-        (id) => Number(id) !== departmentId,
+    roomForm.open_access_afflications = roomForm.open_access_afflications.filter(
+        (id) => Number(id) !== afflicationId,
     );
 
-    if (Number(roomForm._temp_open_department_id) === departmentId) {
-        roomForm._temp_open_department_id = "";
+    if (Number(roomForm._temp_open_afflication_id) === afflicationId) {
+        roomForm._temp_open_afflication_id = "";
     }
 };
 
@@ -310,12 +310,12 @@ const deleteRoom = async (room) => {
     }
 };
 
-const departmentName = (room) => {
-    const department = props.departments.find(
-        (item) => item.id === room.department_id,
+const afflicationName = (room) => {
+    const afflication = props.afflications.find(
+        (item) => item.id === room.afflication_id,
     );
 
-    return department?.name || "未知單位";
+    return afflication?.name || "未知單位";
 };
 </script>
 
@@ -466,7 +466,7 @@ const departmentName = (room) => {
                             <div class="text-sm text-slate-700">
                                 <p>{{ room.building }}</p>
                                 <p class="mt-1 text-slate-500">
-                                    {{ departmentName(room) }}
+                                    {{ afflicationName(room) }}
                                 </p>
                                 <div class="mt-2 flex flex-wrap gap-2">
                                     <span
@@ -487,7 +487,7 @@ const departmentName = (room) => {
                                         v-if="
                                             room.is_open_access &&
                                             !room.open_access_all &&
-                                            room.open_access_departments
+                                            room.open_access_afflications
                                                 ?.length > 0
                                         "
                                         class="inline-flex rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700"
@@ -690,31 +690,31 @@ const departmentName = (room) => {
                             <div>
                                 <label
                                     class="mb-2 block text-sm font-medium text-slate-700"
-                                    for="department"
+                                    for="afflication"
                                     >所屬單位</label
                                 >
                                 <select
-                                    id="department"
-                                    v-model="roomForm.department_id"
-                                    @change="syncOpenDepartments"
+                                    id="afflication"
+                                    v-model="roomForm.afflication_id"
+                                    @change="syncOpenAfflications"
                                     class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900"
                                 >
                                     <option value="" disabled>
                                         請選擇所屬單位
                                     </option>
                                     <option
-                                        v-for="department in departments"
-                                        :key="department.id"
-                                        :value="department.id"
+                                        v-for="afflication in afflications"
+                                        :key="afflication.id"
+                                        :value="afflication.id"
                                     >
-                                        {{ department.name }}
+                                        {{ afflication.name }}
                                     </option>
                                 </select>
                                 <p
-                                    v-if="roomErrors.department_id"
+                                    v-if="roomErrors.afflication_id"
                                     class="mt-2 text-sm text-rose-700"
                                 >
-                                    {{ roomErrors.department_id[0] }}
+                                    {{ roomErrors.afflication_id[0] }}
                                 </p>
                             </div>
 
@@ -856,32 +856,32 @@ const departmentName = (room) => {
                                         <select
                                             ref="openDeptSelectRef"
                                             v-model="
-                                                roomForm._temp_open_department_id
+                                                roomForm._temp_open_afflication_id
                                             "
                                             class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900"
                                         >
                                             <option value="">請選擇單位</option>
                                             <option
-                                                v-for="department in departments.filter(
+                                                v-for="afflication in afflications.filter(
                                                     (d) =>
                                                         String(d.id) !==
                                                         String(
-                                                            roomForm.department_id,
+                                                            roomForm.afflication_id,
                                                         ),
                                                 )"
-                                                :key="department.id"
-                                                :value="department.id"
+                                                :key="afflication.id"
+                                                :value="afflication.id"
                                             >
-                                                {{ department.name }}
+                                                {{ afflication.name }}
                                             </option>
                                         </select>
                                         <button
                                             type="button"
                                             class="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
                                             :disabled="
-                                                !roomForm._temp_open_department_id
+                                                !roomForm._temp_open_afflication_id
                                             "
-                                            @click="addOpenDepartment"
+                                            @click="addOpenAfflication"
                                         >
                                             +
                                         </button>
@@ -889,18 +889,18 @@ const departmentName = (room) => {
 
                                     <div class="flex flex-wrap gap-2">
                                         <span
-                                            v-for="deptId in roomForm.open_access_departments"
+                                            v-for="deptId in roomForm.open_access_afflications"
                                             :key="deptId"
                                             class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700"
                                         >
                                             <span>{{
-                                                getDepartmentName(deptId)
+                                                getAfflicationName(deptId)
                                             }}</span>
                                             <button
                                                 type="button"
                                                 class="rounded-full text-sm text-slate-500 hover:text-slate-700"
                                                 @click="
-                                                    removeOpenDepartment(deptId)
+                                                    removeOpenAfflication(deptId)
                                                 "
                                                 aria-label="移除"
                                             >
@@ -909,7 +909,7 @@ const departmentName = (room) => {
                                         </span>
                                         <p
                                             v-if="
-                                                roomForm.open_access_departments
+                                                roomForm.open_access_afflications
                                                     .length === 0
                                             "
                                             class="text-sm text-slate-500"
@@ -919,13 +919,13 @@ const departmentName = (room) => {
                                     </div>
                                     <p
                                         v-if="
-                                            roomErrors.open_access_departments
+                                            roomErrors.open_access_afflications
                                         "
                                         class="mt-2 text-sm text-rose-700"
                                     >
                                         {{
                                             roomErrors
-                                                .open_access_departments[0]
+                                                .open_access_afflications[0]
                                         }}
                                     </p>
                                 </template>

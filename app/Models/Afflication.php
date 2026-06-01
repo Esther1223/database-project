@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Department extends Model
+class Afflication extends Model
 {
     use HasFactory;
 
@@ -31,10 +31,10 @@ class Department extends Model
     }
 
     /**
-     * Rooms that this department can access via cross-open.
+     * Rooms that this afflication can access via cross-open.
      */
     public function sharedRooms()
     {
-        return $this->belongsToMany(\App\Models\Room::class, 'department_room');
+        return $this->belongsToMany(\App\Models\Room::class, 'afflication_room');
     }
 }

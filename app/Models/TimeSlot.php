@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TimeSlot extends Model
@@ -11,15 +12,25 @@ class TimeSlot extends Model
     use HasFactory;
 
     protected $fillable = [
-        'time_slot_id',
-        'status',
+        'room_id',
+        'period',
+        'price',
     ];
 
     protected function casts(): array
     {
         return [
-            'status' => 'string',
+            'period' => 'integer',
+            'price' => 'integer',
         ];
+    }
+
+    /**
+     * @return BelongsTo<Room, $this>
+     */
+    public function room(): BelongsTo
+    {
+        return $this->belongsTo(Room::class);
     }
 
     /**
@@ -27,6 +38,11 @@ class TimeSlot extends Model
      */
     public function roomSections(): HasMany
     {
-        return $this->hasMany(RoomSection::class, 'time_slot_id', 'time_slot_id');
+        return $this->hasMany(RoomSection::class);
+    }
+
+    public function label(): string
+    {
+        return sprintf('%02d:00 - %02d:00', $this->period, $this->period + 1);
     }
 }

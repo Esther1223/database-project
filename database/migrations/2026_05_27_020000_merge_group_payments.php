@@ -22,7 +22,8 @@ return new class extends Migration
             $payments = DB::table('payments')
                 ->join('reservations', 'payments.reservation_id', '=', 'reservations.id')
                 ->where('reservations.reservation_group_id', $groupId)
-                ->orderBy('reservations.start_time')
+                ->orderBy('reservations.reservation_date')
+                ->orderBy('reservations.time_slot_id')
                 ->select([
                     'payments.id',
                     'payments.amount',

@@ -13,9 +13,11 @@ return new class extends Migration
     {
         Schema::create('time_slots', function (Blueprint $table) {
             $table->id();
-            $table->string('time_slot_id')->unique();
-            $table->enum('status', ['enable', 'disable'])->default('enable');
+            $table->foreignId('room_id')->constrained('rooms')->cascadeOnDelete();
+            $table->unsignedTinyInteger('period');
+            $table->unsignedInteger('price')->default(0);
             $table->timestamps();
+            $table->unique(['room_id', 'period']);
         });
     }
 

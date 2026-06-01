@@ -29,7 +29,7 @@ const slots = ref([]);
 const selectedRoom = computed(() => props.rooms.find((room) => String(room.id) === String(selectedRoomId.value)) || null);
 
 const slotOrder = (slot) => {
-    const numericId = Number(slot.time_slot_id);
+    const numericId = Number(slot.time_slot?.period);
 
     return Number.isFinite(numericId) ? numericId : Number.MAX_SAFE_INTEGER;
 };
@@ -134,7 +134,7 @@ watch([selectedRoomId, selectedDate], loadSlots, { immediate: true });
                     <div class="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
                         <span class="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">可借用</span>
                         <span class="rounded-full bg-amber-100 px-3 py-1 text-amber-700">已預約</span>
-                        <span class="rounded-full bg-slate-200 px-3 py-1 text-slate-500">全域停用</span>
+                        <span class="rounded-full bg-slate-200 px-3 py-1 text-slate-500">不可借用</span>
                     </div>
                 </div>
 
