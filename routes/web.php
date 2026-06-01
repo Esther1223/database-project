@@ -50,8 +50,6 @@ Route::middleware(['auth', 'role:管理員,行政人員'])->prefix('admin')->nam
 
     Route::get('/reports/reservations', [ReportController::class, 'reservationReport'])->name('reports.reservations');
     Route::get('/reports/reservations/monthly', [ReportController::class, 'monthlyReservations'])->name('reports.reservations.monthly');
-    Route::get('/reports/revenue', [ReportController::class, 'revenueReport'])->name('reports.revenue');
-    Route::get('/reports/revenue/monthly', [ReportController::class, 'monthlyRevenue'])->name('reports.revenue.monthly');
 
     Route::get('/reservations/history', [ReservationController::class, 'history'])->name('reservations.history');
 });

@@ -123,14 +123,6 @@ onMounted(loadData);
                             </p>
                         </div>
 
-                        <div class="flex flex-wrap gap-3">
-                            <a
-                                href="/admin/reports/revenue"
-                                class="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                            >
-                                收入統計
-                            </a>
-                        </div>
                     </div>
 
                     <form class="mt-6 grid gap-4 lg:grid-cols-5" @submit.prevent="loadData">
