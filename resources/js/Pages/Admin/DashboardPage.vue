@@ -99,6 +99,12 @@ const taskItems = computed(() => {
     );
 });
 
+const topCards = computed(() => [
+    ...systemCards.value,
+    ...todayCards.value,
+    ...taskItems.value,
+]);
+
 const canViewManagementStats = computed(
     () => summary.value?.permissions?.can_view_management_stats,
 );
@@ -305,14 +311,20 @@ onMounted(loadSummary);
 
                 <template v-else>
                     <div
-                        v-if="systemCards.length"
-                        class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+                        v-if="topCards.length"
+                        class="grid gap-4 grid-cols-2 md:grid-cols-4"
                     >
-                        <a
-                            v-for="card in systemCards"
+                        <component
+                            :is="card.href ? 'a' : 'div'"
+                            v-for="card in topCards"
                             :key="card.label"
                             :href="card.href"
-                            class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                            class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                            :class="
+                                card.href
+                                    ? 'transition hover:border-slate-300 hover:bg-slate-50'
+                                    : ''
+                            "
                         >
                             <p class="text-sm font-medium text-slate-500">
                                 {{ card.label }}
@@ -323,47 +335,7 @@ onMounted(loadSummary);
                             >
                                 {{ card.value }}
                             </p>
-                        </a>
-                    </div>
-
-                    <div
-                        v-if="todayCards.length"
-                        class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
-                    >
-                        <div
-                            v-for="card in todayCards"
-                            :key="card.label"
-                            class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-                        >
-                            <p class="text-sm font-medium text-slate-500">
-                                {{ card.label }}
-                            </p>
-                            <p
-                                class="mt-2 text-3xl font-semibold"
-                                :class="card.tone"
-                            >
-                                {{ card.value }}
-                            </p>
-                        </div>
-                    </div>
-
-                    <div
-                        v-if="taskItems.length"
-                        class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
-                    >
-                        <a
-                            v-for="item in taskItems"
-                            :key="item.label"
-                            :href="item.href"
-                            class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-                        >
-                            <p class="text-sm font-medium text-slate-500">
-                                {{ item.label }}
-                            </p>
-                            <p class="mt-2 text-3xl font-semibold text-slate-950">
-                                {{ item.value }}
-                            </p>
-                        </a>
+                        </component>
                     </div>
 
                     <div
