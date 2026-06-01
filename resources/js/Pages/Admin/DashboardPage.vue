@@ -9,56 +9,115 @@ const loading = ref(true);
 const errorMessage = ref("");
 const upcomingDetail = ref(null);
 
-const todayCards = computed(() => [
-    {
-        label: "總預約數",
-        value: summary.value?.today?.reservations || 0,
-        tone: "text-slate-950",
-    },
-    {
-        label: "待審核數",
-        value: summary.value?.today?.pending || 0,
-        tone: "text-amber-700",
-    },
-    {
-        label: "已核准數",
-        value: summary.value?.today?.approved || 0,
-        tone: "text-emerald-700",
-    },
-    {
-        label: "已取消數",
-        value: summary.value?.today?.cancelled || 0,
-        tone: "text-rose-700",
-    },
-]);
+const permissions = computed(() => summary.value?.permissions || {});
+
+const todayCards = computed(() =>
+    [
+        {
+            label: "預約總數",
+            value: summary.value?.today?.reservations,
+            tone: "text-slate-950",
+        },
+        {
+            label: "待審核",
+            value: summary.value?.today?.pending,
+            tone: "text-amber-700",
+            show: permissions.value.can_reserve || permissions.value.can_review_approvals,
+        },
+        {
+            label: "已核准",
+            value: summary.value?.today?.approved,
+            tone: "text-emerald-700",
+        },
+        {
+            label: "已取消",
+            value: summary.value?.today?.cancelled,
+            tone: "text-rose-700",
+        },
+    ].filter(
+        (card) =>
+            card.value !== null &&
+            card.value !== undefined &&
+            card.show !== false,
+    ),
+);
+
+const systemCards = computed(() =>
+    [
+        {
+            label: "空間數",
+            value: summary.value?.system?.rooms,
+            href: "/admin/rooms",
+        },
+        {
+            label: "使用者數",
+            value: summary.value?.system?.users,
+            href: "/admin/users",
+        },
+        {
+            label: "停用帳號",
+            value: summary.value?.system?.inactive_accounts,
+            href: "/admin/users",
+            tone: "text-amber-700",
+        },
+        {
+            label: "帳號待啟用",
+            value: summary.value?.system?.pending_accounts,
+            href: "/admin/users",
+            tone: "text-amber-700",
+        },
+    ].filter((card) => card.value !== null && card.value !== undefined),
+);
 
 const taskItems = computed(() => {
     const tasks = summary.value?.tasks || {};
 
     return [
         {
-            label: "待付款",
+            label: "待審核申請",
+            value: tasks.pending_reservations,
+            href: "/approvals",
+            show: summary.value?.permissions?.can_review_approvals,
+        },
+        {
+            label: "待處理付款",
             value: tasks.unpaid_orders,
-            href: summary.value?.permissions?.can_view_revenue
-                ? "/admin/payments"
-                : "/reservations",
+            href: "/admin/payments",
+            show: summary.value?.permissions?.can_view_revenue,
         },
         {
             label: "即將開始的預約",
             value: tasks.upcoming_reservations,
             href: "/reservations",
+            show: summary.value?.permissions?.can_reserve,
         },
-        {
-            label: "帳號待啟用",
-            value: tasks.inactive_accounts,
-            href: "/admin/users",
-        },
-    ].filter((item) => item.value !== null && item.value !== undefined);
+    ].filter(
+        (item) =>
+            item.value !== null &&
+            item.value !== undefined &&
+            item.show !== false,
+    );
 });
 
 const canViewManagementStats = computed(
     () => summary.value?.permissions?.can_view_management_stats,
 );
+
+const canViewReservations = computed(
+    () => summary.value?.permissions?.can_reserve,
+);
+
+const dashboardIntro = computed(() => {
+    if (summary.value?.permissions?.can_manage_users) {
+        return "查看系統設定、空間管理與權限維護相關狀態。";
+    }
+
+    if (summary.value?.permissions?.can_view_operations) {
+        return "查看審核、空間管理、付款處理與預約營運狀態。";
+    }
+
+    return "查看自己的預約狀態與即將開始的預約。";
+});
 
 const monthItems = computed(() => {
     const month = summary.value?.month || {};
@@ -226,7 +285,7 @@ onMounted(loadSummary);
                         儀表板
                     </h2>
                     <p class="mt-2 text-sm text-slate-600">
-                        快速掌握截至今日預約、待付款與即將開始的預約、本月統計與近期紀錄。
+                        {{ dashboardIntro }}
                     </p>
                 </div>
 
@@ -245,7 +304,32 @@ onMounted(loadSummary);
                 </div>
 
                 <template v-else>
-                    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    <div
+                        v-if="systemCards.length"
+                        class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+                    >
+                        <a
+                            v-for="card in systemCards"
+                            :key="card.label"
+                            :href="card.href"
+                            class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                        >
+                            <p class="text-sm font-medium text-slate-500">
+                                {{ card.label }}
+                            </p>
+                            <p
+                                class="mt-2 text-3xl font-semibold"
+                                :class="card.tone || 'text-slate-950'"
+                            >
+                                {{ card.value }}
+                            </p>
+                        </a>
+                    </div>
+
+                    <div
+                        v-if="todayCards.length"
+                        class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+                    >
                         <div
                             v-for="card in todayCards"
                             :key="card.label"
@@ -264,6 +348,30 @@ onMounted(loadSummary);
                     </div>
 
                     <div
+                        v-if="taskItems.length"
+                        class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+                    >
+                        <a
+                            v-for="item in taskItems"
+                            :key="item.label"
+                            :href="item.href"
+                            class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                        >
+                            <p class="text-sm font-medium text-slate-500">
+                                {{ item.label }}
+                            </p>
+                            <p class="mt-2 text-3xl font-semibold text-slate-950">
+                                {{ item.value }}
+                            </p>
+                        </a>
+                    </div>
+
+                    <div
+                        v-if="
+                            summary.permissions.can_view_revenue ||
+                            summary.permissions.can_reserve ||
+                            canViewManagementStats
+                        "
                         class="grid gap-6"
                         :class="
                             canViewManagementStats
@@ -272,6 +380,7 @@ onMounted(loadSummary);
                         "
                     >
                         <div
+                            v-if="summary.permissions.can_view_revenue"
                             class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
                         >
                             <h3 class="text-xl font-semibold text-slate-950">
@@ -329,6 +438,7 @@ onMounted(loadSummary);
                         </div>
 
                         <div
+                            v-if="summary.permissions.can_reserve"
                             class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
                         >
                             <h3 class="text-xl font-semibold text-slate-950">
@@ -432,6 +542,12 @@ onMounted(loadSummary);
                     </div>
 
                     <div
+                        v-if="
+                            summary.permissions.can_reserve ||
+                            summary.permissions.can_view_revenue ||
+                            summary.permissions.can_review_approvals ||
+                            canViewManagementStats
+                        "
                         class="grid gap-6"
                         :class="
                             canViewManagementStats
@@ -440,6 +556,11 @@ onMounted(loadSummary);
                         "
                     >
                         <div
+                            v-if="
+                                summary.permissions.can_reserve ||
+                                summary.permissions.can_view_revenue ||
+                                summary.permissions.can_review_approvals
+                            "
                             class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
                         >
                             <h3 class="text-xl font-semibold text-slate-950">
@@ -447,7 +568,7 @@ onMounted(loadSummary);
                             </h3>
 
                             <div class="mt-5 space-y-6">
-                                <div>
+                                <div v-if="summary.permissions.can_reserve">
                                     <h4
                                         class="text-sm font-semibold text-slate-500"
                                     >

@@ -27,6 +27,8 @@ class DashboardController extends Controller
         $user = $request->user();
         $roles = $user->roles()->pluck('role_type')->values()->all();
 
+        $canReserve = $this->hasAnyRole($roles, ['行政人員', '教授', '學生']);
+        $canManageRooms = $this->hasAnyRole($roles, ['管理員', '行政人員']);
         $canViewOperations = $this->hasAnyRole($roles, ['行政人員']);
         $canReviewApprovals = $this->hasAnyRole($roles, ['行政人員']);
         $canViewRevenue = $this->hasAnyRole($roles, ['行政人員']);
@@ -39,16 +41,26 @@ class DashboardController extends Controller
 
         $reservationScope = $this->reservationScope($user, $canViewOperations || $canReviewApprovals);
         $personalReservationScope = $this->reservationScope($user, false);
-        $reservationGroupCounts = $this->reservationGroupCounts($reservationScope);
+        $reservationGroupCounts = $canReserve || $canViewOperations
+            ? $this->reservationGroupCounts($reservationScope)
+            : ['reservations' => null, 'pending' => null, 'approved' => null, 'cancelled' => null];
 
         return response()->json([
             'roles' => $roles,
             'permissions' => [
+                'can_reserve' => $canReserve,
+                'can_manage_rooms' => $canManageRooms,
                 'can_view_operations' => $canViewOperations,
                 'can_review_approvals' => $canReviewApprovals,
                 'can_view_revenue' => $canViewRevenue,
                 'can_view_management_stats' => $canViewManagementStats,
                 'can_manage_users' => $canManageUsers,
+            ],
+            'system' => [
+                'rooms' => $canManageRooms ? Room::count() : null,
+                'users' => $canManageUsers ? User::count() : null,
+                'inactive_accounts' => $canManageUsers ? User::where('is_active', false)->count() : null,
+                'pending_accounts' => $canManageUsers ? User::where('is_active', false)->count() : null,
             ],
             'today' => [
                 'reservations' => $reservationGroupCounts['reservations'],
@@ -59,24 +71,23 @@ class DashboardController extends Controller
             'tasks' => [
                 'pending_reservations' => $canReviewApprovals
                     ? Reservation::where('reservation_status', 'pending')->count()
-                    : (clone $reservationScope)->where('reservation_status', 'pending')->count(),
+                    : null,
                 'unpaid_orders' => $canViewRevenue
                     ? Payment::where('payment_status', 'unpaid')->count()
-                    : $this->scopedUnpaidPaymentCount($reservationScope),
-                'upcoming_reservations' => (clone $personalReservationScope)
-                    ->with('timeSlot')
-                    ->whereIn('reservation_status', ['pending', 'success'])
-                    ->whereDate('reservation_date', '>=', $now->toDateString())
-                    ->whereDate('reservation_date', '<=', $now->copy()->addDay()->toDateString())
-                    ->get()
-                    ->filter(fn (Reservation $reservation): bool => $reservation->start_time >= $now && $reservation->start_time <= $now->copy()->addDay())
-                    ->count(),
-                // Provide lists for frontend display
-                'unpaid_orders_list' => $this->unpaidOrdersList($reservationScope, $canViewRevenue),
-                'upcoming_reservations_list' => $this->upcomingReservationsList($personalReservationScope, $now),
-                'inactive_accounts' => $canManageUsers
-                    ? User::where('is_active', false)->count()
                     : null,
+                'upcoming_reservations' => $canReserve
+                    ? (clone $personalReservationScope)
+                        ->with('timeSlot')
+                        ->whereIn('reservation_status', ['pending', 'success'])
+                        ->whereDate('reservation_date', '>=', $now->toDateString())
+                        ->whereDate('reservation_date', '<=', $now->copy()->addDay()->toDateString())
+                        ->get()
+                        ->filter(fn (Reservation $reservation): bool => $reservation->start_time >= $now && $reservation->start_time <= $now->copy()->addDay())
+                        ->count()
+                    : null,
+                'unpaid_orders_list' => $canViewRevenue ? $this->unpaidOrdersList($reservationScope, true) : [],
+                'upcoming_reservations_list' => $canReserve ? $this->upcomingReservationsList($personalReservationScope, $now) : [],
+                'inactive_accounts' => $canManageUsers ? User::where('is_active', false)->count() : null,
             ],
             'month' => [
                 'borrow_count' => $canViewManagementStats
@@ -96,7 +107,7 @@ class DashboardController extends Controller
                     : null,
             ],
             'recent' => [
-                'reservations' => $this->recentReservations($reservationScope),
+                'reservations' => ($canReserve || $canViewOperations) ? $this->recentReservations($reservationScope) : [],
                 'payments' => $canViewRevenue ? $this->recentPayments() : [],
                 'approvals' => $canReviewApprovals ? $this->recentApprovals() : [],
             ],
