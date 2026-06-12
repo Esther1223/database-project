@@ -41,6 +41,14 @@ class TimeSlot extends Model
         return $this->hasMany(RoomSection::class);
     }
 
+    /**
+     * @return HasMany<Reservation, $this>
+     */
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(Reservation::class);
+    }
+
     public function label(): string
     {
         return sprintf('%02d:00 - %02d:00', $this->period, $this->period + 1);

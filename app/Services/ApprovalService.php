@@ -44,6 +44,7 @@ class ApprovalService
                 $item->update(['reservation_status' => 'success']);
 
                 $this->reserveRoomSections($item);
+                $this->rejectConflictingPendingReservations($item);
             }
 
             $this->createGroupPaymentIfNeeded($this->successReservationsInPaymentGroup($reservation));
@@ -140,6 +141,20 @@ class ApprovalService
             ->where('time_slot_id', $reservation->time_slot_id)
             ->lockForUpdate()
             ->exists();
+    }
+
+    private function rejectConflictingPendingReservations(Reservation $approvedReservation): void
+    {
+        Reservation::query()
+            ->whereKeyNot($approvedReservation->id)
+            ->where('room_id', $approvedReservation->room_id)
+            ->whereDate('reservation_date', $approvedReservation->reservation_date)
+            ->where('time_slot_id', $approvedReservation->time_slot_id)
+            ->where('reservation_status', 'pending')
+            ->update([
+                'reservation_status' => 'rejected',
+                'payment_status' => 'cancelled',
+            ]);
     }
 
     private function createPaymentIfNeeded(Reservation $reservation): void

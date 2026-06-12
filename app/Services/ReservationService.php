@@ -220,11 +220,16 @@ class ReservationService
                     ->get()
                 : collect([$reservation]);
 
+            if ($reservations->contains(fn (Reservation $item): bool => $this->hasStarted($item))) {
+                abort(422, '預約已開始，無法取消。');
+            }
+
             foreach ($reservations as $item) {
                 $wasSuccess = $item->reservation_status === 'success';
 
                 $item->update([
                     'reservation_status' => 'cancelled',
+                    'payment_status' => 'cancelled',
                 ]);
 
                 if ($wasSuccess) {
@@ -234,7 +239,7 @@ class ReservationService
 
             $reservationIds = $reservations->pluck('id')->filter()->values();
 
-            if ($reservationIds->isNotEmpty()) {
+            if (! $cancelGroup && $reservationIds->isNotEmpty()) {
                 Payment::whereIn('reservation_id', $reservationIds)->delete();
             }
 
@@ -250,6 +255,13 @@ class ReservationService
         });
 
         return $reservation->fresh(['room', 'timeSlot']);
+    }
+
+    private function hasStarted(Reservation $reservation): bool
+    {
+        $reservation->loadMissing('timeSlot');
+
+        return $reservation->start_time !== null && $reservation->start_time->lessThanOrEqualTo(now());
     }
 
     public function hasPendingSlotForUser(int $userId, int $roomId, string $date, int $timeSlotId): bool

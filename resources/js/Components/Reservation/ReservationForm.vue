@@ -126,7 +126,7 @@ const sectionRoomLabel = (section) =>
                     {{ selectedRoom.type }} · 容量
                     {{ selectedRoom.capacity }} 人
                 </p>
-                <p class="mt-1">費率：NT$ {{ selectedRoom.rate }} / 小時</p>
+                <p class="mt-1">時段價格：{{ selectedRoom.price_label || "尚未建立時段" }}</p>
                 <p class="mt-1">
                     {{ selectedRoom.need_approval ? "需審核" : "可直接預約" }}
                 </p>

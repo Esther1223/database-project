@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AffiliationController as AdminAffiliationController;
+use App\Http\Controllers\Admin\RoleController as AdminRoleController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AuthController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\RoomSectionController;
+use App\Http\Controllers\TimeSlotController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -29,6 +31,11 @@ Route::middleware(['auth', 'role:管理員'])->prefix('admin')->name('admin.')->
     Route::post('/affiliations', [AdminAffiliationController::class, 'store'])->name('affiliations.store');
     Route::put('/affiliations/{affiliation}', [AdminAffiliationController::class, 'update'])->name('affiliations.update');
     Route::delete('/affiliations/{affiliation}', [AdminAffiliationController::class, 'destroy'])->name('affiliations.destroy');
+
+    Route::get('/roles', [AdminRoleController::class, 'index'])->name('roles.index');
+    Route::post('/roles', [AdminRoleController::class, 'store'])->name('roles.store');
+    Route::put('/roles/{role}', [AdminRoleController::class, 'update'])->name('roles.update');
+    Route::delete('/roles/{role}', [AdminRoleController::class, 'destroy'])->name('roles.destroy');
 
     Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
     Route::post('/users', [AdminUserController::class, 'store'])->name('users.store');
@@ -52,6 +59,8 @@ Route::middleware(['auth', 'role:行政人員'])->prefix('admin')->name('admin.'
 
     Route::get('/reports/reservations', [ReportController::class, 'reservationReport'])->name('reports.reservations');
     Route::get('/reports/reservations/monthly', [ReportController::class, 'monthlyReservations'])->name('reports.reservations.monthly');
+    Route::get('/reports/rooms/usage', [ReportController::class, 'roomUsage'])->name('reports.rooms.usage');
+    Route::get('/reports/payments', [ReportController::class, 'payments'])->name('reports.payments');
 
     Route::get('/reservations/history', [ReservationController::class, 'history'])->name('reservations.history');
 });
@@ -69,7 +78,11 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'role:管理員,行政人員'])->group(function () {
     Route::patch('/room-sections/{roomSection}/status', [RoomSectionController::class, 'updateAvailability']);
-    Route::patch('/time-slots/{timeSlot}/status', [RoomSectionController::class, 'updateAdminDisable']);
+    Route::get('/admin/rooms/{room}/time-slots', [TimeSlotController::class, 'index'])->name('admin.rooms.time-slots.index');
+    Route::post('/admin/rooms/{room}/time-slots', [TimeSlotController::class, 'store'])->name('admin.rooms.time-slots.store');
+    Route::put('/admin/rooms/{room}/time-slots/{timeSlot}', [TimeSlotController::class, 'update'])->name('admin.rooms.time-slots.update');
+    Route::delete('/admin/rooms/{room}/time-slots/{timeSlot}', [TimeSlotController::class, 'destroy'])->name('admin.rooms.time-slots.destroy');
+    Route::patch('/time-slots/{timeSlot}/status', [TimeSlotController::class, 'updateStatus']);
 });
 
 Route::middleware('auth')->group(function () {

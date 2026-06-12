@@ -63,6 +63,14 @@ const slotRangeLabel = (startValue, endValue) => {
 const slotRoomLabel = (slot) =>
     [slot?.room?.name, slot?.room?.building].filter(Boolean).join(" · ");
 
+const startsInFuture = (value) => {
+    if (!value) return false;
+
+    const date = new Date(String(value).replace(" ", "T"));
+
+    return !Number.isNaN(date.getTime()) && date > new Date();
+};
+
 const reservationSlotLabels = (reservation) => {
     if (!reservation.slots?.length) {
         return [slotRangeLabel(reservation.start_time, reservation.end_time)];
@@ -114,7 +122,8 @@ const canCancel = (reservation) =>
         : ["pending", "success"].includes(reservation?.reservation_status));
 
 const canCancelSlot = (slot) =>
-    ["pending", "success"].includes(slot?.reservation_status);
+    ["pending", "success"].includes(slot?.reservation_status) &&
+    startsInFuture(slot?.start_time);
 
 const openCancelDialog = (reservation, slot = null) => {
     if (!canCancel(reservation) || cancellingId.value !== null) {

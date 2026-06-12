@@ -11,7 +11,7 @@ return new class extends Migration
     {
         if (! Schema::hasColumn('reservations', 'payment_status')) {
             Schema::table('reservations', function (Blueprint $table): void {
-                $table->enum('payment_status', ['unpaid', 'paid'])->default('unpaid')->after('reservation_status');
+                $table->string('payment_status')->default('unpaid')->after('reservation_status');
             });
         }
 
@@ -48,7 +48,7 @@ return new class extends Migration
 
         if (! Schema::hasColumn('payments', 'payment_status')) {
             Schema::table('payments', function (Blueprint $table): void {
-                $table->enum('payment_status', ['unpaid', 'paid'])->default('unpaid')->after('amount');
+                $table->string('payment_status')->default('unpaid')->after('amount');
             });
 
             DB::table('reservations')

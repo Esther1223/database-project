@@ -16,6 +16,7 @@ const tabs = [
     { key: "all", label: "全部" },
     { key: "unpaid", label: "未付款" },
     { key: "paid", label: "已付款" },
+    { key: "cancelled", label: "已取消" },
 ];
 
 const formatDateTime = (value) => {
@@ -84,6 +85,10 @@ const switchTab = (tab) => {
 
 const toggleStatus = async (payment) => {
     if (!payment || updatingId.value !== null) {
+        return;
+    }
+
+    if (payment.payment_status === "cancelled") {
         return;
     }
 
@@ -271,6 +276,7 @@ onMounted(loadPayments);
 
                             <div class="flex justify-start lg:justify-center">
                                 <button
+                                    v-if="payment.payment_status !== 'cancelled'"
                                     type="button"
                                     class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                                     :disabled="updatingId === payment.id"
@@ -284,6 +290,12 @@ onMounted(loadPayments);
                                               : "標記已付"
                                     }}
                                 </button>
+                                <span
+                                    v-else
+                                    class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-400"
+                                >
+                                    已取消
+                                </span>
                             </div>
                         </div>
                     </div>
