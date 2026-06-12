@@ -59,8 +59,6 @@ class DashboardController extends Controller
             'system' => [
                 'rooms' => $canManageRooms ? Room::count() : null,
                 'users' => $canManageUsers ? User::count() : null,
-                'inactive_accounts' => $canManageUsers ? User::where('is_active', false)->count() : null,
-                'pending_accounts' => $canManageUsers ? User::where('is_active', false)->count() : null,
             ],
             'today' => [
                 'reservations' => $reservationGroupCounts['reservations'],
@@ -87,7 +85,6 @@ class DashboardController extends Controller
                     : null,
                 'unpaid_orders_list' => $canViewRevenue ? $this->unpaidOrdersList($reservationScope, true) : [],
                 'upcoming_reservations_list' => $canReserve ? $this->upcomingReservationsList($personalReservationScope, $now) : [],
-                'inactive_accounts' => $canManageUsers ? User::where('is_active', false)->count() : null,
             ],
             'month' => [
                 'borrow_count' => $canViewManagementStats

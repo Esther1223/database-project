@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'affiliation_id', 'is_active'])]
+#[Fillable(['name', 'email', 'password', 'affiliation_id'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
@@ -82,11 +82,4 @@ class User extends Authenticatable
         return $this->hasRole('管理員');
     }
 
-    /**
-     * Determine whether the account can sign in.
-     */
-    public function isActive(): bool
-    {
-        return (bool) ($this->is_active ?? true);
-    }
 }

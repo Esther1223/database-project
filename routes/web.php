@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\Admin\AffiliationController as AdminAffiliationController;
-use App\Http\Controllers\Admin\RoleController as AdminRoleController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AuthController;
@@ -32,16 +31,12 @@ Route::middleware(['auth', 'role:管理員'])->prefix('admin')->name('admin.')->
     Route::put('/affiliations/{affiliation}', [AdminAffiliationController::class, 'update'])->name('affiliations.update');
     Route::delete('/affiliations/{affiliation}', [AdminAffiliationController::class, 'destroy'])->name('affiliations.destroy');
 
-    Route::get('/roles', [AdminRoleController::class, 'index'])->name('roles.index');
-    Route::post('/roles', [AdminRoleController::class, 'store'])->name('roles.store');
-    Route::put('/roles/{role}', [AdminRoleController::class, 'update'])->name('roles.update');
-    Route::delete('/roles/{role}', [AdminRoleController::class, 'destroy'])->name('roles.destroy');
+    Route::redirect('/roles', '/admin/users')->name('roles.index');
 
     Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
     Route::post('/users', [AdminUserController::class, 'store'])->name('users.store');
     Route::put('/users/{user}', [AdminUserController::class, 'update'])->name('users.update');
     Route::delete('/users/{user}', [AdminUserController::class, 'destroy'])->name('users.destroy');
-    Route::patch('/users/{user}/status', [AdminUserController::class, 'updateStatus'])->name('users.status');
     Route::put('/users/{user}/roles', [AdminUserController::class, 'updateRoles'])->name('users.roles');
 });
 

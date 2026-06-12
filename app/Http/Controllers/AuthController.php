@@ -23,12 +23,6 @@ class AuthController extends Controller
             ], 401);
         }
 
-        if (!$user->isActive()) {
-            return response()->json([
-                'message' => '帳號已停用，請聯絡管理員',
-            ], 403);
-        }
-
         Auth::login($user);
 
         return response()->json([

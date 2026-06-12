@@ -24,7 +24,6 @@ const userForm = reactive({
     email: "",
     affiliation_id: "",
     password: "",
-    is_active: true,
     role_ids: [],
 });
 const userErrors = reactive({});
@@ -68,7 +67,6 @@ const resetUserForm = () => {
     userForm.email = "";
     userForm.affiliation_id = "";
     userForm.password = "";
-    userForm.is_active = true;
     userForm.role_ids = [];
     userEditingId.value = null;
     clearErrors(userErrors);
@@ -87,7 +85,6 @@ const openUserForm = (user = null) => {
     userForm.email = user.email;
     userForm.affiliation_id = user.affiliation_id ?? "";
     userForm.password = "";
-    userForm.is_active = user.is_active;
     userForm.role_ids = user.roles.map((role) => role.id);
     userEditingId.value = user.id;
 };
@@ -106,7 +103,6 @@ const saveUser = async () => {
         name: userForm.name,
         email: userForm.email,
         affiliation_id: userForm.affiliation_id,
-        is_active: userForm.is_active,
         role_ids: userForm.role_ids,
     };
 
@@ -172,29 +168,6 @@ const isAdmin = (user) => {
     });
 };
 
-const toggleStatus = async (user) => {
-    busyKey.value = `status-${user.id}`;
-    notice.value = "";
-    // Prevent disabling admin users from the UI
-    if (user?.is_active && isAdmin(user)) {
-        busyKey.value = "";
-        notice.value = "無法停用管理員帳號";
-        return;
-    }
-
-    try {
-        await axios.patch(`/admin/users/${user.id}/status`, {
-            is_active: !user.is_active,
-        });
-
-        notice.value = "使用者狀態已更新";
-        router.reload({ preserveScroll: true });
-    } catch (error) {
-        notice.value = error.response?.data?.message || "使用者狀態更新失敗";
-    } finally {
-        busyKey.value = "";
-    }
-};
 </script>
 
 <template>
@@ -250,7 +223,7 @@ const toggleStatus = async (user) => {
                     class="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm"
                 >
                     <div
-                        class="grid grid-cols-[1.5fr_1.2fr_1fr_180px] gap-4 border-b border-slate-200 bg-slate-50 px-6 py-4 text-sm font-semibold text-slate-600"
+                        class="grid grid-cols-[1.5fr_1.2fr_1fr_120px] gap-4 border-b border-slate-200 bg-slate-50 px-6 py-4 text-sm font-semibold text-slate-600"
                     >
                         <div>使用者資料</div>
                         <div>所屬單位</div>
@@ -265,28 +238,12 @@ const toggleStatus = async (user) => {
                         <div
                             v-for="user in filteredUsers"
                             :key="user.id"
-                            class="grid grid-cols-1 gap-4 px-6 py-5 lg:grid-cols-[1.5fr_1.2fr_1fr_180px] lg:items-center"
+                            class="grid grid-cols-1 gap-4 px-6 py-5 lg:grid-cols-[1.5fr_1.2fr_1fr_120px] lg:items-center"
                         >
                             <div>
-                                <div class="flex flex-wrap items-center gap-3">
-                                    <p
-                                        class="text-lg font-semibold text-slate-950"
-                                    >
-                                        {{ user.name }}
-                                    </p>
-                                    <span
-                                        class="rounded-full px-3 py-1 text-xs font-semibold"
-                                        :class="
-                                            user.is_active
-                                                ? 'bg-emerald-100 text-emerald-800'
-                                                : 'bg-rose-100 text-rose-800'
-                                        "
-                                    >
-                                        {{
-                                            user.is_active ? "啟用中" : "已停用"
-                                        }}
-                                    </span>
-                                </div>
+                                <p class="text-lg font-semibold text-slate-950">
+                                    {{ user.name }}
+                                </p>
                                 <p class="mt-1 text-sm text-slate-500">
                                     {{ user.email }}
                                 </p>
@@ -323,28 +280,6 @@ const toggleStatus = async (user) => {
                                     @click="openUserForm(user)"
                                 >
                                     修改
-                                </button>
-                                <!-- 不顯示管理員的停用按鈕 -->
-                                <button
-                                    v-if="!(user.is_active && isAdmin(user))"
-                                    type="button"
-                                    :class="[
-                                        'rounded-xl px-3 py-2 text-sm font-semibold transition',
-                                        busyKey === `status-${user.id}`
-                                            ? 'opacity-70 cursor-wait'
-                                            : '',
-                                        'border border-slate-300 text-slate-700 hover:bg-slate-100',
-                                    ]"
-                                    :disabled="busyKey === `status-${user.id}`"
-                                    @click="toggleStatus(user)"
-                                >
-                                    {{
-                                        busyKey === `status-${user.id}`
-                                            ? "..."
-                                            : user.is_active
-                                              ? "停用"
-                                              : "啟用"
-                                    }}
                                 </button>
                                 <!-- 不顯示管理員的刪除按鈕 -->
                                 <button
@@ -521,25 +456,6 @@ const toggleStatus = async (user) => {
                                     {{ userErrors.password[0] }}
                                 </p>
                             </div>
-
-                            <label
-                                class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
-                            >
-                                <input
-                                    v-model="userForm.is_active"
-                                    type="checkbox"
-                                    class="h-4 w-4 rounded border-slate-300 text-slate-900"
-                                />
-                                <span class="text-sm font-medium text-slate-700"
-                                    >帳號啟用中</span
-                                >
-                            </label>
-                            <p
-                                v-if="userErrors.is_active"
-                                class="text-sm text-rose-700"
-                            >
-                                {{ userErrors.is_active[0] }}
-                            </p>
 
                             <div>
                                 <p

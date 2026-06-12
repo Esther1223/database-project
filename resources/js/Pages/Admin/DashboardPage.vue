@@ -56,18 +56,6 @@ const systemCards = computed(() =>
             value: summary.value?.system?.users,
             href: "/admin/users",
         },
-        {
-            label: "停用帳號",
-            value: summary.value?.system?.inactive_accounts,
-            href: "/admin/users",
-            tone: "text-amber-700",
-        },
-        {
-            label: "帳號待啟用",
-            value: summary.value?.system?.pending_accounts,
-            href: "/admin/users",
-            tone: "text-amber-700",
-        },
     ].filter((card) => card.value !== null && card.value !== undefined),
 );
 
@@ -311,7 +299,7 @@ onMounted(loadSummary);
                     載入儀表板中...
                 </div>
 
-                <template v-else>
+                <template v-else-if="summary">
                     <div
                         v-if="topCards.length"
                         class="grid gap-4 grid-cols-2 md:grid-cols-4"

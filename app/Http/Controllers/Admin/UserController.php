@@ -35,7 +35,6 @@ class UserController extends Controller
                     'affiliation' => $affiliation?->name,
                     'affiliation_id' => $user->affiliation_id,
                     'affiliation_name' => $affiliation?->name,
-                    'is_active' => (bool) ($user->is_active ?? true),
                     'roles' => $user->roles->map(fn (Role $role): array => [
                         'id' => $role->id,
                         'role_type' => $role->role_type,
@@ -78,7 +77,6 @@ class UserController extends Controller
             'email' => ['required', 'email', 'max:255', 'unique:User,email'],
             'affiliation_id' => ['required', 'integer', 'exists:Affiliation,id'],
             'password' => ['required', 'string', 'min:6'],
-            'is_active' => ['sometimes', 'boolean'],
             'role_ids' => ['required', 'array', 'min:1'],
             'role_ids.*' => ['integer', 'exists:Role,id'],
         ], [
@@ -104,7 +102,6 @@ class UserController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'is_active' => $validated['is_active'] ?? true,
             'affiliation_id' => $validated['affiliation_id'],
         ]);
 
@@ -126,7 +123,6 @@ class UserController extends Controller
             'email' => ['required', 'email', 'max:255', Rule::unique('User', 'email')->ignore($user->id)],
             'affiliation_id' => ['required', 'integer', 'exists:Affiliation,id'],
             'password' => ['nullable', 'string', 'min:6'],
-            'is_active' => ['sometimes', 'boolean'],
             'role_ids' => ['required', 'array', 'min:1'],
             'role_ids.*' => ['integer', 'exists:Role,id'],
         ], [
@@ -155,16 +151,6 @@ class UserController extends Controller
         }
 
         if (
-            array_key_exists('is_active', $validated)
-            && $user->id === $request->user()->id
-            && $validated['is_active'] === false
-        ) {
-            throw ValidationException::withMessages([
-                'is_active' => '不能停用目前登入中的帳號。',
-            ]);
-        }
-
-        if (
             $user->roles()->where('role_type', '管理員')->exists()
             && !in_array((int) Role::query()->where('role_type', '管理員')->value('id'), $roleIds, true)
         ) {
@@ -185,10 +171,6 @@ class UserController extends Controller
 
         if (!empty($validated['password'] ?? null)) {
             $payload['password'] = Hash::make($validated['password']);
-        }
-
-        if (array_key_exists('is_active', $validated)) {
-            $payload['is_active'] = $validated['is_active'];
         }
 
         $user->forceFill($payload)->save();
@@ -221,38 +203,6 @@ class UserController extends Controller
 
         return response()->json([
             'message' => '使用者已刪除',
-        ]);
-    }
-
-    /**
-     * Toggle a user's active state.
-     */
-    public function updateStatus(Request $request, User $user): JsonResponse
-    {
-        $validated = $request->validate([
-            'is_active' => ['required', 'boolean'],
-        ]);
-
-        // Prevent deactivating admin users from backend
-        if ($validated['is_active'] === false && $user->roles()->where('role_type', '管理員')->exists()) {
-            throw ValidationException::withMessages([
-                'is_active' => '無法停用管理員帳號。',
-            ]);
-        }
-
-        // Prevent deactivating currently authenticated user
-        if ($validated['is_active'] === false && $request->user()?->id === $user->id) {
-            throw ValidationException::withMessages([
-                'is_active' => '不能停用目前登入中的帳號。',
-            ]);
-        }
-
-        $user->forceFill([
-            'is_active' => $validated['is_active'],
-        ])->save();
-
-        return response()->json([
-            'message' => '使用者狀態已更新',
         ]);
     }
 
