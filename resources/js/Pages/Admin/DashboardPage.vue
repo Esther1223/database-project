@@ -103,7 +103,18 @@ const canViewReservations = computed(
     () => summary.value?.permissions?.can_reserve,
 );
 
+const isBlankAdminDashboard = computed(
+    () =>
+        summary.value?.permissions?.can_manage_users &&
+        !summary.value?.permissions?.can_view_operations &&
+        !summary.value?.permissions?.can_reserve,
+);
+
 const dashboardIntro = computed(() => {
+    if (isBlankAdminDashboard.value) {
+        return "";
+    }
+
     if (summary.value?.permissions?.can_manage_users) {
         return "查看系統設定、空間管理與權限維護相關狀態。";
     }
@@ -280,7 +291,10 @@ onMounted(loadSummary);
                     <h2 class="mt-3 text-3xl font-semibold text-slate-950">
                         儀表板
                     </h2>
-                    <p class="mt-2 text-sm text-slate-600">
+                    <p
+                        v-if="dashboardIntro"
+                        class="mt-2 text-sm text-slate-600"
+                    >
                         {{ dashboardIntro }}
                     </p>
                 </div>
@@ -299,7 +313,7 @@ onMounted(loadSummary);
                     載入儀表板中...
                 </div>
 
-                <template v-else-if="summary">
+                <template v-else-if="summary && !isBlankAdminDashboard">
                     <div
                         v-if="topCards.length"
                         class="grid gap-4 grid-cols-2 md:grid-cols-4"
