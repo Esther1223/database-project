@@ -47,15 +47,10 @@ watch(selectedDate, (newDate) => {
                 </div>
             </div>
 
-            <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            <div class="grid gap-5 md:grid-cols-2">
                 <div class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
                     <p class="text-sm text-slate-500">容量</p>
                     <p class="mt-2 text-2xl font-semibold text-slate-950">{{ room.capacity }} 人</p>
-                </div>
-
-                <div class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
-                    <p class="text-sm text-slate-500">費率</p>
-                    <p class="mt-2 text-2xl font-semibold text-slate-950">NT$ {{ room.rate }} / 小時</p>
                 </div>
 
                 <div class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
@@ -82,10 +77,6 @@ watch(selectedDate, (newDate) => {
                             <dt class="text-slate-500">所在建築</dt>
                             <dd class="font-medium text-slate-900">{{ room.building }}</dd>
                         </div>
-                        <div class="flex items-center justify-between gap-4 border-b border-slate-100 pb-3">
-                            <dt class="text-slate-500">費率</dt>
-                            <dd class="font-medium text-slate-900">NT$ {{ room.rate }}</dd>
-                        </div>
                         <div class="flex items-center justify-between gap-4">
                             <dt class="text-slate-500">審核狀態</dt>
                             <dd class="font-medium text-slate-900">{{ room.need_approval ? '需要' : '不需要' }}</dd>
@@ -97,9 +88,12 @@ watch(selectedDate, (newDate) => {
            <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
                 
                 <div class="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
-                    <p class="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500">
-                        可預約時段
-                    </p>
+                    <div>
+                        <p class="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500">
+                            可預約時段
+                        </p>
+                        <p class="mt-1 text-xs text-slate-500">各時段費率可能不同，請參考下方列表</p>
+                    </div>
                     <div class="flex items-center gap-3">
                         <label for="date-picker" class="text-sm font-medium text-slate-600">選擇日期：</label>
                         <input 
@@ -127,9 +121,10 @@ watch(selectedDate, (newDate) => {
                         
                         <div class="min-w-0">
                            <p class="text-base font-semibold">{{ section.time_label }}</p>
+                           <p class="mt-0.5 text-sm text-slate-500">NT$ {{ section.time_slot?.price ?? 0 }}</p>
                         </div>
 
-                        <div class="shrink-0">
+                        <div class="shrink-0 flex items-center gap-3">
                             <span v-if="section.state === 'disabled'"
                                 class="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-500">暫停開放</span>
                             
