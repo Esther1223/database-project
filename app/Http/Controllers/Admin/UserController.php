@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Afflication;
+use App\Models\Affiliation;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -22,22 +22,26 @@ class UserController extends Controller
     public function index(): Response
     {
         $users = User::query()
-            ->with(['roles', 'afflication'])
+            ->with(['roles', 'affiliation'])
             ->orderBy('name')
             ->get()
-            ->map(fn (User $user): array => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'affiliation' => $user->affiliation,
-                'afflication_id' => $user->afflication_id,
-                'afflication_name' => $user->afflication?->name,
-                'is_active' => (bool) ($user->is_active ?? true),
-                'roles' => $user->roles->map(fn (Role $role): array => [
-                    'id' => $role->id,
-                    'role_type' => $role->role_type,
-                ]),
-            ]);
+            ->map(function (User $user): array {
+                $affiliation = $user->getRelation('affiliation');
+
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'affiliation' => $user->affiliation,
+                    'affiliation_id' => $user->affiliation_id,
+                    'affiliation_name' => $affiliation?->name,
+                    'is_active' => (bool) ($user->is_active ?? true),
+                    'roles' => $user->roles->map(fn (Role $role): array => [
+                        'id' => $role->id,
+                        'role_type' => $role->role_type,
+                    ]),
+                ];
+            });
 
         $roles = Role::query()
             ->orderBy('role_type')
@@ -47,12 +51,12 @@ class UserController extends Controller
                 'role_type' => $role->role_type,
             ]);
 
-        $afflications = Afflication::query()
+        $affiliations = Affiliation::query()
             ->orderBy('name')
             ->get()
-            ->map(fn (Afflication $afflication): array => [
-                'id' => $afflication->id,
-                'name' => $afflication->name,
+            ->map(fn (Affiliation $affiliation): array => [
+                'id' => $affiliation->id,
+                'name' => $affiliation->name,
             ])
             ->values()
             ->all();
@@ -60,7 +64,7 @@ class UserController extends Controller
         return Inertia::render('Admin/Users/UserListPage', [
             'users' => $users,
             'roles' => $roles,
-            'afflications' => $afflications,
+            'affiliations' => $affiliations,
         ]);
     }
 
@@ -72,7 +76,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'afflication_id' => ['required', 'integer', 'exists:afflications,id'],
+            'affiliation_id' => ['required', 'integer', 'exists:affiliations,id'],
             'password' => ['required', 'string', 'min:6'],
             'is_active' => ['sometimes', 'boolean'],
             'role_ids' => ['required', 'array', 'min:1'],
@@ -96,15 +100,15 @@ class UserController extends Controller
             }
         }
 
-        $afflication = Afflication::find($validated['afflication_id']);
+        $affiliation = Affiliation::find($validated['affiliation_id']);
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'affiliation' => $afflication?->name ?? '未指定',
+            'affiliation' => $affiliation?->name ?? '未指定',
             'password' => Hash::make($validated['password']),
             'is_active' => $validated['is_active'] ?? true,
-            'afflication_id' => $validated['afflication_id'],
+            'affiliation_id' => $validated['affiliation_id'],
         ]);
 
         $user->roles()->sync($roleIds);
@@ -123,7 +127,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'afflication_id' => ['required', 'integer', 'exists:afflications,id'],
+            'affiliation_id' => ['required', 'integer', 'exists:affiliations,id'],
             'password' => ['nullable', 'string', 'min:6'],
             'is_active' => ['sometimes', 'boolean'],
             'role_ids' => ['required', 'array', 'min:1'],
@@ -176,13 +180,13 @@ class UserController extends Controller
             }
         }
 
-        $afflication = Afflication::find($validated['afflication_id']);
+        $affiliation = Affiliation::find($validated['affiliation_id']);
 
         $payload = [
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'affiliation' => $afflication?->name ?? '未指定',
-            'afflication_id' => $validated['afflication_id'],
+            'affiliation' => $affiliation?->name ?? '未指定',
+            'affiliation_id' => $validated['affiliation_id'],
         ];
 
         if (!empty($validated['password'] ?? null)) {

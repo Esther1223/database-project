@@ -11,7 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('afflications', function (Blueprint $table) {
+        if (Schema::hasTable('afflications') && ! Schema::hasTable('affiliations')) {
+            Schema::rename('afflications', 'affiliations');
+
+            return;
+        }
+
+        if (Schema::hasTable('affiliations')) {
+            return;
+        }
+
+        Schema::create('affiliations', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique();
             $table->timestamps();
@@ -23,6 +33,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('afflications');
+        Schema::dropIfExists('affiliations');
     }
 };

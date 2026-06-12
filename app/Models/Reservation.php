@@ -19,6 +19,7 @@ class Reservation extends Model
         'reservation_date',
         'time_slot_id',
         'reservation_status',
+        'payment_status',
     ];
 
     protected $appends = [

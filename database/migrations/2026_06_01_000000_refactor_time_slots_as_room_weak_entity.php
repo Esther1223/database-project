@@ -12,7 +12,8 @@ return new class extends Migration
         $legacySchema = Schema::hasColumn('time_slots', 'time_slot_id');
 
         if ($legacySchema) {
-            $rooms = DB::table('rooms')->get(['id', 'hourly_rate']);
+            $rooms = DB::table('rooms')
+                ->get(Schema::hasColumn('rooms', 'hourly_rate') ? ['id', 'hourly_rate'] : ['id']);
 
             Schema::table('room_sections', function (Blueprint $table): void {
                 $table->dropForeign(['time_slot_id']);

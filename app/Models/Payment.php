@@ -13,7 +13,6 @@ class Payment extends Model
     protected $fillable = [
         'reservation_id',
         'amount',
-        'payment_status',
     ];
 
     protected function casts(): array

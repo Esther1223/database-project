@@ -21,9 +21,8 @@ class Room extends Model
         'room_type',
         'capacity',
         'building',
-        'afflication_id',
+        'affiliation_id',
         'information',
-        'hourly_rate',
         'need_approval',
         'is_open_access',
         'open_access_all',
@@ -33,7 +32,6 @@ class Room extends Model
     {
         return [
             'capacity' => 'integer',
-            'hourly_rate' => 'integer',
             'need_approval' => 'boolean',
             'is_open_access' => 'boolean',
             'open_access_all' => 'boolean',
@@ -53,14 +51,6 @@ class Room extends Model
         return Attribute::make(
             get: fn (): ?string => $this->attributes['room_type'] ?? null,
             set: fn (string $value): array => ['room_type' => $value],
-        );
-    }
-
-    protected function rate(): Attribute
-    {
-        return Attribute::make(
-            get: fn (): int => (int) ($this->attributes['hourly_rate'] ?? 0),
-            set: fn (int|string $value): array => ['hourly_rate' => (int) $value],
         );
     }
 
@@ -89,19 +79,19 @@ class Room extends Model
     }
 
     /**
-     * Afflications that are allowed to access this room (cross-open).
+     * Affiliations that are allowed to access this room (cross-open).
      */
-    public function openAfflications()
+    public function openAffiliations()
     {
-        return $this->belongsToMany(Afflication::class, 'afflication_room');
+        return $this->belongsToMany(Affiliation::class, 'affiliation_room');
     }
 
     /**
-     * @return BelongsTo<Afflication, $this>
+     * @return BelongsTo<Affiliation, $this>
      */
-    public function afflication(): BelongsTo
+    public function affiliation(): BelongsTo
     {
-        return $this->belongsTo(Afflication::class);
+        return $this->belongsTo(Affiliation::class);
     }
 
     public function scopeBookableForUser(Builder $query, User $user): Builder
@@ -112,14 +102,14 @@ class Room extends Model
 
         return $query->where(function (Builder $builder) use ($user): void {
             $builder
-                ->where('afflication_id', $user->afflication_id)
+                ->where('affiliation_id', $user->affiliation_id)
                 ->orWhere(function (Builder $openBuilder) use ($user): void {
                     $openBuilder
                         ->where('is_open_access', true)
                         ->where(function (Builder $accessBuilder) use ($user): void {
                             $accessBuilder
                                 ->where('open_access_all', true)
-                                ->orWhereHas('openAfflications', fn (Builder $query) => $query->where('afflications.id', $user->afflication_id));
+                                ->orWhereHas('openAffiliations', fn (Builder $query) => $query->where('affiliations.id', $user->affiliation_id));
                         });
                 });
         })->where(function (Builder $builder) use ($user): void {
@@ -141,7 +131,7 @@ class Room extends Model
             return false;
         }
 
-        if ((int) $this->afflication_id === (int) $user->afflication_id) {
+        if ((int) $this->affiliation_id === (int) $user->affiliation_id) {
             return true;
         }
 
@@ -153,8 +143,8 @@ class Room extends Model
             return true;
         }
 
-        return $this->openAfflications()
-            ->where('afflications.id', $user->afflication_id)
+        return $this->openAffiliations()
+            ->where('affiliations.id', $user->affiliation_id)
             ->exists();
     }
 

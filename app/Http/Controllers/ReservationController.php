@@ -132,7 +132,7 @@ class ReservationController extends Controller
             'status' => ['nullable', 'string', 'in:pending,success,cancelled,rejected'],
         ]);
 
-        $reservations = Reservation::with(['room.afflication', 'user.afflication', 'payment', 'timeSlot'])
+        $reservations = Reservation::with(['room.affiliation', 'user.affiliation', 'payment', 'timeSlot'])
             ->when($validated['start_date'] ?? null, fn ($query, string $date) => $query->whereDate('reservation_date', '>=', $date))
             ->when($validated['end_date'] ?? null, fn ($query, string $date) => $query->whereDate('reservation_date', '<=', $date))
             ->when($validated['room_id'] ?? null, fn ($query, int|string $roomId) => $query->where('room_id', $roomId))
@@ -141,37 +141,41 @@ class ReservationController extends Controller
             ->latest('time_slot_id')
             ->limit(200)
             ->get()
-            ->map(fn (Reservation $reservation): array => [
-                'id' => $reservation->id,
-                'start_time' => $reservation->start_time?->toDateTimeString(),
-                'end_time' => $reservation->end_time?->toDateTimeString(),
-                'reservation_status' => $reservation->reservation_status,
-                'created_at' => $reservation->created_at?->toDateTimeString(),
-                'room' => $reservation->room
-                    ? [
-                        'id' => $reservation->room->id,
-                        'name' => $reservation->room->name,
-                        'type' => $reservation->room->type,
-                        'building' => $reservation->room->building,
-                        'afflication_name' => $reservation->room->afflication?->name,
-                    ]
-                    : null,
-                'user' => $reservation->user
-                    ? [
-                        'id' => $reservation->user->id,
-                        'name' => $reservation->user->name,
-                        'email' => $reservation->user->email,
-                        'afflication_name' => $reservation->user->afflication?->name,
-                    ]
-                    : null,
-                'payment' => $reservation->payment
-                    ? [
-                        'id' => $reservation->payment->id,
-                        'amount' => $reservation->payment->amount,
-                        'payment_status' => $reservation->payment->payment_status,
-                    ]
-                    : null,
-            ]);
+            ->map(function (Reservation $reservation): array {
+                $userAffiliation = $reservation->user?->getRelation('affiliation');
+
+                return [
+                    'id' => $reservation->id,
+                    'start_time' => $reservation->start_time?->toDateTimeString(),
+                    'end_time' => $reservation->end_time?->toDateTimeString(),
+                    'reservation_status' => $reservation->reservation_status,
+                    'created_at' => $reservation->created_at?->toDateTimeString(),
+                    'room' => $reservation->room
+                        ? [
+                            'id' => $reservation->room->id,
+                            'name' => $reservation->room->name,
+                            'type' => $reservation->room->type,
+                            'building' => $reservation->room->building,
+                            'affiliation_name' => $reservation->room->affiliation?->name,
+                        ]
+                        : null,
+                    'user' => $reservation->user
+                        ? [
+                            'id' => $reservation->user->id,
+                            'name' => $reservation->user->name,
+                            'email' => $reservation->user->email,
+                            'affiliation_name' => $userAffiliation?->name,
+                        ]
+                        : null,
+                    'payment' => $reservation->payment
+                        ? [
+                            'id' => $reservation->payment->id,
+                            'amount' => $reservation->payment->amount,
+                            'payment_status' => $reservation->payment_status,
+                        ]
+                        : null,
+                ];
+            });
 
         return response()->json([
             'data' => $reservations,
@@ -219,7 +223,7 @@ class ReservationController extends Controller
             ] : null,
             'payment' => $payments->isEmpty() ? null : [
                 'amount' => $payments->sum('amount'),
-                'payment_status' => $payments->contains(fn ($payment): bool => $payment->payment_status === 'unpaid') ? 'unpaid' : 'paid',
+                'payment_status' => $sorted->contains(fn (Reservation $reservation): bool => $reservation->payment_status === 'unpaid') ? 'unpaid' : 'paid',
             ],
             'slots' => $sorted
                 ->map(fn (Reservation $reservation): array => [

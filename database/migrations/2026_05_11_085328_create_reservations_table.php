@@ -19,6 +19,7 @@ return new class extends Migration
             $table->date('reservation_date')->nullable();
             $table->unsignedBigInteger('time_slot_id')->nullable();
             $table->string('reservation_status');
+            $table->enum('payment_status', ['unpaid', 'paid'])->default('unpaid');
             $table->timestamps();
         });
     }

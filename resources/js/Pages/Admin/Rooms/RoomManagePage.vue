@@ -21,7 +21,7 @@ const props = defineProps({
         type: Array,
         required: true,
     },
-    afflications: {
+    affiliations: {
         type: Array,
         required: true,
     },
@@ -38,14 +38,13 @@ const roomForm = reactive({
     type: "",
     capacity: 1,
     building: "",
-    afflication_id: "",
+    affiliation_id: "",
     information: "",
-    hourly_rate: 0,
     need_approval: false,
     is_open_access: false,
     open_access_all: false,
-    open_access_afflications: [],
-    _temp_open_afflication_id: "",
+    open_access_affiliations: [],
+    _temp_open_affiliation_id: "",
 });
 
 const roomErrors = reactive({});
@@ -133,14 +132,13 @@ const resetRoomForm = () => {
     roomForm.type = "";
     roomForm.capacity = 1;
     roomForm.building = "";
-    roomForm.afflication_id = "";
+    roomForm.affiliation_id = "";
     roomForm.information = "";
-    roomForm.hourly_rate = 0;
     roomForm.need_approval = false;
     roomForm.is_open_access = false;
     roomForm.open_access_all = false;
-    roomForm.open_access_afflications = [];
-    roomForm._temp_open_afflication_id = "";
+    roomForm.open_access_affiliations = [];
+    roomForm._temp_open_affiliation_id = "";
     roomEditingId.value = null;
     clearErrors(roomErrors);
 };
@@ -158,18 +156,17 @@ const openRoomForm = (room = null) => {
     roomForm.type = room.type;
     roomForm.capacity = room.capacity;
     roomForm.building = room.building;
-    roomForm.afflication_id = room.afflication_id ?? "";
+    roomForm.affiliation_id = room.affiliation_id ?? "";
     roomForm.information = room.information || "";
-    roomForm.hourly_rate = room.rate;
     roomForm.need_approval = room.need_approval;
     roomForm.is_open_access = room.is_open_access;
     roomForm.open_access_all = room.open_access_all;
-    roomForm.open_access_afflications = room.open_access_all
+    roomForm.open_access_affiliations = room.open_access_all
         ? []
-        : (room.open_access_afflications || []).map((d) =>
+        : (room.open_access_affiliations || []).map((d) =>
               typeof d === "object" ? d.id : d,
           );
-    roomForm._temp_open_afflication_id = "";
+    roomForm._temp_open_affiliation_id = "";
     roomEditingId.value = room.id;
 };
 
@@ -239,17 +236,16 @@ const saveRoom = async () => {
         type: roomForm.type,
         capacity: roomForm.capacity,
         building: roomForm.building,
-        afflication_id: roomForm.afflication_id || null,
+        affiliation_id: roomForm.affiliation_id || null,
         information: roomForm.information,
-        hourly_rate: roomForm.hourly_rate,
         need_approval: roomForm.need_approval,
         is_open_access: roomForm.is_open_access,
         open_access_all: roomForm.is_open_access
             ? roomForm.open_access_all
             : false,
-        open_access_afflications:
+        open_access_affiliations:
             roomForm.is_open_access && !roomForm.open_access_all
-                ? roomForm.open_access_afflications || []
+                ? roomForm.open_access_affiliations || []
                 : [],
     };
 
@@ -275,36 +271,36 @@ const saveRoom = async () => {
     }
 };
 
-const addOpenAfflication = () => {
+const addOpenAffiliation = () => {
     if (roomForm.open_access_all) return;
 
-    const val = roomForm._temp_open_afflication_id;
+    const val = roomForm._temp_open_affiliation_id;
 
     if (!val) return;
 
     const id = Number(val);
-    const afflicationId = Number(roomForm.afflication_id);
+    const affiliationId = Number(roomForm.affiliation_id);
 
-    if (id === afflicationId) {
-        roomForm._temp_open_afflication_id = "";
+    if (id === affiliationId) {
+        roomForm._temp_open_affiliation_id = "";
         return;
     }
 
-    if (!roomForm.open_access_afflications.includes(id)) {
-        roomForm.open_access_afflications.push(id);
+    if (!roomForm.open_access_affiliations.includes(id)) {
+        roomForm.open_access_affiliations.push(id);
     }
 
-    roomForm._temp_open_afflication_id = "";
+    roomForm._temp_open_affiliation_id = "";
 };
 
-const removeOpenAfflication = (id) => {
-    roomForm.open_access_afflications = roomForm.open_access_afflications.filter(
+const removeOpenAffiliation = (id) => {
+    roomForm.open_access_affiliations = roomForm.open_access_affiliations.filter(
         (x) => x !== id,
     );
 };
 
-const getAfflicationName = (id) => {
-    const d = props.afflications.find((item) => item.id === id);
+const getAffiliationName = (id) => {
+    const d = props.affiliations.find((item) => item.id === id);
     return d ? d.name : "未知單位";
 };
 
@@ -316,27 +312,27 @@ const onToggleOpenAccess = async () => {
         openDeptSelectRef.value?.focus?.();
     } else {
         roomForm.open_access_all = false;
-        roomForm.open_access_afflications = [];
-        roomForm._temp_open_afflication_id = "";
+        roomForm.open_access_affiliations = [];
+        roomForm._temp_open_affiliation_id = "";
     }
 };
 
 const onToggleOpenAccessAll = () => {
     if (roomForm.open_access_all) {
-        roomForm.open_access_afflications = [];
-        roomForm._temp_open_afflication_id = "";
+        roomForm.open_access_affiliations = [];
+        roomForm._temp_open_affiliation_id = "";
     }
 };
 
-const syncOpenAfflications = () => {
-    const afflicationId = Number(roomForm.afflication_id);
+const syncOpenAffiliations = () => {
+    const affiliationId = Number(roomForm.affiliation_id);
 
-    roomForm.open_access_afflications = roomForm.open_access_afflications.filter(
-        (id) => Number(id) !== afflicationId,
+    roomForm.open_access_affiliations = roomForm.open_access_affiliations.filter(
+        (id) => Number(id) !== affiliationId,
     );
 
-    if (Number(roomForm._temp_open_afflication_id) === afflicationId) {
-        roomForm._temp_open_afflication_id = "";
+    if (Number(roomForm._temp_open_affiliation_id) === affiliationId) {
+        roomForm._temp_open_affiliation_id = "";
     }
 };
 
@@ -364,12 +360,12 @@ const deleteRoom = async (room) => {
     }
 };
 
-const afflicationName = (room) => {
-    const afflication = props.afflications.find(
-        (item) => item.id === room.afflication_id,
+const affiliationName = (room) => {
+    const affiliation = props.affiliations.find(
+        (item) => item.id === room.affiliation_id,
     );
 
-    return afflication?.name || "未知單位";
+    return affiliation?.name || "未知單位";
 };
 
 const slotPriceSummary = (room) => {
@@ -534,7 +530,7 @@ const slotPriceSummary = (room) => {
                             <div class="text-sm text-slate-700">
                                 <p>{{ room.building }}</p>
                                 <p class="mt-1 text-slate-500">
-                                    {{ afflicationName(room) }}
+                                    {{ affiliationName(room) }}
                                 </p>
                                 <div class="mt-2 flex flex-wrap gap-2">
                                     <span
@@ -555,7 +551,7 @@ const slotPriceSummary = (room) => {
                                         v-if="
                                             room.is_open_access &&
                                             !room.open_access_all &&
-                                            room.open_access_afflications
+                                            room.open_access_affiliations
                                                 ?.length > 0
                                         "
                                         class="inline-flex rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700"
@@ -866,31 +862,31 @@ const slotPriceSummary = (room) => {
                             <div>
                                 <label
                                     class="mb-2 block text-sm font-medium text-slate-700"
-                                    for="afflication"
+                                    for="affiliation"
                                     >所屬單位</label
                                 >
                                 <select
-                                    id="afflication"
-                                    v-model="roomForm.afflication_id"
-                                    @change="syncOpenAfflications"
+                                    id="affiliation"
+                                    v-model="roomForm.affiliation_id"
+                                    @change="syncOpenAffiliations"
                                     class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900"
                                 >
                                     <option value="" disabled>
                                         請選擇所屬單位
                                     </option>
                                     <option
-                                        v-for="afflication in afflications"
-                                        :key="afflication.id"
-                                        :value="afflication.id"
+                                        v-for="affiliation in affiliations"
+                                        :key="affiliation.id"
+                                        :value="affiliation.id"
                                     >
-                                        {{ afflication.name }}
+                                        {{ affiliation.name }}
                                     </option>
                                 </select>
                                 <p
-                                    v-if="roomErrors.afflication_id"
+                                    v-if="roomErrors.affiliation_id"
                                     class="mt-2 text-sm text-rose-700"
                                 >
-                                    {{ roomErrors.afflication_id[0] }}
+                                    {{ roomErrors.affiliation_id[0] }}
                                 </p>
                             </div>
 
@@ -917,27 +913,6 @@ const slotPriceSummary = (room) => {
                                     </p>
                                 </div>
 
-                                <div>
-                                    <label
-                                        class="mb-2 block text-sm font-medium text-slate-700"
-                                        for="hourly_rate"
-                                        >每小時費率</label
-                                    >
-                                    <input
-                                        id="hourly_rate"
-                                        v-model.number="roomForm.hourly_rate"
-                                        type="number"
-                                        min="0"
-                                        class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900"
-                                        placeholder="請輸入費率"
-                                    />
-                                    <p
-                                        v-if="roomErrors.hourly_rate"
-                                        class="mt-2 text-sm text-rose-700"
-                                    >
-                                        {{ roomErrors.hourly_rate[0] }}
-                                    </p>
-                                </div>
                             </div>
 
                             <div>
@@ -1032,32 +1007,32 @@ const slotPriceSummary = (room) => {
                                         <select
                                             ref="openDeptSelectRef"
                                             v-model="
-                                                roomForm._temp_open_afflication_id
+                                                roomForm._temp_open_affiliation_id
                                             "
                                             class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900"
                                         >
                                             <option value="">請選擇單位</option>
                                             <option
-                                                v-for="afflication in afflications.filter(
+                                                v-for="affiliation in affiliations.filter(
                                                     (d) =>
                                                         String(d.id) !==
                                                         String(
-                                                            roomForm.afflication_id,
+                                                            roomForm.affiliation_id,
                                                         ),
                                                 )"
-                                                :key="afflication.id"
-                                                :value="afflication.id"
+                                                :key="affiliation.id"
+                                                :value="affiliation.id"
                                             >
-                                                {{ afflication.name }}
+                                                {{ affiliation.name }}
                                             </option>
                                         </select>
                                         <button
                                             type="button"
                                             class="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
                                             :disabled="
-                                                !roomForm._temp_open_afflication_id
+                                                !roomForm._temp_open_affiliation_id
                                             "
-                                            @click="addOpenAfflication"
+                                            @click="addOpenAffiliation"
                                         >
                                             +
                                         </button>
@@ -1065,18 +1040,18 @@ const slotPriceSummary = (room) => {
 
                                     <div class="flex flex-wrap gap-2">
                                         <span
-                                            v-for="deptId in roomForm.open_access_afflications"
+                                            v-for="deptId in roomForm.open_access_affiliations"
                                             :key="deptId"
                                             class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700"
                                         >
                                             <span>{{
-                                                getAfflicationName(deptId)
+                                                getAffiliationName(deptId)
                                             }}</span>
                                             <button
                                                 type="button"
                                                 class="rounded-full text-sm text-slate-500 hover:text-slate-700"
                                                 @click="
-                                                    removeOpenAfflication(deptId)
+                                                    removeOpenAffiliation(deptId)
                                                 "
                                                 aria-label="移除"
                                             >
@@ -1085,7 +1060,7 @@ const slotPriceSummary = (room) => {
                                         </span>
                                         <p
                                             v-if="
-                                                roomForm.open_access_afflications
+                                                roomForm.open_access_affiliations
                                                     .length === 0
                                             "
                                             class="text-sm text-slate-500"
@@ -1095,13 +1070,13 @@ const slotPriceSummary = (room) => {
                                     </div>
                                     <p
                                         v-if="
-                                            roomErrors.open_access_afflications
+                                            roomErrors.open_access_affiliations
                                         "
                                         class="mt-2 text-sm text-rose-700"
                                     >
                                         {{
                                             roomErrors
-                                                .open_access_afflications[0]
+                                                .open_access_affiliations[0]
                                         }}
                                     </p>
                                 </template>

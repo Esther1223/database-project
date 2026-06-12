@@ -73,7 +73,7 @@ class DashboardController extends Controller
                     ? Reservation::where('reservation_status', 'pending')->count()
                     : null,
                 'unpaid_orders' => $canViewRevenue
-                    ? Payment::where('payment_status', 'unpaid')->count()
+                    ? Payment::whereHas('reservation', fn (Builder $query) => $query->where('payment_status', 'unpaid'))->count()
                     : null,
                 'upcoming_reservations' => $canReserve
                     ? (clone $personalReservationScope)
@@ -142,7 +142,7 @@ class DashboardController extends Controller
             ->whereHas('reservation', fn (Builder $query) => $query
                 ->whereDate('reservation_date', '>=', $monthStart->toDateString())
                 ->whereDate('reservation_date', '<=', $monthEnd->toDateString()))
-            ->when($status, fn (Builder $query, string $status) => $query->where('payment_status', $status))
+            ->when($status, fn (Builder $query, string $status) => $query->whereHas('reservation', fn (Builder $reservationQuery) => $reservationQuery->where('payment_status', $status)))
             ->sum('amount');
     }
 
@@ -151,7 +151,7 @@ class DashboardController extends Controller
         $reservationIds = (clone $reservationScope)->select('id');
 
         return Payment::query()
-            ->where('payment_status', 'unpaid')
+            ->whereHas('reservation', fn (Builder $query) => $query->where('payment_status', 'unpaid'))
             ->whereIn('reservation_id', $reservationIds)
             ->count();
     }
@@ -261,7 +261,7 @@ class DashboardController extends Controller
             'payment_ids' => $sorted->pluck('id')->values()->all(),
             'slot_count' => $slotCount,
             'amount' => $sorted->sum('amount'),
-            'status' => $sorted->contains(fn (Payment $payment): bool => $payment->payment_status === 'unpaid') ? 'unpaid' : 'paid',
+            'status' => $sorted->contains(fn (Payment $payment): bool => $payment->reservation?->payment_status === 'unpaid') ? 'unpaid' : 'paid',
             'room_name' => $first->reservation?->room?->name ?? '未知空間',
             'user_name' => $first->reservation?->user?->name ?? $first->reservation?->user?->email,
             'created_at' => $sorted->sortByDesc('created_at')->first()?->created_at?->toDateTimeString(),
@@ -316,7 +316,7 @@ class DashboardController extends Controller
         $reservationIds = (clone $reservationScope)->select('id');
 
         $payments = Payment::with(['reservation.room', 'reservation.timeSlot'])
-            ->where('payment_status', 'unpaid')
+            ->whereHas('reservation', fn (Builder $query) => $query->where('payment_status', 'unpaid'))
             ->when(! $canViewRevenue, fn ($query) => $query->whereIn('reservation_id', $reservationIds))
             ->latest('created_at')
             ->limit(10)

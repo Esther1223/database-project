@@ -44,20 +44,14 @@ class PaymentController extends Controller
             'payment_status' => ['required', 'string', 'in:paid,unpaid'],
         ]);
 
-        $payment->update([
-            'payment_status' => $validated['payment_status'],
-        ]);
-
         $reservation = $payment->reservation;
 
         if ($reservation?->reservation_group_id) {
-            $reservationIds = Reservation::query()
+            Reservation::query()
                 ->where('reservation_group_id', $reservation->reservation_group_id)
-                ->pluck('id');
-
-            Payment::query()
-                ->whereIn('reservation_id', $reservationIds)
                 ->update(['payment_status' => $validated['payment_status']]);
+        } elseif ($reservation) {
+            $reservation->update(['payment_status' => $validated['payment_status']]);
         }
 
         return response()->json([
@@ -94,7 +88,7 @@ class PaymentController extends Controller
             'id' => $firstPayment->id,
             'payment_ids' => $group->pluck('id')->values()->all(),
             'amount' => $group->sum('amount'),
-            'payment_status' => $group->contains(fn (Payment $payment): bool => $payment->payment_status === 'unpaid') ? 'unpaid' : 'paid',
+            'payment_status' => $reservations->contains(fn (Reservation $reservation): bool => $reservation->payment_status === 'unpaid') ? 'unpaid' : 'paid',
             'created_at' => $group->sortBy('created_at')->first()?->created_at?->toDateTimeString(),
             'updated_at' => $group->sortByDesc('updated_at')->first()?->updated_at?->toDateTimeString(),
             'slot_count' => $reservations->count(),
@@ -135,7 +129,6 @@ class PaymentController extends Controller
             'name' => $reservation->room->name,
             'type' => $reservation->room->type,
             'building' => $reservation->room->building,
-            'rate' => $reservation->room->rate,
         ];
     }
 

@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Room\StoreRoomRequest;
 use App\Http\Requests\Room\UpdateRoomRequest;
-use App\Models\Afflication;
+use App\Models\Affiliation;
 use App\Models\Reservation;
 use App\Models\Room;
 use App\Models\TimeSlot;
@@ -75,12 +75,12 @@ class RoomController extends Controller
             ->values()
             ->all();
 
-        $afflications = Afflication::query()
+        $affiliations = Affiliation::query()
             ->orderBy('name')
             ->get()
-            ->map(fn (Afflication $afflication): array => [
-                'id' => $afflication->id,
-                'name' => $afflication->name,
+            ->map(fn (Affiliation $affiliation): array => [
+                'id' => $affiliation->id,
+                'name' => $affiliation->name,
             ])
             ->values()
             ->all();
@@ -92,7 +92,7 @@ class RoomController extends Controller
                 'filters' => $filters,
                 'roomTypes' => $roomTypes,
                 'buildings' => $buildings,
-                'afflications' => $afflications,
+                'affiliations' => $affiliations,
             ],
         );
     }
@@ -167,7 +167,7 @@ class RoomController extends Controller
         $room = Room::create($this->roomStoragePayload($validated));
         $this->syncDefaultTimeSlots($room);
 
-        $room->openAfflications()->sync($validated['open_access_afflications'] ?? []);
+        $room->openAffiliations()->sync($validated['open_access_affiliations'] ?? []);
 
         return response()->json([
             'message' => '空間已建立',
@@ -186,7 +186,7 @@ class RoomController extends Controller
         $room->forceFill($this->roomStoragePayload($validated))->save();
         $this->syncDefaultTimeSlots($room);
 
-        $room->openAfflications()->sync($validated['open_access_afflications'] ?? []);
+        $room->openAffiliations()->sync($validated['open_access_affiliations'] ?? []);
 
         return response()->json([
             'message' => '空間已更新',
@@ -219,12 +219,11 @@ class RoomController extends Controller
             'type' => $room->type,
             'capacity' => $room->capacity,
             'building' => $room->building,
-            'afflication_id' => $room->afflication_id,
-            'rate' => $room->rate,
+            'affiliation_id' => $room->affiliation_id,
             'need_approval' => (bool) $room->need_approval,
             'is_open_access' => (bool) $room->is_open_access,
             'open_access_all' => (bool) $room->open_access_all,
-            'open_access_afflications' => $room->openAfflications()->get()->map(fn (Afflication $d): array => ['id' => $d->id, 'name' => $d->name])->values()->all(),
+            'open_access_affiliations' => $room->openAffiliations()->get()->map(fn (Affiliation $d): array => ['id' => $d->id, 'name' => $d->name])->values()->all(),
             'time_slots' => $room->timeSlots()
                 ->orderBy('period')
                 ->get()
@@ -252,9 +251,8 @@ class RoomController extends Controller
             'type' => $validated['type'],
             'capacity' => (int) $validated['capacity'],
             'building' => $validated['building'],
-            'afflication_id' => $validated['afflication_id'],
+            'affiliation_id' => $validated['affiliation_id'],
             'information' => $validated['information'] ?? null,
-            'rate' => (int) $validated['hourly_rate'],
             'need_approval' => (bool) $validated['need_approval'],
             'is_open_access' => (bool) $validated['is_open_access'],
             'open_access_all' => (bool) ($validated['is_open_access'] && ($validated['open_access_all'] ?? false)),
@@ -266,7 +264,7 @@ class RoomController extends Controller
         foreach (range(8, 21) as $period) {
             $room->timeSlots()->firstOrCreate(
                 ['period' => $period],
-                ['price' => (int) $room->hourly_rate],
+                ['price' => 0],
             );
         }
     }

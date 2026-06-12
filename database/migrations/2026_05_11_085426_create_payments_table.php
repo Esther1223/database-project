@@ -15,7 +15,6 @@ return new class extends Migration
             $table->id();
             $table->foreignId('reservation_id')->constrained()->cascadeOnDelete();
             $table->integer('amount');
-            $table->enum('payment_status', ['unpaid', 'paid'])->default('unpaid');
             $table->timestamps();
         });
     }

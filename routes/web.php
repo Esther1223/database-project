@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\Admin\AfflicationController as AdminAfflicationController;
+use App\Http\Controllers\Admin\AffiliationController as AdminAffiliationController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AuthController;
@@ -25,10 +25,10 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', 'role:管理員'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/afflications', [AdminAfflicationController::class, 'index'])->name('afflications.index');
-    Route::post('/afflications', [AdminAfflicationController::class, 'store'])->name('afflications.store');
-    Route::put('/afflications/{afflication}', [AdminAfflicationController::class, 'update'])->name('afflications.update');
-    Route::delete('/afflications/{afflication}', [AdminAfflicationController::class, 'destroy'])->name('afflications.destroy');
+    Route::get('/affiliations', [AdminAffiliationController::class, 'index'])->name('affiliations.index');
+    Route::post('/affiliations', [AdminAffiliationController::class, 'store'])->name('affiliations.store');
+    Route::put('/affiliations/{affiliation}', [AdminAffiliationController::class, 'update'])->name('affiliations.update');
+    Route::delete('/affiliations/{affiliation}', [AdminAffiliationController::class, 'destroy'])->name('affiliations.destroy');
 
     Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
     Route::post('/users', [AdminUserController::class, 'store'])->name('users.store');

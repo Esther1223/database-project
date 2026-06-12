@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Approval;
-use App\Models\Afflication;
+use App\Models\Affiliation;
 use App\Models\Payment;
 use App\Models\Reservation;
 use App\Models\Role;
@@ -32,14 +32,14 @@ class CompleteSeeder extends Seeder
             $roleType => Role::updateOrCreate(['role_type' => $roleType]),
         ]);
 
-        $afflications = collect([
+        $affiliations = collect([
             '資訊工程學系',
             '資訊中心',
             '總務處',
             '數學系',
             '光電工程學系',
         ])->mapWithKeys(fn (string $name): array => [
-            $name => Afflication::updateOrCreate(['name' => $name]),
+            $name => Affiliation::updateOrCreate(['name' => $name]),
         ]);
 
         $usersData = [
@@ -50,14 +50,14 @@ class CompleteSeeder extends Seeder
             ['role' => '學生', 'name' => 'Omuba', 'email' => 'Omuba@example.com', 'password' => 'omuba', 'affiliation' => '光電工程學系'],
         ];
 
-        $users = collect($usersData)->mapWithKeys(function (array $u) use ($roles, $afflications): array {
+        $users = collect($usersData)->mapWithKeys(function (array $u) use ($roles, $affiliations): array {
             $user = User::updateOrCreate(
                 ['email' => $u['email']],
                 [
                     'name' => $u['name'],
                     'password' => Hash::make($u['password']),
                     'affiliation' => $u['affiliation'],
-                    'afflication_id' => $afflications[$u['affiliation']]->id ?? null,
+                    'affiliation_id' => $affiliations[$u['affiliation']]->id ?? null,
                 ],
             );
 
@@ -71,26 +71,33 @@ class CompleteSeeder extends Seeder
         $professor = $users['wu@example.com'];
         $studentB = $users['Omuba@example.com'];
 
+        $roomPrices = [
+            'A101 會議室' => 500,
+            'B201 教室' => 0,
+            'C301 多功能廳' => 1500,
+            'B1 多功能教室' => 0,
+        ];
+
         $roomsData = [
-            ['room_name' => 'A101 會議室', 'room_type' => '會議室', 'capacity' => 30, 'building' => '科教大樓', 'afflication_id' => $afflications['資訊工程學系']->id, 'information' => '含投影機、白板。', 'hourly_rate' => 500, 'need_approval' => true, 'is_open_access' => false],
-            ['room_name' => 'B201 教室', 'room_type' => '教室', 'capacity' => 60, 'building' => '教學大樓', 'afflication_id' => $afflications['資訊中心']->id, 'information' => '適合課程與講座。', 'hourly_rate' => 0, 'need_approval' => false, 'is_open_access' => false],
-            ['room_name' => 'C301 多功能廳', 'room_type' => '多功能廳', 'capacity' => 120, 'building' => '活動中心', 'afflication_id' => $afflications['總務處']->id, 'information' => '大型活動、表演。', 'hourly_rate' => 1500, 'need_approval' => true, 'is_open_access' => false],
-            ['room_name' => 'B1 多功能教室', 'room_type' => '教室', 'capacity' => 60, 'building' => '科教大樓', 'afflication_id' => $afflications['資訊工程學系']->id, 'information' => '開放式空間，任何人都可以借用。', 'hourly_rate' => 0, 'need_approval' => false, 'is_open_access' => true, 'open_access_all' => true],
+            ['room_name' => 'A101 會議室', 'room_type' => '會議室', 'capacity' => 30, 'building' => '科教大樓', 'affiliation_id' => $affiliations['資訊工程學系']->id, 'information' => '含投影機、白板。', 'need_approval' => true, 'is_open_access' => false],
+            ['room_name' => 'B201 教室', 'room_type' => '教室', 'capacity' => 60, 'building' => '教學大樓', 'affiliation_id' => $affiliations['資訊中心']->id, 'information' => '適合課程與講座。', 'need_approval' => false, 'is_open_access' => false],
+            ['room_name' => 'C301 多功能廳', 'room_type' => '多功能廳', 'capacity' => 120, 'building' => '活動中心', 'affiliation_id' => $affiliations['總務處']->id, 'information' => '大型活動、表演。', 'need_approval' => true, 'is_open_access' => false],
+            ['room_name' => 'B1 多功能教室', 'room_type' => '教室', 'capacity' => 60, 'building' => '科教大樓', 'affiliation_id' => $affiliations['資訊工程學系']->id, 'information' => '開放式空間，任何人都可以借用。', 'need_approval' => false, 'is_open_access' => true, 'open_access_all' => true],
         ];
 
         $rooms = collect($roomsData)->mapWithKeys(fn (array $r): array => [
             $r['room_name'] => Room::updateOrCreate(['room_name' => $r['room_name']], $r),
         ]);
 
-        $rooms['B1 多功能教室']->openAfflications()->syncWithoutDetaching([
-            $afflications['光電工程學系']->id,
+        $rooms['B1 多功能教室']->openAffiliations()->syncWithoutDetaching([
+            $affiliations['光電工程學系']->id,
         ]);
 
         $timeSlots = $rooms->mapWithKeys(fn (Room $room, string $roomName): array => [
             $roomName => collect(range(8, 21))->mapWithKeys(fn (int $period): array => [
                 $period => TimeSlot::updateOrCreate(
                     ['room_id' => $room->id, 'period' => $period],
-                    ['price' => (int) $room->hourly_rate],
+                    ['price' => (int) ($roomPrices[$roomName] ?? 0)],
                 ),
             ]),
         ]);
@@ -146,6 +153,7 @@ class CompleteSeeder extends Seeder
                 [
                     'reservation_group_id' => $multiGroupId,
                     'reservation_status' => 'success',
+                    'payment_status' => 'unpaid',
                 ],
             );
         });
@@ -165,7 +173,7 @@ class CompleteSeeder extends Seeder
             if ($amount > 0) {
                 Payment::updateOrCreate(
                     ['reservation_id' => $firstMultiRes->id],
-                    ['amount' => $amount, 'payment_status' => 'unpaid'],
+                    ['amount' => $amount],
                 );
 
                 Payment::whereIn('reservation_id', $multiReservations->pluck('id')->filter()->values())

@@ -27,10 +27,10 @@ return new class extends Migration
                 ->select([
                     'payments.id',
                     'payments.amount',
-                    'payments.payment_status',
                     'payments.reservation_id',
                     'payments.created_at',
                     'payments.updated_at',
+                    'reservations.payment_status',
                 ])
                 ->get();
 
@@ -48,9 +48,12 @@ return new class extends Migration
                 ->where('id', $representative->id)
                 ->update([
                     'amount' => $amount,
-                    'payment_status' => $status,
                     'updated_at' => now(),
                 ]);
+
+            DB::table('reservations')
+                ->where('reservation_group_id', $groupId)
+                ->update(['payment_status' => $status]);
 
             DB::table('payments')
                 ->whereIn('id', $payments->pluck('id')->reject(fn ($id): bool => (int) $id === (int) $representative->id))

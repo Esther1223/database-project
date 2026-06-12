@@ -57,7 +57,7 @@ class StoreReservationRequest extends FormRequest
                     }
 
                     if ($user !== null && ! $room->isBookableBy($user)) {
-                        $validator->errors()->add('selected_slots', '此角色無法借用所選空間類型，或該空間未開放給所屬 Afflication。');
+                        $validator->errors()->add('selected_slots', '此角色無法借用所選空間類型，或該空間未開放給所屬 Affiliation。');
 
                         return;
                     }
@@ -86,7 +86,7 @@ class StoreReservationRequest extends FormRequest
             $room = Room::find($this->integer('room_id'));
             if ($user !== null && $room !== null) {
                 if (! $room->isBookableBy($user)) {
-                    $validator->errors()->add('room_id', '此角色無法借用該空間類型，或該空間未開放給所屬 Afflication。');
+                    $validator->errors()->add('room_id', '此角色無法借用該空間類型，或該空間未開放給所屬 Affiliation。');
 
                     return;
                 }

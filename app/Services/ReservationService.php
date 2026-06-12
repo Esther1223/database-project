@@ -299,11 +299,6 @@ class ReservationService
 
         $payment = Payment::firstOrNew(['reservation_id' => $reservation->id]);
         $payment->amount = $amount;
-
-        if (! $payment->exists) {
-            $payment->payment_status = 'unpaid';
-        }
-
         $payment->save();
     }
 
@@ -336,11 +331,6 @@ class ReservationService
 
         $payment = Payment::firstOrNew(['reservation_id' => $representative->id]);
         $payment->amount = $amount;
-
-        if (! $payment->exists) {
-            $payment->payment_status = 'unpaid';
-        }
-
         $payment->save();
     }
 }

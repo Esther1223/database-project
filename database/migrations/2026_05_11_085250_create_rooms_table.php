@@ -18,7 +18,6 @@ return new class extends Migration
             $table->integer('capacity');
             $table->string('building');
             $table->text('information')->nullable();
-            $table->integer('hourly_rate')->default(0);
             $table->boolean('need_approval')->default(false);
             $table->timestamps();
         });
