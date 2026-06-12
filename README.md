@@ -33,9 +33,75 @@ mysql -u root
 
 //建立資料庫
 CREATE DATABASE database_project CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'database_project_user'@'localhost' IDENTIFIED BY '你的密碼';
+GRANT ALL PRIVILEGES ON database_project.* TO 'database_project_user'@'localhost';
+FLUSH PRIVILEGES;
 EXIT;
 
 ```
+
+## linux (Ubuntu/Debian)
+
+### 1. 安裝環境
+
+先更新 apt，安裝基本工具：
+```bash
+sudo apt update
+sudo apt install -y curl unzip git software-properties-common
+```
+
+安裝 PHP 8.4 和 Laravel 常用 extensions：
+```bash
+sudo add-apt-repository ppa:ondrej/php -y
+sudo apt update
+sudo apt install -y php8.4 php8.4-cli php8.4-common php8.4-mbstring php8.4-xml php8.4-curl php8.4-mysql php8.4-zip php8.4-bcmath
+```
+
+安裝 Composer：
+```bash
+curl -sS https://getcomposer.org/installer -o composer-setup.php
+sudo php composer-setup.php --install-dir=/usr/local/bin --filename=composer
+rm composer-setup.php
+```
+
+安裝 Node.js 20 和 npm：
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+```
+
+安裝 MySQL：
+```bash
+sudo apt install -y mysql-server
+```
+
+確認版本：
+```bash
+php -v        //建議8.4
+composer -V   //2.xx (2開頭就行)
+node -v       // 我是v20.19.6
+npm -v        // 我是10.8.2
+mysql --version
+```
+
+### 2. 啟動mysql
+
+```bash
+sudo systemctl start mysql
+sudo systemctl enable mysql
+
+//登入 MySQL
+sudo mysql
+
+//建立資料庫和專案用帳號
+CREATE DATABASE database_project CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'database_project_user'@'localhost' IDENTIFIED BY '你的密碼';
+GRANT ALL PRIVILEGES ON database_project.* TO 'database_project_user'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
+```
+
+## 共用部署步驟
 
 ### 3. Clone 專案
 ```bash
@@ -67,6 +133,9 @@ DB_PORT=3306
 DB_DATABASE=database_project
 DB_USERNAME=root
 DB_PASSWORD=你的密碼
+//如果是照上面建立專案用帳號：
+//DB_USERNAME=database_project_user
+//DB_PASSWORD=你的密碼
 ```
 
 ### 6. 產生 Laravel key
@@ -117,8 +186,6 @@ http://127.0.0.1:8000
 npx prettier --write .  
 // . 可以改成檔案路徑 (. 表示全部檔案都掃一次)
 ```
-
-// 目前想到這些 待更新
 
 
 ### laravel 大致架構
