@@ -1235,13 +1235,6 @@ const slotPriceSummary = (room) => {
                                               : "建立空間"
                                     }}
                                 </button>
-                                <button
-                                    type="button"
-                                    class="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-                                    @click="closeRoomForm"
-                                >
-                                    取消
-                                </button>
                             </div>
                         </form>
                     </div>

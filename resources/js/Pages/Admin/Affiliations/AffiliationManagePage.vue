@@ -279,13 +279,6 @@ const deleteAffiliation = async (affiliation) => {
                                               : "建立單位"
                                     }}
                                 </button>
-                                <button
-                                    type="button"
-                                    class="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-                                    @click="closeAffiliationForm"
-                                >
-                                    取消
-                                </button>
                             </div>
                         </form>
                     </div>

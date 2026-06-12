@@ -94,7 +94,7 @@ class DashboardController extends Controller
                         ->count()
                     : null,
                 'revenue' => $canViewRevenue
-                    ? $this->paymentAmountForMonth($monthStart, $monthEnd)
+                    ? $this->paymentAmountForMonth($monthStart, $monthEnd, 'paid')
                     : null,
                 'unpaid_amount' => $canViewRevenue
                     ? $this->paymentAmountForMonth($monthStart, $monthEnd, 'unpaid')
