@@ -7,6 +7,7 @@ use App\Models\Room;
 use App\Policies\ReservationPolicy;
 use App\Policies\RoomPolicy;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -24,6 +25,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $appUrl = trim((string) config('app.url'));
+
+        if (str_starts_with($appUrl, 'https://')) {
+            URL::forceRootUrl(rtrim($appUrl, '/'));
+            URL::forceScheme('https');
+        }
+
         Gate::policy(Room::class, RoomPolicy::class);
         Gate::policy(Reservation::class, ReservationPolicy::class);
     }

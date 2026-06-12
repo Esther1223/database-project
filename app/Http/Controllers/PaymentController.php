@@ -45,6 +45,28 @@ class PaymentController extends Controller
         ]);
 
         $reservation = $payment->reservation;
+        $reservations = $reservation
+            ? Reservation::query()
+                ->when(
+                    $reservation->reservation_group_id,
+                    fn ($query) => $query->where('reservation_group_id', $reservation->reservation_group_id),
+                    fn ($query) => $query->whereKey($reservation->id),
+                )
+                ->get()
+            : collect();
+        $currentStatus = $this->paymentStatus($reservations);
+
+        if ($currentStatus === 'paid' && $validated['payment_status'] === 'unpaid') {
+            return response()->json([
+                'message' => '已付款的資料不能再標記為未付款。',
+            ], 422);
+        }
+
+        if ($currentStatus === 'cancelled') {
+            return response()->json([
+                'message' => '已取消的付款資料不能變更狀態。',
+            ], 422);
+        }
 
         if ($reservation?->reservation_group_id) {
             Reservation::query()

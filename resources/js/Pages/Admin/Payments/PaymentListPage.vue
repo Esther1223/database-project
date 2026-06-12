@@ -88,7 +88,7 @@ const toggleStatus = async (payment) => {
         return;
     }
 
-    if (payment.payment_status === "cancelled") {
+    if (payment.payment_status !== "unpaid") {
         return;
     }
 
@@ -96,7 +96,7 @@ const toggleStatus = async (payment) => {
     message.value = "";
     errorMessage.value = "";
 
-    const nextStatus = payment.payment_status === "paid" ? "unpaid" : "paid";
+    const nextStatus = "paid";
 
     try {
         await axios.patch(`/admin/payments/${payment.id}/status`, {
@@ -276,7 +276,7 @@ onMounted(loadPayments);
 
                             <div class="flex justify-start lg:justify-center">
                                 <button
-                                    v-if="payment.payment_status !== 'cancelled'"
+                                    v-if="payment.payment_status === 'unpaid'"
                                     type="button"
                                     class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                                     :disabled="updatingId === payment.id"
@@ -285,16 +285,18 @@ onMounted(loadPayments);
                                     {{
                                         updatingId === payment.id
                                             ? "更新中..."
-                                            : payment.payment_status === "paid"
-                                              ? "標記未付"
-                                              : "標記已付"
+                                            : "標記已付"
                                     }}
                                 </button>
                                 <span
                                     v-else
                                     class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-400"
                                 >
-                                    已取消
+                                    {{
+                                        payment.payment_status === "paid"
+                                            ? "已付款"
+                                            : "已取消"
+                                    }}
                                 </span>
                             </div>
                         </div>

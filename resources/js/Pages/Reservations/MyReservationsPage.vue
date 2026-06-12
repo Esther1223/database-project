@@ -116,6 +116,30 @@ const roomType = (reservation) =>
 
 const roomBuilding = (reservation) => reservation.room?.building || "-";
 
+const paymentStatusLabel = (status) => {
+    const labels = {
+        paid: "已付款",
+        unpaid: "未付款",
+    };
+
+    return labels[status] || status || "-";
+};
+
+const paymentStatusClass = (status) => {
+    if (status === "paid") {
+        return "bg-emerald-100 text-emerald-800";
+    }
+
+    if (status === "unpaid") {
+        return "bg-rose-100 text-rose-800";
+    }
+
+    return "bg-slate-100 text-slate-600";
+};
+
+const shouldShowPaymentStatus = (reservation) =>
+    reservation?.reservation_status !== "cancelled" && reservation?.payment;
+
 const canCancel = (reservation) =>
     (reservation?.slots?.length
         ? reservation.slots.some((slot) => canCancelSlot(slot))
@@ -326,6 +350,21 @@ onMounted(loadReservations);
                                 <ReservationStatusBadge
                                     :status="reservation.reservation_status"
                                 />
+                                <span
+                                    v-if="shouldShowPaymentStatus(reservation)"
+                                    class="mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold"
+                                    :class="
+                                        paymentStatusClass(
+                                            reservation.payment.payment_status,
+                                        )
+                                    "
+                                >
+                                    {{
+                                        paymentStatusLabel(
+                                            reservation.payment.payment_status,
+                                        )
+                                    }}
+                                </span>
                             </div>
 
                             <div class="flex justify-start">
@@ -408,6 +447,27 @@ onMounted(loadReservations);
                                     <ReservationStatusBadge
                                         :status="detailReservation.reservation_status"
                                     />
+                                    <span
+                                        v-if="
+                                            shouldShowPaymentStatus(
+                                                detailReservation,
+                                            )
+                                        "
+                                        class="ml-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold"
+                                        :class="
+                                            paymentStatusClass(
+                                                detailReservation.payment
+                                                    .payment_status,
+                                            )
+                                        "
+                                    >
+                                        {{
+                                            paymentStatusLabel(
+                                                detailReservation.payment
+                                                    .payment_status,
+                                            )
+                                        }}
+                                    </span>
                                 </div>
                                 <p class="mt-3">
                                     共

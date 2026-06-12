@@ -21,6 +21,14 @@ class RoomController extends Controller
     public function index(Request $request): Response
     {
         $this->authorize('viewAny', Room::class);
+        $isAdminRoomPage = $request->routeIs('admin.rooms.index');
+        $visibleRoomsQuery = Room::query();
+
+        if (! $isAdminRoomPage) {
+            $visibleRoomsQuery
+                ->bookableForUser($request->user())
+                ->whereHas('timeSlots');
+        }
 
         $filters = [
             'search' => trim((string) $request->query('search', '')),
@@ -29,11 +37,9 @@ class RoomController extends Controller
             'capacity_min' => trim((string) $request->query('capacity_min', '')),
             'affiliation_id' => trim((string) $request->query('affiliation_id', '')),
             'open_access' => trim((string) $request->query('open_access', '')),
-            'date' => trim((string) $request->query('date', '')),
-            'period' => trim((string) $request->query('period', '')),
         ];
 
-        $query = Room::query()->orderBy('room_name');
+        $query = (clone $visibleRoomsQuery)->orderBy('room_name');
 
         $query->when($filters['search'] !== '', function ($builder) use ($filters): void {
             $builder->where(function ($searchBuilder) use ($filters): void {
@@ -50,17 +56,6 @@ class RoomController extends Controller
         $query->when($filters['capacity_min'] !== '', fn ($builder) => $builder->where('capacity', '>=', (int) $filters['capacity_min']));
         $query->when($filters['affiliation_id'] !== '', fn ($builder) => $builder->where('affiliation_id', (int) $filters['affiliation_id']));
         $query->when($filters['open_access'] !== '', fn ($builder) => $builder->where('is_open_access', $filters['open_access'] === '1'));
-        $query->when($filters['period'] !== '', function ($builder) use ($filters): void {
-            $period = (int) $filters['period'];
-            $builder->whereHas('timeSlots', fn ($slotQuery) => $slotQuery->where('period', $period));
-
-            if ($filters['date'] !== '') {
-                $builder->whereDoesntHave('reservations', fn ($reservationQuery) => $reservationQuery
-                    ->whereDate('reservation_date', $filters['date'])
-                    ->where('reservation_status', 'success')
-                    ->whereHas('timeSlot', fn ($slotQuery) => $slotQuery->where('period', $period)));
-            }
-        });
 
         $roomsPaginator = $query->paginate(8)->withQueryString();
 
@@ -78,7 +73,7 @@ class RoomController extends Controller
             ],
         ];
 
-        $roomTypes = Room::query()
+        $roomTypes = (clone $visibleRoomsQuery)
             ->select('room_type')
             ->distinct()
             ->orderBy('room_type')
@@ -86,7 +81,7 @@ class RoomController extends Controller
             ->values()
             ->all();
 
-        $buildings = Room::query()
+        $buildings = (clone $visibleRoomsQuery)
             ->select('building')
             ->distinct()
             ->orderBy('building')
@@ -94,7 +89,14 @@ class RoomController extends Controller
             ->values()
             ->all();
 
+        $visibleAffiliationIds = (clone $visibleRoomsQuery)
+            ->select('affiliation_id')
+            ->whereNotNull('affiliation_id')
+            ->distinct()
+            ->pluck('affiliation_id');
+
         $affiliations = Affiliation::query()
+            ->whereIn('id', $visibleAffiliationIds)
             ->orderBy('name')
             ->get()
             ->map(fn (Affiliation $affiliation): array => [

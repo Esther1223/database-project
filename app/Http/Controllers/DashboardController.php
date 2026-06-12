@@ -41,8 +41,8 @@ class DashboardController extends Controller
 
         $reservationScope = $this->reservationScope($user, $canViewOperations || $canReviewApprovals);
         $personalReservationScope = $this->reservationScope($user, false);
-        $reservationGroupCounts = $canReserve || $canViewOperations
-            ? $this->reservationGroupCounts($reservationScope)
+        $reservationGroupCounts = $canReserve
+            ? $this->reservationGroupCounts($personalReservationScope)
             : ['reservations' => null, 'pending' => null, 'approved' => null, 'cancelled' => null];
 
         return response()->json([
@@ -68,10 +68,10 @@ class DashboardController extends Controller
             ],
             'tasks' => [
                 'pending_reservations' => $canReviewApprovals
-                    ? Reservation::where('reservation_status', 'pending')->count()
+                    ? $this->pendingApprovalGroupCount()
                     : null,
                 'unpaid_orders' => $canViewRevenue
-                    ? Payment::whereHas('reservation', fn (Builder $query) => $query->where('payment_status', 'unpaid'))->count()
+                    ? $this->unpaidPaymentManagementGroupCount()
                     : null,
                 'upcoming_reservations' => $canReserve
                     ? (clone $personalReservationScope)
@@ -83,7 +83,7 @@ class DashboardController extends Controller
                         ->filter(fn (Reservation $reservation): bool => $reservation->start_time >= $now && $reservation->start_time <= $now->copy()->addDay())
                         ->count()
                     : null,
-                'unpaid_orders_list' => $canViewRevenue ? $this->unpaidOrdersList($reservationScope, true) : [],
+                'personal_unpaid_reservations_list' => $canReserve ? $this->unpaidOrdersList($personalReservationScope, false) : [],
                 'upcoming_reservations_list' => $canReserve ? $this->upcomingReservationsList($personalReservationScope, $now) : [],
             ],
             'month' => [
@@ -150,6 +150,24 @@ class DashboardController extends Controller
         return Payment::query()
             ->whereHas('reservation', fn (Builder $query) => $query->where('payment_status', 'unpaid'))
             ->whereIn('reservation_id', $reservationIds)
+            ->count();
+    }
+
+    private function pendingApprovalGroupCount(): int
+    {
+        return Reservation::query()
+            ->where('reservation_status', 'pending')
+            ->get(['id', 'reservation_group_id'])
+            ->groupBy(fn (Reservation $reservation): string => $reservation->reservation_group_id ?: (string) $reservation->id)
+            ->count();
+    }
+
+    private function unpaidPaymentManagementGroupCount(): int
+    {
+        return Payment::with('reservation')
+            ->whereHas('reservation', fn (Builder $query) => $query->where('payment_status', 'unpaid'))
+            ->get()
+            ->groupBy(fn (Payment $payment): string => $payment->reservation?->reservation_group_id ?: (string) $payment->reservation_id)
             ->count();
     }
 

@@ -21,6 +21,10 @@ const statusMap = {
         text: "已取消",
         class: "bg-slate-100 text-slate-600",
     },
+    canceled: {
+        text: "已取消",
+        class: "bg-slate-100 text-slate-600",
+    },
 };
 
 const badge = computed(

@@ -89,7 +89,7 @@ class Room extends Model
 
     public function scopeBookableForUser(Builder $query, User $user): Builder
     {
-        if ($user->isAdmin()) {
+        if ($user->isAdmin() || $user->hasRole('行政人員')) {
             return $query;
         }
 
@@ -105,23 +105,13 @@ class Room extends Model
                                 ->orWhereHas('openAffiliations', fn (Builder $query) => $query->where('Affiliation.id', $user->affiliation_id));
                         });
                 });
-        })->where(function (Builder $builder) use ($user): void {
-            $allowedTypes = $this->bookableRoomTypesFor($user);
-
-            if ($allowedTypes !== []) {
-                $builder->whereIn('room_type', $allowedTypes);
-            }
         });
     }
 
     public function isBookableBy(User $user): bool
     {
-        if ($user->isAdmin()) {
+        if ($user->isAdmin() || $user->hasRole('行政人員')) {
             return true;
-        }
-
-        if (! in_array($this->type, $this->bookableRoomTypesFor($user), true)) {
-            return false;
         }
 
         if ((int) $this->affiliation_id === (int) $user->affiliation_id) {
@@ -139,21 +129,5 @@ class Room extends Model
         return $this->openAffiliations()
             ->where('Affiliation.id', $user->affiliation_id)
             ->exists();
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function bookableRoomTypesFor(User $user): array
-    {
-        if ($user->hasRole('學生')) {
-            return ['教室', '會議室'];
-        }
-
-        if ($user->hasRole('教授') || $user->hasRole('行政人員')) {
-            return ['教室', '會議室', '實驗室'];
-        }
-
-        return [];
     }
 }

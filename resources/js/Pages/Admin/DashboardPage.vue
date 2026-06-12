@@ -75,12 +75,6 @@ const taskItems = computed(() => {
             href: "/admin/payments",
             show: summary.value?.permissions?.can_view_revenue,
         },
-        {
-            label: "即將開始的預約",
-            value: tasks.upcoming_reservations,
-            href: "/reservations",
-            show: summary.value?.permissions?.can_reserve,
-        },
     ].filter(
         (item) =>
             item.value !== null &&
@@ -344,19 +338,19 @@ onMounted(loadSummary);
 
                     <div
                         v-if="
-                            summary.permissions.can_view_revenue ||
                             summary.permissions.can_reserve ||
                             canViewManagementStats
                         "
                         class="grid gap-6"
                         :class="
-                            canViewManagementStats
+                            canViewManagementStats ||
+                            summary.permissions.can_reserve
                                 ? 'xl:grid-cols-2'
                                 : 'xl:grid-cols-1'
                         "
                     >
                         <div
-                            v-if="summary.permissions.can_view_revenue"
+                            v-if="summary.permissions.can_reserve"
                             class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
                         >
                             <h3 class="text-xl font-semibold text-slate-950">
@@ -365,16 +359,17 @@ onMounted(loadSummary);
                             <div class="mt-5">
                                 <div
                                     v-if="
-                                        summary.tasks?.unpaid_orders_list
+                                        summary.tasks
+                                            ?.personal_unpaid_reservations_list
                                             ?.length > 0
                                     "
                                     class="space-y-2"
                                 >
                                     <a
                                         v-for="payment in summary.tasks
-                                            .unpaid_orders_list"
+                                            .personal_unpaid_reservations_list"
                                         :key="payment.id"
-                                        href="/admin/payments"
+                                        href="/reservations"
                                         class="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition hover:bg-white"
                                     >
                                         <div class="min-w-0">
