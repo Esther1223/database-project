@@ -368,19 +368,8 @@ onMounted(loadPayments);
                                     {{ formatAmount(paymentToConfirm.amount) }}
                                 </p>
                                 <p class="mt-1">
-                                    {{
-                                        formatDateTime(
-                                            paymentToConfirm.reservation
-                                                ?.start_time,
-                                        )
-                                    }}
-                                    至
-                                    {{
-                                        formatDateTime(
-                                            paymentToConfirm.reservation
-                                                ?.end_time,
-                                        )
-                                    }}
+                                    共 {{ paymentToConfirm.slot_count || 1 }}
+                                    個時段
                                 </p>
                             </div>
 
