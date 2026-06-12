@@ -77,7 +77,6 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', 'role:管理員,行政人員'])->group(function () {
-    Route::patch('/room-sections/{roomSection}/status', [RoomSectionController::class, 'updateAvailability']);
     Route::get('/admin/rooms/{room}/time-slots', [TimeSlotController::class, 'index'])->name('admin.rooms.time-slots.index');
     Route::post('/admin/rooms/{room}/time-slots', [TimeSlotController::class, 'store'])->name('admin.rooms.time-slots.store');
     Route::put('/admin/rooms/{room}/time-slots/{timeSlot}', [TimeSlotController::class, 'update'])->name('admin.rooms.time-slots.update');

@@ -34,7 +34,7 @@ class RoleController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'role_type' => ['required', 'string', 'max:50', 'unique:roles,role_type'],
+            'role_type' => ['required', 'string', 'max:50', 'unique:Role,role_type'],
         ]);
 
         $role = Role::create($validated);
@@ -48,7 +48,7 @@ class RoleController extends Controller
     public function update(Request $request, Role $role): JsonResponse
     {
         $validated = $request->validate([
-            'role_type' => ['required', 'string', 'max:50', Rule::unique('roles', 'role_type')->ignore($role->id)],
+            'role_type' => ['required', 'string', 'max:50', Rule::unique('Role', 'role_type')->ignore($role->id)],
         ]);
 
         $role->update($validated);

@@ -25,7 +25,7 @@ class DecisionApprovalRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'reservation_id' => ['required', 'integer', 'exists:reservations,id'],
+            'reservation_id' => ['required', 'integer', 'exists:Reservation,id'],
             'decision' => ['required', 'string', 'in:'.Approval::DECISION_APPROVED.','.Approval::DECISION_REJECTED],
         ];
     }

@@ -11,6 +11,8 @@ class TimeSlot extends Model
 {
     use HasFactory;
 
+    protected $table = 'Time_slot';
+
     protected $fillable = [
         'room_id',
         'period',
@@ -31,14 +33,6 @@ class TimeSlot extends Model
     public function room(): BelongsTo
     {
         return $this->belongsTo(Room::class);
-    }
-
-    /**
-     * @return HasMany<RoomSection, $this>
-     */
-    public function roomSections(): HasMany
-    {
-        return $this->hasMany(RoomSection::class);
     }
 
     /**

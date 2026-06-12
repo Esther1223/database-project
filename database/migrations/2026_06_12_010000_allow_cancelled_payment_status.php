@@ -8,8 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (Schema::hasColumn('reservations', 'payment_status') && DB::getDriverName() === 'mysql') {
-            DB::statement("ALTER TABLE reservations MODIFY payment_status VARCHAR(50) NOT NULL DEFAULT 'unpaid'");
+        if (Schema::hasColumn('Reservation', 'payment_status') && DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE Reservation MODIFY payment_status VARCHAR(50) NOT NULL DEFAULT 'unpaid'");
         }
     }
 

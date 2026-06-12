@@ -32,7 +32,7 @@ class UserController extends Controller
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
-                    'affiliation' => $user->affiliation,
+                    'affiliation' => $affiliation?->name,
                     'affiliation_id' => $user->affiliation_id,
                     'affiliation_name' => $affiliation?->name,
                     'is_active' => (bool) ($user->is_active ?? true),
@@ -75,12 +75,12 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'affiliation_id' => ['required', 'integer', 'exists:affiliations,id'],
+            'email' => ['required', 'email', 'max:255', 'unique:User,email'],
+            'affiliation_id' => ['required', 'integer', 'exists:Affiliation,id'],
             'password' => ['required', 'string', 'min:6'],
             'is_active' => ['sometimes', 'boolean'],
             'role_ids' => ['required', 'array', 'min:1'],
-            'role_ids.*' => ['integer', 'exists:roles,id'],
+            'role_ids.*' => ['integer', 'exists:Role,id'],
         ], [
             'role_ids.required' => '請至少選擇一個角色。',
             'role_ids.min' => '請至少選擇一個角色。',
@@ -100,12 +100,9 @@ class UserController extends Controller
             }
         }
 
-        $affiliation = Affiliation::find($validated['affiliation_id']);
-
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'affiliation' => $affiliation?->name ?? '未指定',
             'password' => Hash::make($validated['password']),
             'is_active' => $validated['is_active'] ?? true,
             'affiliation_id' => $validated['affiliation_id'],
@@ -126,18 +123,18 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'affiliation_id' => ['required', 'integer', 'exists:affiliations,id'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('User', 'email')->ignore($user->id)],
+            'affiliation_id' => ['required', 'integer', 'exists:Affiliation,id'],
             'password' => ['nullable', 'string', 'min:6'],
             'is_active' => ['sometimes', 'boolean'],
             'role_ids' => ['required', 'array', 'min:1'],
-            'role_ids.*' => ['integer', 'exists:roles,id'],
+            'role_ids.*' => ['integer', 'exists:Role,id'],
         ], [
             'role_ids.required' => '請至少選擇一個角色。',
             'role_ids.min' => '請至少選擇一個角色。',
         ]);
 
-        $roleIds = array_map('intval', $validated['role_ids'] ?? $user->roles()->pluck('roles.id')->all());
+        $roleIds = array_map('intval', $validated['role_ids'] ?? $user->roles()->pluck('Role.id')->all());
 
         $adminRoleId = Role::query()->where('role_type', '管理員')->value('id');
 
@@ -180,12 +177,9 @@ class UserController extends Controller
             }
         }
 
-        $affiliation = Affiliation::find($validated['affiliation_id']);
-
         $payload = [
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'affiliation' => $affiliation?->name ?? '未指定',
             'affiliation_id' => $validated['affiliation_id'],
         ];
 
@@ -269,7 +263,7 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'role_ids' => ['required', 'array', 'min:1'],
-            'role_ids.*' => ['integer', 'exists:roles,id'],
+            'role_ids.*' => ['integer', 'exists:Role,id'],
         ], [
             'role_ids.required' => '請至少選擇一個角色。',
             'role_ids.min' => '請至少選擇一個角色。',

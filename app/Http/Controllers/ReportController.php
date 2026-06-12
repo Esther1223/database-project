@@ -116,7 +116,7 @@ class ReportController extends Controller
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'payment_status' => ['nullable', 'string', 'in:unpaid,paid,cancelled'],
-            'room_id' => ['nullable', 'integer', 'exists:rooms,id'],
+            'room_id' => ['nullable', 'integer', 'exists:Room,id'],
         ]);
         [$startDate, $endDate] = $this->dateRange($filters);
 
@@ -195,7 +195,7 @@ class ReportController extends Controller
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'status' => ['nullable', 'string', 'in:pending,success,cancelled,rejected'],
-            'room_id' => ['nullable', 'integer', 'exists:rooms,id'],
+            'room_id' => ['nullable', 'integer', 'exists:Room,id'],
         ]);
     }
 

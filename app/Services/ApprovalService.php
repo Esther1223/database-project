@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Approval;
 use App\Models\Payment;
 use App\Models\Reservation;
-use App\Models\RoomSection;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -15,7 +14,7 @@ class ApprovalService
 
     /**
      * Approve a pending reservation: create approval record, set reservation_status to 'success',
-     * and mark related room sections as 'reserved'.
+     * and reject conflicting pending reservations.
      */
     public function approveReservation(int $reservationId, int $approverId): Reservation
     {
@@ -43,7 +42,6 @@ class ApprovalService
             foreach ($reservations as $item) {
                 $item->update(['reservation_status' => 'success']);
 
-                $this->reserveRoomSections($item);
                 $this->rejectConflictingPendingReservations($item);
             }
 
@@ -109,26 +107,6 @@ class ApprovalService
             ->where('reservation_status', 'success')
             ->lockForUpdate()
             ->get();
-    }
-
-    private function reserveRoomSections(Reservation $reservation): void
-    {
-        $date = $reservation->reservation_date?->format('Y-m-d');
-
-        if ($date === null || $reservation->time_slot_id === null) {
-            return;
-        }
-
-        RoomSection::updateOrCreate(
-            [
-                'room_id' => $reservation->room_id,
-                'date' => $date,
-                'time_slot_id' => $reservation->time_slot_id,
-            ],
-            [
-                'status' => 'reserved',
-            ],
-        );
     }
 
     private function slotAlreadyReserved(Reservation $reservation): bool

@@ -128,7 +128,7 @@ class ReservationController extends Controller
         $validated = $request->validate([
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'room_id' => ['nullable', 'integer', 'exists:rooms,id'],
+            'room_id' => ['nullable', 'integer', 'exists:Room,id'],
             'status' => ['nullable', 'string', 'in:pending,success,cancelled,rejected'],
         ]);
 

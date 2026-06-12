@@ -11,21 +11,21 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (Schema::hasColumn('users', 'afflication_id') && ! Schema::hasColumn('users', 'affiliation_id')) {
-            Schema::table('users', function (Blueprint $table) {
+        if (Schema::hasColumn('User', 'afflication_id') && ! Schema::hasColumn('User', 'affiliation_id')) {
+            Schema::table('User', function (Blueprint $table) {
                 $table->renameColumn('afflication_id', 'affiliation_id');
             });
 
             return;
         }
 
-        if (Schema::hasColumn('users', 'affiliation_id')) {
+        if (Schema::hasColumn('User', 'affiliation_id')) {
             return;
         }
 
-        Schema::table('users', function (Blueprint $table) {
-            $table->foreignId('affiliation_id')->nullable()->after('affiliation')
-                ->constrained('affiliations')
+        Schema::table('User', function (Blueprint $table) {
+            $table->foreignId('affiliation_id')->nullable()->after('password')
+                ->constrained('Affiliation')
                 ->nullOnDelete();
         });
     }
@@ -35,7 +35,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
+        Schema::table('User', function (Blueprint $table) {
             $table->dropConstrainedForeignId('affiliation_id');
         });
     }

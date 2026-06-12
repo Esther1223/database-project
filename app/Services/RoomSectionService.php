@@ -3,9 +3,6 @@
 namespace App\Services;
 
 use App\Models\Room;
-use App\Models\RoomSection;
-use App\Models\TimeSlot;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
 class RoomSectionService
@@ -29,54 +26,8 @@ class RoomSectionService
 
     public function cleanUpOldSections(int $daysToKeep = 30): int
     {
-        $cutoffDate = Carbon::today()->subDays($daysToKeep)->toDateString();
+        Log::info('room_sections 已移除，無需清理歷史時段資料');
 
-        $deletedCount = RoomSection::query()->where('date', '<', $cutoffDate)->delete();
-
-        Log::info("已清理 {$cutoffDate} 之前的歷史時段，共刪除 {$deletedCount} 筆資料");
-
-        return $deletedCount;
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function timeSlotIds(Room $room): array
-    {
-        return $room->timeSlots()
-            ->orderBy('period')
-            ->pluck('id')
-            ->all();
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function sectionRow(int $roomId, string $date, int $timeSlotId): array
-    {
-        return [
-            'room_id' => $roomId,
-            'date' => $date,
-            'time_slot_id' => $timeSlotId,
-            'status' => 'available',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ];
-    }
-
-    /**
-     * @param array<int, array<string, mixed>> $rows
-     */
-    private function upsertRows(array $rows): void
-    {
-        if ($rows === []) {
-            return;
-        }
-
-        RoomSection::upsert(
-            $rows,
-            ['room_id', 'date', 'time_slot_id'],
-            ['status', 'updated_at'],
-        );
+        return 0;
     }
 }

@@ -4,7 +4,6 @@ namespace App\Http\Requests\Reservation;
 
 use App\Models\Reservation;
 use App\Models\Room;
-use App\Models\RoomSection;
 use App\Models\TimeSlot;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
@@ -23,18 +22,17 @@ class StoreReservationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'room_id' => ['required_without:selected_slots', 'exists:rooms,id'],
-            'section_id' => ['nullable', 'exists:room_sections,id'],
-            'date' => ['required_without_all:section_id,dates,selected_slots', 'date_format:Y-m-d'],
-            'dates' => ['required_without_all:section_id,date,selected_slots', 'array', 'min:1'],
+            'room_id' => ['required_without:selected_slots', 'exists:Room,id'],
+            'date' => ['required_without_all:dates,selected_slots', 'date_format:Y-m-d'],
+            'dates' => ['required_without_all:date,selected_slots', 'array', 'min:1'],
             'dates.*' => ['date_format:Y-m-d'],
-            'time_slot_id' => ['required_without_all:section_id,time_slot_ids,selected_slots', 'integer', 'exists:time_slots,id'],
-            'time_slot_ids' => ['required_without_all:section_id,time_slot_id,selected_slots', 'array', 'min:1'],
-            'time_slot_ids.*' => ['integer', 'distinct', 'exists:time_slots,id'],
-            'selected_slots' => ['required_without_all:section_id,time_slot_id,time_slot_ids', 'array', 'min:1'],
-            'selected_slots.*.room_id' => ['required_with:selected_slots', 'integer', 'exists:rooms,id'],
+            'time_slot_id' => ['required_without_all:time_slot_ids,selected_slots', 'integer', 'exists:Time_slot,id'],
+            'time_slot_ids' => ['required_without_all:time_slot_id,selected_slots', 'array', 'min:1'],
+            'time_slot_ids.*' => ['integer', 'distinct', 'exists:Time_slot,id'],
+            'selected_slots' => ['required_without_all:time_slot_id,time_slot_ids', 'array', 'min:1'],
+            'selected_slots.*.room_id' => ['required_with:selected_slots', 'integer', 'exists:Room,id'],
             'selected_slots.*.date' => ['required_with:selected_slots', 'date_format:Y-m-d'],
-            'selected_slots.*.time_slot_id' => ['required_with:selected_slots', 'integer', 'exists:time_slots,id'],
+            'selected_slots.*.time_slot_id' => ['required_with:selected_slots', 'integer', 'exists:Time_slot,id'],
         ];
     }
 
@@ -119,39 +117,16 @@ class StoreReservationRequest extends FormRequest
                 return;
             }
 
-            if ($this->filled('section_id')) {
-                $section = RoomSection::with('timeSlot')->find($this->integer('section_id'));
+            $date = (string) $this->input('date');
+            $timeSlot = TimeSlot::query()
+                ->whereKey($this->integer('time_slot_id'))
+                ->where('room_id', $room->id)
+                ->first();
 
-                if ($section === null) {
-                    return;
-                }
+            if ($timeSlot === null) {
+                $validator->errors()->add('time_slot_id', '該時段不屬於該教室。');
 
-                if ($section->room_id !== $room->id) {
-                    $validator->errors()->add('section_id', '選擇的時段不屬於該教室。');
-
-                    return;
-                }
-
-                if ($section->date === null || $section->timeSlot === null) {
-                    $validator->errors()->add('section_id', '預約時段不存在。');
-
-                    return;
-                }
-
-                $date = Carbon::parse($section->date)->format('Y-m-d');
-                $timeSlot = $section->timeSlot;
-            } else {
-                $date = (string) $this->input('date');
-                $timeSlot = TimeSlot::query()
-                    ->whereKey($this->integer('time_slot_id'))
-                    ->where('room_id', $room->id)
-                    ->first();
-
-                if ($timeSlot === null) {
-                    $validator->errors()->add('time_slot_id', '該時段不屬於該教室。');
-
-                    return;
-                }
+                return;
             }
 
             if ($this->slotStart($date, $timeSlot)->lessThanOrEqualTo($now)) {

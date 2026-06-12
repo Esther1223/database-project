@@ -10,6 +10,8 @@ class Affiliation extends Model
 {
     use HasFactory;
 
+    protected $table = 'Affiliation';
+
     protected $fillable = [
         'name',
     ];
@@ -35,6 +37,6 @@ class Affiliation extends Model
      */
     public function sharedRooms()
     {
-        return $this->belongsToMany(\App\Models\Room::class, 'affiliation_room');
+        return $this->belongsToMany(\App\Models\Room::class, 'Allow_aff');
     }
 }

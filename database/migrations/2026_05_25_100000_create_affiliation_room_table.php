@@ -11,13 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (Schema::hasTable('afflication_room') && ! Schema::hasTable('affiliation_room')) {
-            Schema::rename('afflication_room', 'affiliation_room');
+        if (Schema::hasTable('afflication_room') && ! Schema::hasTable('Allow_aff')) {
+            Schema::rename('afflication_room', 'Allow_aff');
         }
 
-        if (Schema::hasTable('affiliation_room')) {
-            if (Schema::hasColumn('affiliation_room', 'afflication_id') && ! Schema::hasColumn('affiliation_room', 'affiliation_id')) {
-                Schema::table('affiliation_room', function (Blueprint $table) {
+        if (Schema::hasTable('Allow_aff')) {
+            if (Schema::hasColumn('Allow_aff', 'afflication_id') && ! Schema::hasColumn('Allow_aff', 'affiliation_id')) {
+                Schema::table('Allow_aff', function (Blueprint $table) {
                     $table->renameColumn('afflication_id', 'affiliation_id');
                 });
             }
@@ -25,10 +25,10 @@ return new class extends Migration
             return;
         }
 
-        Schema::create('affiliation_room', function (Blueprint $table) {
+        Schema::create('Allow_aff', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('affiliation_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('room_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('affiliation_id')->constrained('Affiliation')->cascadeOnDelete();
+            $table->foreignId('room_id')->constrained('Room')->cascadeOnDelete();
             $table->timestamps();
         });
     }
@@ -38,6 +38,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('affiliation_room');
+        Schema::dropIfExists('Allow_aff');
     }
 };

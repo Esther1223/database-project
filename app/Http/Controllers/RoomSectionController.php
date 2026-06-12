@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Room;
-use App\Models\RoomSection;
 use App\Models\TimeSlot;
 use App\Models\Reservation;
 use Carbon\Carbon;
@@ -34,20 +33,6 @@ class RoomSectionController extends Controller
             ->all();
 
         return response()->json(['data' => $sections]);
-    }
-
-    public function updateAvailability(Request $request, RoomSection $roomSection): JsonResponse
-    {
-        $validated = $request->validate([
-            'status' => 'required|in:available,unavailable,reserved',
-        ]);
-
-        $roomSection->update(['status' => $validated['status']]);
-
-        return response()->json([
-            'message' => '教室時段狀態已更新',
-            'data' => $this->sectionPayload($roomSection->fresh(['timeSlot'])),
-        ]);
     }
 
     public function updateAdminDisable(Request $request, TimeSlot $timeSlot): JsonResponse
@@ -83,11 +68,13 @@ class RoomSectionController extends Controller
      */
     private function allSectionsForDate(Room $room, string $selectedDate, Request $request): Collection
     {
-        $reservedSections = $room->roomSections()
-            ->with('timeSlot')
-            ->whereDate('date', $selectedDate)
-            ->get()
-            ->keyBy('time_slot_id');
+        $reservedTimeSlotIds = Reservation::query()
+            ->where('room_id', $room->id)
+            ->whereDate('reservation_date', $selectedDate)
+            ->where('reservation_status', 'success')
+            ->pluck('time_slot_id')
+            ->map(fn ($timeSlotId): int => (int) $timeSlotId)
+            ->flip();
         $pendingTimeSlotIds = Reservation::query()
             ->where('user_id', $request->user()?->id)
             ->where('room_id', $room->id)
@@ -100,21 +87,20 @@ class RoomSectionController extends Controller
         return $room->timeSlots()
             ->orderBy('period')
             ->get()
-            ->map(function (TimeSlot $timeSlot) use ($reservedSections, $pendingTimeSlotIds, $room, $selectedDate): array {
-                $reservedSection = $reservedSections->get($timeSlot->id);
+            ->map(function (TimeSlot $timeSlot) use ($reservedTimeSlotIds, $pendingTimeSlotIds, $room, $selectedDate): array {
                 $state = $this->sectionState(
-                    $reservedSection?->status,
                     $selectedDate,
                     $timeSlot,
+                    $reservedTimeSlotIds->has($timeSlot->id),
                     $pendingTimeSlotIds->has($timeSlot->id),
                 );
 
                 return [
-                    'id' => $reservedSection?->id,
+                    'id' => null,
                     'room_id' => $room->id,
                     'date' => $selectedDate,
                     'time_slot_id' => $timeSlot->id,
-                    'status' => $reservedSection?->status ?? 'available',
+                    'status' => $state === 'reserved' ? 'reserved' : 'available',
                     'state' => $state,
                     'is_bookable' => $state === 'available',
                     'time_slot' => [
@@ -127,14 +113,10 @@ class RoomSectionController extends Controller
             });
     }
 
-    private function sectionState(?string $sectionStatus, ?string $date = null, ?TimeSlot $timeSlot = null, bool $hasPendingReservation = false): string
+    private function sectionState(?string $date = null, ?TimeSlot $timeSlot = null, bool $hasSuccessReservation = false, bool $hasPendingReservation = false): string
     {
-        if ($sectionStatus === 'reserved') {
+        if ($hasSuccessReservation) {
             return 'reserved';
-        }
-
-        if ($sectionStatus === 'unavailable') {
-            return 'disabled';
         }
 
         if ($hasPendingReservation) {
@@ -146,32 +128,6 @@ class RoomSectionController extends Controller
         }
 
         return 'available';
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function sectionPayload(RoomSection $section): array
-    {
-        $timeSlot = $section->timeSlot;
-        $date = Carbon::parse($section->date)->format('Y-m-d');
-        $state = $this->sectionState($section->status, $date, $timeSlot);
-
-        return [
-            'id' => $section->id,
-            'room_id' => $section->room_id,
-            'date' => $date,
-            'time_slot_id' => $section->time_slot_id,
-            'status' => $section->status,
-            'state' => $state,
-            'is_bookable' => $state === 'available',
-            'time_slot' => $timeSlot === null ? null : [
-                'id' => $timeSlot->id,
-                'period' => $timeSlot->period,
-                'price' => $timeSlot->price,
-                'label' => $timeSlot->label(),
-            ],
-        ];
     }
 
     private function slotStartsInPast(string $date, TimeSlot $timeSlot): bool

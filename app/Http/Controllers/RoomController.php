@@ -125,11 +125,13 @@ class RoomController extends Controller
 
         $selectedDate = $request->query('date', now()->toDateString());
 
-        $reservedSections = $room->roomSections()
-            ->with('timeSlot')
-            ->where('date', $selectedDate)
-            ->get()
-            ->keyBy('time_slot_id');
+        $reservedTimeSlotIds = Reservation::query()
+            ->where('room_id', $room->id)
+            ->whereDate('reservation_date', $selectedDate)
+            ->where('reservation_status', 'success')
+            ->pluck('time_slot_id')
+            ->map(fn ($timeSlotId): int => (int) $timeSlotId)
+            ->flip();
         $pendingTimeSlotIds = Reservation::query()
             ->where('user_id', $request->user()?->id)
             ->where('room_id', $room->id)
@@ -142,21 +144,20 @@ class RoomController extends Controller
         $sections = $room->timeSlots()
             ->orderBy('period')
             ->get()
-            ->map(function (TimeSlot $timeSlot) use ($reservedSections, $pendingTimeSlotIds, $room, $selectedDate): array {
-                $reservedSection = $reservedSections->get($timeSlot->id);
+            ->map(function (TimeSlot $timeSlot) use ($reservedTimeSlotIds, $pendingTimeSlotIds, $room, $selectedDate): array {
                 $state = $this->sectionState(
-                    $reservedSection?->status,
                     $selectedDate,
                     $timeSlot,
+                    $reservedTimeSlotIds->has($timeSlot->id),
                     $pendingTimeSlotIds->has($timeSlot->id),
                 );
 
                 return [
-                    'id' => $reservedSection?->id,
+                    'id' => null,
                     'room_id' => $room->id,
                     'date' => $selectedDate,
                     'time_slot_id' => $timeSlot->id,
-                    'status' => $reservedSection?->status ?? 'available',
+                    'status' => $state === 'reserved' ? 'reserved' : 'available',
                     'state' => $state,
                     'time_label' => $timeSlot->label(),
                     'time_slot' => [
@@ -309,14 +310,10 @@ class RoomController extends Controller
         }
     }
 
-    private function sectionState(?string $sectionStatus, ?string $date = null, ?TimeSlot $timeSlot = null, bool $hasPendingReservation = false): string
+    private function sectionState(?string $date = null, ?TimeSlot $timeSlot = null, bool $hasSuccessReservation = false, bool $hasPendingReservation = false): string
     {
-        if ($sectionStatus === 'reserved') {
+        if ($hasSuccessReservation) {
             return 'reserved';
-        }
-
-        if ($sectionStatus === 'unavailable') {
-            return 'disabled';
         }
 
         if ($hasPendingReservation) {

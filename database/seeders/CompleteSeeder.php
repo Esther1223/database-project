@@ -5,10 +5,10 @@ namespace Database\Seeders;
 use App\Models\Approval;
 use App\Models\Affiliation;
 use App\Models\Payment;
+use App\Models\ReserveTimeslot;
 use App\Models\Reservation;
 use App\Models\Role;
 use App\Models\Room;
-use App\Models\RoomSection;
 use App\Models\TimeSlot;
 use App\Models\User;
 use Carbon\Carbon;
@@ -56,7 +56,6 @@ class CompleteSeeder extends Seeder
                 [
                     'name' => $u['name'],
                     'password' => Hash::make($u['password']),
-                    'affiliation' => $u['affiliation'],
                     'affiliation_id' => $affiliations[$u['affiliation']]->id ?? null,
                 ],
             );
@@ -106,32 +105,12 @@ class CompleteSeeder extends Seeder
         $tomorrow = Carbon::today()->addDay();
         $dayAfter = Carbon::today()->addDays(2);
 
-        $createSectionsForDate = function (Room $room, string $roomName, Carbon $date) use ($timeSlots): void {
-            foreach ($timeSlots[$roomName] as $timeSlot) {
-                RoomSection::updateOrCreate(
-                    ['room_id' => $room->id, 'date' => $date->toDateString(), 'time_slot_id' => $timeSlot->id],
-                    ['status' => 'available'],
-                );
-            }
-        };
-
-        foreach ($rooms as $roomName => $room) {
-            $createSectionsForDate($room, $roomName, $today);
-            $createSectionsForDate($room, $roomName, $tomorrow);
-            $createSectionsForDate($room, $roomName, $dayAfter);
-        }
-
         $singleDate = $today->toDateString();
         Reservation::query()
             ->where('room_id', $rooms['B201 教室']->id)
             ->whereDate('reservation_date', $singleDate)
             ->where('time_slot_id', $timeSlots['B201 教室'][13]->id)
             ->delete();
-
-        RoomSection::updateOrCreate(
-            ['room_id' => $rooms['B201 教室']->id, 'date' => $singleDate, 'time_slot_id' => $timeSlots['B201 教室'][13]->id],
-            ['status' => 'available'],
-        );
 
         $multiDate = $tomorrow->toDateString();
         Reservation::query()
@@ -143,7 +122,7 @@ class CompleteSeeder extends Seeder
 
         $multiGroupId = (string) Str::uuid();
         $multiReservations = collect([9, 10, 11])->map(function (int $period) use ($multiDate, $multiGroupId, $rooms, $professor, $timeSlots): Reservation {
-            return Reservation::updateOrCreate(
+            $reservation = Reservation::updateOrCreate(
                 [
                     'user_id' => $professor->id,
                     'room_id' => $rooms['A101 會議室']->id,
@@ -156,14 +135,14 @@ class CompleteSeeder extends Seeder
                     'payment_status' => 'unpaid',
                 ],
             );
-        });
 
-        foreach ([9, 10, 11] as $period) {
-            RoomSection::updateOrCreate(
-                ['room_id' => $rooms['A101 會議室']->id, 'date' => $multiDate, 'time_slot_id' => $timeSlots['A101 會議室'][$period]->id],
-                ['status' => 'reserved'],
+            ReserveTimeslot::updateOrCreate(
+                ['reservation_id' => $reservation->id, 'time_slot_id' => $timeSlots['A101 會議室'][$period]->id],
+                [],
             );
-        }
+
+            return $reservation;
+        });
 
         $firstMultiRes = $multiReservations->first();
 
@@ -189,7 +168,7 @@ class CompleteSeeder extends Seeder
 
         $cancelDate = $dayAfter->toDateString();
 
-        Reservation::updateOrCreate(
+        $cancelledReservation = Reservation::updateOrCreate(
             [
                 'user_id' => $admin->id,
                 'room_id' => $rooms['C301 多功能廳']->id,
@@ -201,8 +180,12 @@ class CompleteSeeder extends Seeder
                 'reservation_status' => 'cancelled',
             ],
         );
+        ReserveTimeslot::updateOrCreate(
+            ['reservation_id' => $cancelledReservation->id, 'time_slot_id' => $timeSlots['C301 多功能廳'][10]->id],
+            [],
+        );
 
-        Reservation::updateOrCreate(
+        $pendingReservation = Reservation::updateOrCreate(
             [
                 'user_id' => $studentB->id,
                 'room_id' => $rooms['A101 會議室']->id,
@@ -213,6 +196,10 @@ class CompleteSeeder extends Seeder
                 'reservation_group_id' => (string) Str::uuid(),
                 'reservation_status' => 'pending',
             ],
+        );
+        ReserveTimeslot::updateOrCreate(
+            ['reservation_id' => $pendingReservation->id, 'time_slot_id' => $timeSlots['A101 會議室'][14]->id],
+            [],
         );
     }
 }

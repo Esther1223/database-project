@@ -28,7 +28,7 @@ class StoreRoomRequest extends FormRequest
             'type' => ['required', 'string', 'max:255'],
             'capacity' => ['required', 'integer', 'min:1'],
             'building' => ['required', 'string', 'max:255'],
-            'affiliation_id' => ['required', 'integer', 'exists:affiliations,id'],
+            'affiliation_id' => ['required', 'integer', 'exists:Affiliation,id'],
             'information' => ['nullable', 'string'],
             'need_approval' => ['required', 'boolean'],
             'is_open_access' => ['required', 'boolean'],
@@ -38,7 +38,7 @@ class StoreRoomRequest extends FormRequest
                 'array',
                 'min:1',
             ],
-            'open_access_affiliations.*' => ['integer', 'exists:affiliations,id'],
+            'open_access_affiliations.*' => ['integer', 'exists:Affiliation,id'],
         ];
     }
 

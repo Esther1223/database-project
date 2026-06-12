@@ -3,9 +3,9 @@
 namespace App\Services;
 
 use App\Models\Payment;
+use App\Models\ReserveTimeslot;
 use App\Models\Reservation;
 use App\Models\Room;
-use App\Models\RoomSection;
 use App\Models\TimeSlot;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -49,11 +49,7 @@ class ReservationService
                     'time_slot_id' => $slot['time_slot_id'],
                 ];
 
-                $section = $this->lockOrCreateSection($slotData, $room);
-
-                if ($section->status !== 'available') {
-                    abort(422, '所選時段已被借走或關閉');
-                }
+                $timeSlot = $this->timeSlotForRoom($slotData, $room);
 
                 if ($this->hasPendingSlotForUser($userId, $room->id, $slot['date'], (int) $slot['time_slot_id'])) {
                     abort(422, '已送出相同時段的審核申請，取消後才可重新送出。');
@@ -73,10 +69,7 @@ class ReservationService
                     'time_slot_id' => (int) $slot['time_slot_id'],
                     'reservation_status' => $reservationStatus,
                 ]);
-
-                if ($reservationStatus === 'success') {
-                    $section->update(['status' => 'reserved']);
-                }
+                $this->syncReserveTimeslot($reservation, $timeSlot->id);
 
                 $reservations[] = $reservation->fresh(['room', 'timeSlot', 'payment']);
             }
@@ -127,18 +120,14 @@ class ReservationService
     private function createReservation(array $data, int $userId): Reservation
     {
         $room = Room::findOrFail($data['room_id']);
-        $section = $this->lockOrCreateSection($data, $room);
-        $date = $section->date->format('Y-m-d');
+        $timeSlot = $this->timeSlotForRoom($data, $room);
+        $date = (string) $data['date'];
 
-        if ($section->status !== 'available') {
-            abort(422, '該時段已被借走或關閉');
-        }
-
-        if ($this->hasPendingSlotForUser($userId, $room->id, $date, (int) $section->time_slot_id)) {
+        if ($this->hasPendingSlotForUser($userId, $room->id, $date, (int) $timeSlot->id)) {
             abort(422, '已送出相同時段的審核申請，取消後才可重新送出。');
         }
 
-        if ($this->hasConflict($room->id, $date, (int) $section->time_slot_id)) {
+        if ($this->hasConflict($room->id, $date, (int) $timeSlot->id)) {
             abort(422, '該時段已有預約');
         }
 
@@ -149,48 +138,24 @@ class ReservationService
             'reservation_group_id' => (string) Str::uuid(),
             'room_id' => $room->id,
             'reservation_date' => $date,
-            'time_slot_id' => (int) $section->time_slot_id,
+            'time_slot_id' => (int) $timeSlot->id,
             'reservation_status' => $reservationStatus,
         ]);
+        $this->syncReserveTimeslot($reservation, $timeSlot->id);
 
         if ($reservationStatus === 'success') {
-            $section->update(['status' => 'reserved']);
             $this->createPaymentIfNeeded($reservation);
         }
 
         return $reservation->fresh(['room', 'timeSlot', 'payment']);
     }
 
-    private function lockOrCreateSection(array $data, Room $room): RoomSection
+    private function timeSlotForRoom(array $data, Room $room): TimeSlot
     {
-        if (! empty($data['section_id'])) {
-            return RoomSection::whereKey($data['section_id'])
-                ->where('room_id', $room->id)
-                ->lockForUpdate()
-                ->firstOrFail();
-        }
-
-        $timeSlot = TimeSlot::query()
+        return TimeSlot::query()
             ->whereKey($data['time_slot_id'])
             ->where('room_id', $room->id)
             ->firstOrFail();
-
-        $section = RoomSection::where('room_id', $room->id)
-            ->whereDate('date', $data['date'])
-            ->where('time_slot_id', $timeSlot->id)
-            ->lockForUpdate()
-            ->first();
-
-        if ($section !== null) {
-            return $section;
-        }
-
-        return RoomSection::create([
-            'room_id' => $room->id,
-            'date' => $data['date'],
-            'time_slot_id' => $timeSlot->id,
-            'status' => 'available',
-        ]);
     }
 
     public function cancel(Reservation $reservation): Reservation
@@ -225,16 +190,11 @@ class ReservationService
             }
 
             foreach ($reservations as $item) {
-                $wasSuccess = $item->reservation_status === 'success';
-
                 $item->update([
                     'reservation_status' => 'cancelled',
                     'payment_status' => 'cancelled',
                 ]);
 
-                if ($wasSuccess) {
-                    $this->releaseRoomSection($item);
-                }
             }
 
             $reservationIds = $reservations->pluck('id')->filter()->values();
@@ -286,19 +246,12 @@ class ReservationService
             ->exists();
     }
 
-    private function releaseRoomSection(Reservation $reservation): void
+    private function syncReserveTimeslot(Reservation $reservation, int $timeSlotId): void
     {
-        $date = $reservation->reservation_date?->format('Y-m-d');
-
-        if ($date === null || $reservation->time_slot_id === null) {
-            return;
-        }
-
-        RoomSection::where('room_id', $reservation->room_id)
-            ->whereDate('date', $date)
-            ->where('time_slot_id', $reservation->time_slot_id)
-            ->where('status', 'reserved')
-            ->update(['status' => 'available']);
+        ReserveTimeslot::updateOrCreate(
+            ['reservation_id' => $reservation->id, 'time_slot_id' => $timeSlotId],
+            [],
+        );
     }
 
     private function createPaymentIfNeeded(Reservation $reservation): void

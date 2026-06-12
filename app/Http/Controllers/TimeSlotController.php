@@ -33,7 +33,7 @@ class TimeSlotController extends Controller
                 'integer',
                 'min:0',
                 'max:23',
-                Rule::unique('time_slots', 'period')->where('room_id', $room->id),
+                Rule::unique('Time_slot', 'period')->where('room_id', $room->id),
             ],
             'price' => ['required', 'integer', 'min:0'],
         ]);
@@ -57,7 +57,7 @@ class TimeSlotController extends Controller
                 'integer',
                 'min:0',
                 'max:23',
-                Rule::unique('time_slots', 'period')->where('room_id', $room->id)->ignore($timeSlot->id),
+                Rule::unique('Time_slot', 'period')->where('room_id', $room->id)->ignore($timeSlot->id),
             ],
             'price' => ['required', 'integer', 'min:0'],
         ]);
@@ -92,7 +92,7 @@ class TimeSlotController extends Controller
         $this->authorize('update', $room);
         $this->ensureBelongsToRoom($room, $timeSlot);
 
-        if ($timeSlot->roomSections()->exists() || $timeSlot->reservations()->exists()) {
+        if ($timeSlot->reservations()->exists()) {
             return response()->json([
                 'message' => '此時段已有預約或狀態紀錄，不可刪除。',
             ], 422);
