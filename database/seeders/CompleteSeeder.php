@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Models\Approval;
 use App\Models\Affiliation;
 use App\Models\Payment;
-use App\Models\ReserveTimeslot;
 use App\Models\Reservation;
 use App\Models\Role;
 use App\Models\Room;
@@ -136,11 +135,6 @@ class CompleteSeeder extends Seeder
                 ],
             );
 
-            ReserveTimeslot::updateOrCreate(
-                ['reservation_id' => $reservation->id, 'time_slot_id' => $timeSlots['A101 會議室'][$period]->id],
-                [],
-            );
-
             return $reservation;
         });
 
@@ -180,10 +174,6 @@ class CompleteSeeder extends Seeder
                 'reservation_status' => 'cancelled',
             ],
         );
-        ReserveTimeslot::updateOrCreate(
-            ['reservation_id' => $cancelledReservation->id, 'time_slot_id' => $timeSlots['C301 多功能廳'][10]->id],
-            [],
-        );
 
         $pendingReservation = Reservation::updateOrCreate(
             [
@@ -196,10 +186,6 @@ class CompleteSeeder extends Seeder
                 'reservation_group_id' => (string) Str::uuid(),
                 'reservation_status' => 'pending',
             ],
-        );
-        ReserveTimeslot::updateOrCreate(
-            ['reservation_id' => $pendingReservation->id, 'time_slot_id' => $timeSlots['A101 會議室'][14]->id],
-            [],
         );
     }
 }
