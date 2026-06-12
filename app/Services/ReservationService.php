@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Payment;
-use App\Models\ReserveTimeslot;
 use App\Models\Reservation;
 use App\Models\Room;
 use App\Models\TimeSlot;
@@ -69,7 +68,6 @@ class ReservationService
                     'time_slot_id' => (int) $slot['time_slot_id'],
                     'reservation_status' => $reservationStatus,
                 ]);
-                $this->syncReserveTimeslot($reservation, $timeSlot->id);
 
                 $reservations[] = $reservation->fresh(['room', 'timeSlot', 'payment']);
             }
@@ -141,7 +139,6 @@ class ReservationService
             'time_slot_id' => (int) $timeSlot->id,
             'reservation_status' => $reservationStatus,
         ]);
-        $this->syncReserveTimeslot($reservation, $timeSlot->id);
 
         if ($reservationStatus === 'success') {
             $this->createPaymentIfNeeded($reservation);
@@ -244,14 +241,6 @@ class ReservationService
             ->whereIn('reservation_status', self::ACTIVE_STATUSES)
             ->lockForUpdate()
             ->exists();
-    }
-
-    private function syncReserveTimeslot(Reservation $reservation, int $timeSlotId): void
-    {
-        ReserveTimeslot::updateOrCreate(
-            ['reservation_id' => $reservation->id, 'time_slot_id' => $timeSlotId],
-            [],
-        );
     }
 
     private function createPaymentIfNeeded(Reservation $reservation): void

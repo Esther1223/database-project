@@ -28,7 +28,7 @@ class DashboardController extends Controller
         $roles = $user->roles()->pluck('role_type')->values()->all();
 
         $canReserve = $this->hasAnyRole($roles, ['行政人員', '教授', '學生']);
-        $canManageRooms = $this->hasAnyRole($roles, ['管理員', '行政人員']);
+        $canManageRooms = $this->hasAnyRole($roles, ['管理員']);
         $canViewOperations = $this->hasAnyRole($roles, ['行政人員']);
         $canReviewApprovals = $this->hasAnyRole($roles, ['行政人員']);
         $canViewRevenue = $this->hasAnyRole($roles, ['行政人員']);

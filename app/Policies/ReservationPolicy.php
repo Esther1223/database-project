@@ -20,7 +20,7 @@ class ReservationPolicy
 
     public function create(User $user): bool
     {
-        return $user->isActive() && ($user->hasRole('行政人員') || $user->hasRole('教授') || $user->hasRole('學生'));
+        return $user->hasRole('行政人員') || $user->hasRole('教授') || $user->hasRole('學生');
     }
 
     public function update(User $user, Reservation $reservation): bool

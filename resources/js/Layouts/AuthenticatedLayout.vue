@@ -24,7 +24,7 @@ const canReserve = computed(() =>
         ["行政人員", "教授", "學生"].includes(role.role_type),
     ),
 );
-const canManageRooms = computed(() => isAdmin.value || isStaff.value);
+const canManageRooms = computed(() => isAdmin.value);
 const canReviewApprovals = computed(() =>
     isStaff.value,
 );

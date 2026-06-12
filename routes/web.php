@@ -40,7 +40,7 @@ Route::middleware(['auth', 'role:管理員'])->prefix('admin')->name('admin.')->
     Route::put('/users/{user}/roles', [AdminUserController::class, 'updateRoles'])->name('users.roles');
 });
 
-Route::middleware(['auth', 'role:管理員,行政人員'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'role:管理員'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/rooms', [RoomController::class, 'index'])->name('rooms.index');
     Route::post('/rooms', [RoomController::class, 'store'])->name('rooms.store');
     Route::put('/rooms/{room}', [RoomController::class, 'update'])->name('rooms.update');
@@ -71,7 +71,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/rooms/{room}/disabled-sections', [RoomSectionController::class, 'getDisabled']);
 });
 
-Route::middleware(['auth', 'role:管理員,行政人員'])->group(function () {
+Route::middleware(['auth', 'role:管理員'])->group(function () {
     Route::get('/admin/rooms/{room}/time-slots', [TimeSlotController::class, 'index'])->name('admin.rooms.time-slots.index');
     Route::post('/admin/rooms/{room}/time-slots', [TimeSlotController::class, 'store'])->name('admin.rooms.time-slots.store');
     Route::put('/admin/rooms/{room}/time-slots/{timeSlot}', [TimeSlotController::class, 'update'])->name('admin.rooms.time-slots.update');
