@@ -6,26 +6,19 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('Time_slot', function (Blueprint $table) {
+        Schema::create('Allow_aff', function (Blueprint $table): void {
             $table->id();
+            $table->foreignId('affiliation_id')->constrained('Affiliation')->cascadeOnDelete();
             $table->foreignId('room_id')->constrained('Room')->cascadeOnDelete();
-            $table->unsignedTinyInteger('period');
-            $table->unsignedInteger('price')->default(0);
             $table->timestamps();
-            $table->unique(['room_id', 'period']);
+            $table->unique(['affiliation_id', 'room_id']);
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('Time_slot');
+        Schema::dropIfExists('Allow_aff');
     }
 };

@@ -6,25 +6,20 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('Reserve_timeslot', function (Blueprint $table) {
+        Schema::create('Approve', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('reservation_id')->constrained('Reservation')->cascadeOnDelete();
-            $table->foreignId('time_slot_id')->constrained('Time_slot')->cascadeOnDelete();
+            $table->foreignId('approver_id')->constrained('User')->cascadeOnDelete();
+            $table->enum('decision', ['approved', 'rejected']);
+            $table->dateTime('decision_time');
             $table->timestamps();
-            $table->unique(['reservation_id', 'time_slot_id']);
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('Reserve_timeslot');
+        Schema::dropIfExists('Approve');
     }
 };
