@@ -11,6 +11,7 @@ const message = ref("");
 const errorMessage = ref("");
 const activeTab = ref("all");
 const updatingId = ref(null);
+const paymentToConfirm = ref(null);
 
 const tabs = [
     { key: "all", label: "全部" },
@@ -83,7 +84,7 @@ const switchTab = (tab) => {
     activeTab.value = tab;
 };
 
-const toggleStatus = async (payment) => {
+const openPaymentConfirm = (payment) => {
     if (!payment || updatingId.value !== null) {
         return;
     }
@@ -92,18 +93,35 @@ const toggleStatus = async (payment) => {
         return;
     }
 
+    paymentToConfirm.value = payment;
+};
+
+const closePaymentConfirm = () => {
+    if (updatingId.value !== null) {
+        return;
+    }
+
+    paymentToConfirm.value = null;
+};
+
+const confirmPaidStatus = async () => {
+    const payment = paymentToConfirm.value;
+
+    if (!payment || updatingId.value !== null || payment.payment_status !== "unpaid") {
+        return;
+    }
+
     updatingId.value = payment.id;
     message.value = "";
     errorMessage.value = "";
 
-    const nextStatus = "paid";
-
     try {
         await axios.patch(`/admin/payments/${payment.id}/status`, {
-            payment_status: nextStatus,
+            payment_status: "paid",
         });
 
-        payment.payment_status = nextStatus;
+        payment.payment_status = "paid";
+        paymentToConfirm.value = null;
         message.value = "付款狀態已更新";
     } catch (e) {
         console.error("更新付款狀態失敗：", e.response?.data || e.message);
@@ -280,7 +298,7 @@ onMounted(loadPayments);
                                     type="button"
                                     class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                                     :disabled="updatingId === payment.id"
-                                    @click="toggleStatus(payment)"
+                                    @click="openPaymentConfirm(payment)"
                                 >
                                     {{
                                         updatingId === payment.id
@@ -302,6 +320,101 @@ onMounted(loadPayments);
                         </div>
                     </div>
                 </div>
+
+                <teleport to="body">
+                    <div
+                        v-if="paymentToConfirm"
+                        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-8"
+                        @click.self="closePaymentConfirm"
+                    >
+                        <div
+                            class="w-full max-w-md rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl"
+                        >
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <p
+                                        class="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500"
+                                    >
+                                        Payment
+                                    </p>
+                                    <h3
+                                        class="mt-3 text-2xl font-semibold text-slate-950"
+                                    >
+                                        確認標記已付款
+                                    </h3>
+                                </div>
+                                <button
+                                    type="button"
+                                    class="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-lg font-semibold leading-none text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                    :disabled="updatingId !== null"
+                                    aria-label="關閉"
+                                    @click="closePaymentConfirm"
+                                >
+                                    ×
+                                </button>
+                            </div>
+
+                            <div
+                                class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700"
+                            >
+                                <p class="font-semibold text-slate-950">
+                                    {{ roomName(paymentToConfirm) }}
+                                </p>
+                                <p class="mt-2">
+                                    申請者：{{ userName(paymentToConfirm) }}
+                                </p>
+                                <p class="mt-1">
+                                    金額：NT$
+                                    {{ formatAmount(paymentToConfirm.amount) }}
+                                </p>
+                                <p class="mt-1">
+                                    {{
+                                        formatDateTime(
+                                            paymentToConfirm.reservation
+                                                ?.start_time,
+                                        )
+                                    }}
+                                    至
+                                    {{
+                                        formatDateTime(
+                                            paymentToConfirm.reservation
+                                                ?.end_time,
+                                        )
+                                    }}
+                                </p>
+                            </div>
+
+                            <p class="mt-4 text-sm leading-6 text-slate-600">
+                                標記為已付款後，系統不允許再改回未付款。
+                            </p>
+
+                            <div
+                                class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"
+                            >
+                                <button
+                                    type="button"
+                                    class="rounded-2xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                    :disabled="updatingId !== null"
+                                    @click="closePaymentConfirm"
+                                >
+                                    取消
+                                </button>
+                                <button
+                                    type="button"
+                                    class="rounded-2xl border border-slate-900 bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                    :disabled="updatingId !== null"
+                                    @click="confirmPaidStatus"
+                                >
+                                    {{
+                                        updatingId !== null
+                                            ? "更新中..."
+                                            : "確認已付款"
+                                    }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </teleport>
             </section>
         </AuthenticatedLayout>
     </div>
