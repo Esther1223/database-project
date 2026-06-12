@@ -6,23 +6,16 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Payment extends Model
+class ReserveTimeslot extends Model
 {
     use HasFactory;
 
-    protected $table = 'Payment';
+    protected $table = 'Reserve_timeslot';
 
     protected $fillable = [
         'reservation_id',
-        'amount',
+        'time_slot_id',
     ];
-
-    protected function casts(): array
-    {
-        return [
-            'amount' => 'integer',
-        ];
-    }
 
     /**
      * @return BelongsTo<Reservation, $this>
@@ -30,5 +23,13 @@ class Payment extends Model
     public function reservation(): BelongsTo
     {
         return $this->belongsTo(Reservation::class);
+    }
+
+    /**
+     * @return BelongsTo<TimeSlot, $this>
+     */
+    public function timeSlot(): BelongsTo
+    {
+        return $this->belongsTo(TimeSlot::class);
     }
 }

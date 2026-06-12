@@ -77,6 +77,10 @@ watch(selectedDate, (newDate) => {
                             <dt class="text-slate-500">所在建築</dt>
                             <dd class="font-medium text-slate-900">{{ room.building }}</dd>
                         </div>
+                        <div class="flex items-center justify-between gap-4 border-b border-slate-100 pb-3">
+                            <dt class="text-slate-500">時段價格</dt>
+                            <dd class="font-medium text-slate-900">{{ room.price_label || '尚未建立時段' }}</dd>
+                        </div>
                         <div class="flex items-center justify-between gap-4">
                             <dt class="text-slate-500">審核狀態</dt>
                             <dd class="font-medium text-slate-900">{{ room.need_approval ? '需要' : '不需要' }}</dd>

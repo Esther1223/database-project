@@ -11,10 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('approvals', function (Blueprint $table) {
+        Schema::create('Approve', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('reservation_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('approver_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('reservation_id')->constrained('Reservation')->cascadeOnDelete();
+            $table->foreignId('approver_id')->constrained('User')->cascadeOnDelete();
             $table->enum('decision', ['approved', 'rejected']);
             $table->dateTime('decision_time');
             $table->timestamps();
@@ -26,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('approvals');
+        Schema::dropIfExists('Approve');
     }
 };

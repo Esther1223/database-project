@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table): void {
-            $table->boolean('is_active')->default(true)->after('affiliation');
+        Schema::table('User', function (Blueprint $table): void {
+            $table->boolean('is_active')->default(true)->after('password');
         });
     }
 
@@ -21,7 +21,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table): void {
+        Schema::table('User', function (Blueprint $table): void {
             $table->dropColumn('is_active');
         });
     }

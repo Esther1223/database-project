@@ -11,34 +11,34 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('reservations', function (Blueprint $table): void {
-            if (! Schema::hasColumn('reservations', 'reservation_group_id')) {
+        Schema::table('Reservation', function (Blueprint $table): void {
+            if (! Schema::hasColumn('Reservation', 'reservation_group_id')) {
                 $table->uuid('reservation_group_id')->nullable()->after('id');
             }
 
-            if (! Schema::hasColumn('reservations', 'reservation_date')) {
+            if (! Schema::hasColumn('Reservation', 'reservation_date')) {
                 $table->date('reservation_date')->nullable()->after('room_id');
             }
 
-            if (! Schema::hasColumn('reservations', 'time_slot_id')) {
+            if (! Schema::hasColumn('Reservation', 'time_slot_id')) {
                 $table->unsignedBigInteger('time_slot_id')->nullable()->after('reservation_date');
             }
         });
 
-        if (Schema::hasColumn('reservations', 'start_time')) {
-            DB::table('reservations')
+        if (Schema::hasColumn('Reservation', 'start_time')) {
+            DB::table('Reservation')
                 ->select(['id', 'room_id', 'start_time'])
                 ->whereNull('reservation_date')
                 ->orderBy('id')
                 ->get()
                 ->each(function ($reservation): void {
                     $startTime = Carbon::parse($reservation->start_time);
-                    $timeSlotId = DB::table('time_slots')
+                    $timeSlotId = DB::table('Time_slot')
                         ->where('room_id', $reservation->room_id)
                         ->where('period', $startTime->hour)
                         ->value('id');
 
-                    DB::table('reservations')
+                    DB::table('Reservation')
                         ->where('id', $reservation->id)
                         ->update([
                             'reservation_group_id' => (string) Str::uuid(),
@@ -51,9 +51,9 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('reservations', function (Blueprint $table): void {
+        Schema::table('Reservation', function (Blueprint $table): void {
             $dropColumns = collect(['reservation_group_id', 'reservation_date', 'time_slot_id'])
-                ->filter(fn (string $column): bool => Schema::hasColumn('reservations', $column))
+                ->filter(fn (string $column): bool => Schema::hasColumn('Reservation', $column))
                 ->all();
 
             if ($dropColumns !== []) {

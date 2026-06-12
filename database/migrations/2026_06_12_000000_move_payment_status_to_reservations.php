@@ -9,30 +9,30 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (! Schema::hasColumn('reservations', 'payment_status')) {
-            Schema::table('reservations', function (Blueprint $table): void {
-                $table->enum('payment_status', ['unpaid', 'paid'])->default('unpaid')->after('reservation_status');
+        if (! Schema::hasColumn('Reservation', 'payment_status')) {
+            Schema::table('Reservation', function (Blueprint $table): void {
+                $table->string('payment_status')->default('unpaid')->after('reservation_status');
             });
         }
 
-        if (Schema::hasColumn('payments', 'payment_status')) {
-            DB::table('payments')
+        if (Schema::hasColumn('Payment', 'payment_status')) {
+            DB::table('Payment')
                 ->select(['reservation_id', 'payment_status'])
                 ->whereIn('payment_status', ['unpaid', 'paid'])
                 ->orderBy('id')
                 ->each(function (object $payment): void {
-                    DB::table('reservations')
+                    DB::table('Reservation')
                         ->where('id', $payment->reservation_id)
                         ->update(['payment_status' => $payment->payment_status]);
                 });
 
-            Schema::table('payments', function (Blueprint $table): void {
+            Schema::table('Payment', function (Blueprint $table): void {
                 $table->dropColumn('payment_status');
             });
         }
 
-        if (Schema::hasColumn('rooms', 'hourly_rate')) {
-            Schema::table('rooms', function (Blueprint $table): void {
+        if (Schema::hasColumn('Room', 'hourly_rate')) {
+            Schema::table('Room', function (Blueprint $table): void {
                 $table->dropColumn('hourly_rate');
             });
         }
@@ -40,30 +40,30 @@ return new class extends Migration
 
     public function down(): void
     {
-        if (! Schema::hasColumn('rooms', 'hourly_rate')) {
-            Schema::table('rooms', function (Blueprint $table): void {
+        if (! Schema::hasColumn('Room', 'hourly_rate')) {
+            Schema::table('Room', function (Blueprint $table): void {
                 $table->integer('hourly_rate')->default(0)->after('information');
             });
         }
 
-        if (! Schema::hasColumn('payments', 'payment_status')) {
-            Schema::table('payments', function (Blueprint $table): void {
-                $table->enum('payment_status', ['unpaid', 'paid'])->default('unpaid')->after('amount');
+        if (! Schema::hasColumn('Payment', 'payment_status')) {
+            Schema::table('Payment', function (Blueprint $table): void {
+                $table->string('payment_status')->default('unpaid')->after('amount');
             });
 
-            DB::table('reservations')
+            DB::table('Reservation')
                 ->select(['id', 'payment_status'])
                 ->whereIn('payment_status', ['unpaid', 'paid'])
                 ->orderBy('id')
                 ->each(function (object $reservation): void {
-                    DB::table('payments')
+                    DB::table('Payment')
                         ->where('reservation_id', $reservation->id)
                         ->update(['payment_status' => $reservation->payment_status]);
                 });
         }
 
-        if (Schema::hasColumn('reservations', 'payment_status')) {
-            Schema::table('reservations', function (Blueprint $table): void {
+        if (Schema::hasColumn('Reservation', 'payment_status')) {
+            Schema::table('Reservation', function (Blueprint $table): void {
                 $table->dropColumn('payment_status');
             });
         }

@@ -37,7 +37,7 @@ class ReservationController extends Controller
                 'type' => $room->type,
                 'capacity' => $room->capacity,
                 'building' => $room->building,
-                'rate' => $room->rate,
+                'price_label' => $this->priceLabel($room),
                 'need_approval' => (bool) $room->need_approval,
                 'information' => $room->information,
             ])
@@ -128,7 +128,7 @@ class ReservationController extends Controller
         $validated = $request->validate([
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'room_id' => ['nullable', 'integer', 'exists:rooms,id'],
+            'room_id' => ['nullable', 'integer', 'exists:Room,id'],
             'status' => ['nullable', 'string', 'in:pending,success,cancelled,rejected'],
         ]);
 
@@ -223,7 +223,7 @@ class ReservationController extends Controller
             ] : null,
             'payment' => $payments->isEmpty() ? null : [
                 'amount' => $payments->sum('amount'),
-                'payment_status' => $sorted->contains(fn (Reservation $reservation): bool => $reservation->payment_status === 'unpaid') ? 'unpaid' : 'paid',
+                'payment_status' => $this->paymentStatus($sorted),
             ],
             'slots' => $sorted
                 ->map(fn (Reservation $reservation): array => [
@@ -255,5 +255,38 @@ class ReservationController extends Controller
         }
 
         return (string) ($statuses->first() ?? '-');
+    }
+
+    private function paymentStatus($reservations): string
+    {
+        if ($reservations->contains(fn (Reservation $reservation): bool => $reservation->payment_status === 'unpaid')) {
+            return 'unpaid';
+        }
+
+        if ($reservations->contains(fn (Reservation $reservation): bool => $reservation->payment_status === 'cancelled')) {
+            return 'cancelled';
+        }
+
+        return 'paid';
+    }
+
+    private function priceLabel(Room $room): string
+    {
+        $prices = $room->timeSlots()
+            ->pluck('price')
+            ->map(fn ($price): int => (int) $price)
+            ->unique()
+            ->sort()
+            ->values();
+
+        if ($prices->isEmpty()) {
+            return '尚未建立時段';
+        }
+
+        if ($prices->count() === 1) {
+            return '每時段 NT$ '.$prices->first();
+        }
+
+        return 'NT$ '.$prices->first().' - '.$prices->last();
     }
 }

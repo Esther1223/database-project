@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('rooms', function (Blueprint $table): void {
+        Schema::table('Room', function (Blueprint $table): void {
             $table->boolean('open_access_all')->default(false)->after('is_open_access');
         });
     }
@@ -21,7 +21,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('rooms', function (Blueprint $table): void {
+        Schema::table('Room', function (Blueprint $table): void {
             $table->dropColumn('open_access_all');
         });
     }

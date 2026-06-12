@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Approval;
 use App\Models\Payment;
 use App\Models\Reservation;
-use App\Models\RoomSection;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -15,7 +14,7 @@ class ApprovalService
 
     /**
      * Approve a pending reservation: create approval record, set reservation_status to 'success',
-     * and mark related room sections as 'reserved'.
+     * and reject conflicting pending reservations.
      */
     public function approveReservation(int $reservationId, int $approverId): Reservation
     {
@@ -43,7 +42,7 @@ class ApprovalService
             foreach ($reservations as $item) {
                 $item->update(['reservation_status' => 'success']);
 
-                $this->reserveRoomSections($item);
+                $this->rejectConflictingPendingReservations($item);
             }
 
             $this->createGroupPaymentIfNeeded($this->successReservationsInPaymentGroup($reservation));
@@ -110,26 +109,6 @@ class ApprovalService
             ->get();
     }
 
-    private function reserveRoomSections(Reservation $reservation): void
-    {
-        $date = $reservation->reservation_date?->format('Y-m-d');
-
-        if ($date === null || $reservation->time_slot_id === null) {
-            return;
-        }
-
-        RoomSection::updateOrCreate(
-            [
-                'room_id' => $reservation->room_id,
-                'date' => $date,
-                'time_slot_id' => $reservation->time_slot_id,
-            ],
-            [
-                'status' => 'reserved',
-            ],
-        );
-    }
-
     private function slotAlreadyReserved(Reservation $reservation): bool
     {
         return Reservation::query()
@@ -140,6 +119,20 @@ class ApprovalService
             ->where('time_slot_id', $reservation->time_slot_id)
             ->lockForUpdate()
             ->exists();
+    }
+
+    private function rejectConflictingPendingReservations(Reservation $approvedReservation): void
+    {
+        Reservation::query()
+            ->whereKeyNot($approvedReservation->id)
+            ->where('room_id', $approvedReservation->room_id)
+            ->whereDate('reservation_date', $approvedReservation->reservation_date)
+            ->where('time_slot_id', $approvedReservation->time_slot_id)
+            ->where('reservation_status', 'pending')
+            ->update([
+                'reservation_status' => 'rejected',
+                'payment_status' => 'cancelled',
+            ]);
     }
 
     private function createPaymentIfNeeded(Reservation $reservation): void

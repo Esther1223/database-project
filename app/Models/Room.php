@@ -13,10 +13,11 @@ class Room extends Model
 {
     use HasFactory;
 
+    protected $table = 'Room';
+
     protected $fillable = [
         'name',
         'type',
-        'rate',
         'room_name',
         'room_type',
         'capacity',
@@ -63,14 +64,6 @@ class Room extends Model
     }
 
     /**
-     * @return HasMany<RoomSection, $this>
-     */
-    public function roomSections(): HasMany
-    {
-        return $this->hasMany(RoomSection::class);
-    }
-
-    /**
      * @return HasMany<TimeSlot, $this>
      */
     public function timeSlots(): HasMany
@@ -83,7 +76,7 @@ class Room extends Model
      */
     public function openAffiliations()
     {
-        return $this->belongsToMany(Affiliation::class, 'affiliation_room');
+        return $this->belongsToMany(Affiliation::class, 'Allow_aff');
     }
 
     /**
@@ -109,7 +102,7 @@ class Room extends Model
                         ->where(function (Builder $accessBuilder) use ($user): void {
                             $accessBuilder
                                 ->where('open_access_all', true)
-                                ->orWhereHas('openAffiliations', fn (Builder $query) => $query->where('affiliations.id', $user->affiliation_id));
+                                ->orWhereHas('openAffiliations', fn (Builder $query) => $query->where('Affiliation.id', $user->affiliation_id));
                         });
                 });
         })->where(function (Builder $builder) use ($user): void {
@@ -144,7 +137,7 @@ class Room extends Model
         }
 
         return $this->openAffiliations()
-            ->where('affiliations.id', $user->affiliation_id)
+            ->where('Affiliation.id', $user->affiliation_id)
             ->exists();
     }
 

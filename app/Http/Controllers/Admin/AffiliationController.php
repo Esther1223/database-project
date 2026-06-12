@@ -39,7 +39,7 @@ class AffiliationController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255', 'unique:affiliations,name'],
+            'name' => ['required', 'string', 'max:255', 'unique:Affiliation,name'],
         ]);
 
         $affiliation = Affiliation::create([
@@ -58,7 +58,7 @@ class AffiliationController extends Controller
     public function update(Request $request, Affiliation $affiliation): JsonResponse
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255', Rule::unique('affiliations', 'name')->ignore($affiliation->id)],
+            'name' => ['required', 'string', 'max:255', Rule::unique('Affiliation', 'name')->ignore($affiliation->id)],
         ]);
 
         $affiliation->update([

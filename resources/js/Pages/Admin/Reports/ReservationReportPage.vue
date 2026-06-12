@@ -292,7 +292,15 @@ onMounted(loadData);
                             <div class="text-sm text-slate-700">
                                 <p>NT$ {{ reservation.payment?.amount ?? 0 }}</p>
                                 <p class="mt-1 text-slate-500">
-                                    {{ reservation.payment?.payment_status === "paid" ? "已付款" : reservation.payment ? "未付款" : "免付款" }}
+                                    {{
+                                        reservation.payment?.payment_status === "paid"
+                                            ? "已付款"
+                                            : reservation.payment?.payment_status === "cancelled"
+                                              ? "已取消"
+                                              : reservation.payment
+                                                ? "未付款"
+                                                : "免付款"
+                                    }}
                                 </p>
                             </div>
                             <div>

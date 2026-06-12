@@ -17,6 +17,10 @@ const statusMap = {
         text: "已付款",
         class: "bg-emerald-100 text-emerald-700",
     },
+    cancelled: {
+        text: "已取消",
+        class: "bg-slate-100 text-slate-600",
+    },
 };
 
 const badge = computed(

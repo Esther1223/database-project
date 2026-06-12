@@ -10,16 +10,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        $fallbackAffiliationId = DB::table('affiliations')
+        $fallbackAffiliationId = DB::table('Affiliation')
             ->where('name', '總務處')
             ->value('id')
-            ?? DB::table('affiliations')->orderBy('id')->value('id');
+            ?? DB::table('Affiliation')->orderBy('id')->value('id');
 
         if ($fallbackAffiliationId === null) {
             return;
         }
 
-        DB::table('rooms')
+        DB::table('Room')
             ->whereNull('affiliation_id')
             ->update(['affiliation_id' => $fallbackAffiliationId]);
     }

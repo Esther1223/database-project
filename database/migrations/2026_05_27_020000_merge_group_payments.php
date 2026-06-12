@@ -10,8 +10,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        $groups = DB::table('payments')
-            ->join('reservations', 'payments.reservation_id', '=', 'reservations.id')
+        $groups = DB::table('Payment as payments')
+            ->join('Reservation as reservations', 'payments.reservation_id', '=', 'reservations.id')
             ->whereNotNull('reservations.reservation_group_id')
             ->select('reservations.reservation_group_id')
             ->groupBy('reservations.reservation_group_id')
@@ -19,8 +19,8 @@ return new class extends Migration
             ->pluck('reservation_group_id');
 
         foreach ($groups as $groupId) {
-            $payments = DB::table('payments')
-                ->join('reservations', 'payments.reservation_id', '=', 'reservations.id')
+            $payments = DB::table('Payment as payments')
+                ->join('Reservation as reservations', 'payments.reservation_id', '=', 'reservations.id')
                 ->where('reservations.reservation_group_id', $groupId)
                 ->orderBy('reservations.reservation_date')
                 ->orderBy('reservations.time_slot_id')
@@ -44,18 +44,18 @@ return new class extends Migration
                 ? 'unpaid'
                 : 'paid';
 
-            DB::table('payments')
+            DB::table('Payment')
                 ->where('id', $representative->id)
                 ->update([
                     'amount' => $amount,
                     'updated_at' => now(),
                 ]);
 
-            DB::table('reservations')
+            DB::table('Reservation')
                 ->where('reservation_group_id', $groupId)
                 ->update(['payment_status' => $status]);
 
-            DB::table('payments')
+            DB::table('Payment')
                 ->whereIn('id', $payments->pluck('id')->reject(fn ($id): bool => (int) $id === (int) $representative->id))
                 ->delete();
         }

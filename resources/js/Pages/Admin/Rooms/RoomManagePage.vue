@@ -56,6 +56,11 @@ const showFormModal = ref(false);
 const priceModalRoom = ref(null);
 const slotPrices = reactive({});
 const slotPriceErrors = reactive({});
+const newSlotForm = reactive({
+    period: "",
+    price: 0,
+});
+const newSlotErrors = reactive({});
 
 const pageNumbers = computed(() => {
     const lastPage = props.rooms.meta.last_page || 1;
@@ -179,6 +184,9 @@ const openSlotPriceModal = (room) => {
     priceModalRoom.value = room;
     Object.keys(slotPrices).forEach((key) => delete slotPrices[key]);
     clearErrors(slotPriceErrors);
+    clearErrors(newSlotErrors);
+    newSlotForm.period = "";
+    newSlotForm.price = 0;
 
     (room.time_slots || []).forEach((slot) => {
         slotPrices[slot.id] = slot.price ?? 0;
@@ -193,6 +201,7 @@ const closeSlotPriceModal = () => {
     priceModalRoom.value = null;
     Object.keys(slotPrices).forEach((key) => delete slotPrices[key]);
     clearErrors(slotPriceErrors);
+    clearErrors(newSlotErrors);
 };
 
 const saveSlotPrice = async (slot) => {
@@ -221,6 +230,74 @@ const saveSlotPrice = async (slot) => {
     } catch (error) {
         slotPriceErrors[slot.id] =
             error.response?.data?.message || "時段價格更新失敗";
+    } finally {
+        busyKey.value = "";
+    }
+};
+
+const createSlot = async () => {
+    if (!priceModalRoom.value?.id || busyKey.value) {
+        return;
+    }
+
+    busyKey.value = "slot-create";
+    notice.value = "";
+    clearErrors(newSlotErrors);
+
+    try {
+        const response = await axios.post(
+            `/admin/rooms/${priceModalRoom.value.id}/time-slots`,
+            {
+                period: newSlotForm.period,
+                price: newSlotForm.price,
+            },
+        );
+        const slot = response.data.data;
+        priceModalRoom.value.time_slots = [
+            ...(priceModalRoom.value.time_slots || []),
+            slot,
+        ].sort((a, b) => Number(a.period) - Number(b.period));
+        slotPrices[slot.id] = slot.price ?? 0;
+        newSlotForm.period = "";
+        newSlotForm.price = 0;
+        notice.value = "時段已建立";
+    } catch (error) {
+        if (error.response?.status === 422) {
+            Object.assign(newSlotErrors, error.response.data?.errors || {});
+        } else {
+            newSlotErrors.period = [
+                error.response?.data?.message || "時段建立失敗",
+            ];
+        }
+    } finally {
+        busyKey.value = "";
+    }
+};
+
+const deleteSlot = async (slot) => {
+    if (!priceModalRoom.value?.id || !slot?.id || busyKey.value) {
+        return;
+    }
+
+    if (!window.confirm(`確定刪除時段「${slot.label}」嗎？`)) {
+        return;
+    }
+
+    busyKey.value = `slot-delete-${slot.id}`;
+    notice.value = "";
+
+    try {
+        await axios.delete(
+            `/admin/rooms/${priceModalRoom.value.id}/time-slots/${slot.id}`,
+        );
+        priceModalRoom.value.time_slots = (
+            priceModalRoom.value.time_slots || []
+        ).filter((item) => item.id !== slot.id);
+        delete slotPrices[slot.id];
+        notice.value = "時段已刪除";
+    } catch (error) {
+        slotPriceErrors[slot.id] =
+            error.response?.data?.message || "時段刪除失敗";
     } finally {
         busyKey.value = "";
     }
@@ -688,11 +765,63 @@ const slotPriceSummary = (room) => {
                             </button>
                         </div>
 
+                        <form
+                            class="mt-5 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[1fr_1fr_auto]"
+                            @submit.prevent="createSlot"
+                        >
+                            <div>
+                                <label class="mb-1 block text-xs font-semibold text-slate-600">
+                                    起始小時
+                                </label>
+                                <input
+                                    v-model.number="newSlotForm.period"
+                                    type="number"
+                                    min="0"
+                                    max="23"
+                                    class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-slate-900"
+                                    placeholder="例如 8"
+                                />
+                                <p
+                                    v-if="newSlotErrors.period"
+                                    class="mt-1 text-xs font-semibold text-rose-700"
+                                >
+                                    {{ newSlotErrors.period[0] }}
+                                </p>
+                            </div>
+                            <div>
+                                <label class="mb-1 block text-xs font-semibold text-slate-600">
+                                    價格
+                                </label>
+                                <input
+                                    v-model.number="newSlotForm.price"
+                                    type="number"
+                                    min="0"
+                                    class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-slate-900"
+                                    placeholder="0"
+                                />
+                                <p
+                                    v-if="newSlotErrors.price"
+                                    class="mt-1 text-xs font-semibold text-rose-700"
+                                >
+                                    {{ newSlotErrors.price[0] }}
+                                </p>
+                            </div>
+                            <div class="flex items-end">
+                                <button
+                                    type="submit"
+                                    class="w-full rounded-xl border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                    :disabled="busyKey === 'slot-create'"
+                                >
+                                    {{ busyKey === "slot-create" ? "新增中" : "新增時段" }}
+                                </button>
+                            </div>
+                        </form>
+
                         <div
                             class="mt-5 overflow-hidden rounded-2xl border border-slate-200"
                         >
                             <div
-                                class="grid grid-cols-[1fr_160px_96px] gap-4 border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600"
+                                class="grid grid-cols-[1fr_160px_156px] gap-4 border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600"
                             >
                                 <div>時段</div>
                                 <div>價格</div>
@@ -703,7 +832,7 @@ const slotPriceSummary = (room) => {
                                 <div
                                     v-for="slot in priceModalRoom.time_slots || []"
                                     :key="slot.id"
-                                    class="grid grid-cols-[1fr_160px_96px] gap-4 px-4 py-3 text-sm md:items-center"
+                                    class="grid grid-cols-[1fr_160px_156px] gap-4 px-4 py-3 text-sm md:items-center"
                                 >
                                     <div>
                                         <p class="font-semibold text-slate-950">
@@ -724,7 +853,7 @@ const slotPriceSummary = (room) => {
                                             {{ slotPriceErrors[slot.id] }}
                                         </p>
                                     </div>
-                                    <div class="text-right">
+                                    <div class="flex justify-end gap-2">
                                         <button
                                             type="button"
                                             class="rounded-xl border border-slate-900 bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
@@ -739,6 +868,22 @@ const slotPriceSummary = (room) => {
                                                 `slot-price-${slot.id}`
                                                     ? "儲存中"
                                                     : "儲存"
+                                            }}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                            :disabled="
+                                                busyKey ===
+                                                `slot-delete-${slot.id}`
+                                            "
+                                            @click="deleteSlot(slot)"
+                                        >
+                                            {{
+                                                busyKey ===
+                                                `slot-delete-${slot.id}`
+                                                    ? "刪除中"
+                                                    : "刪除"
                                             }}
                                         </button>
                                     </div>

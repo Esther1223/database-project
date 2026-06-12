@@ -11,6 +11,8 @@ class TimeSlot extends Model
 {
     use HasFactory;
 
+    protected $table = 'Time_slot';
+
     protected $fillable = [
         'room_id',
         'period',
@@ -34,11 +36,11 @@ class TimeSlot extends Model
     }
 
     /**
-     * @return HasMany<RoomSection, $this>
+     * @return HasMany<Reservation, $this>
      */
-    public function roomSections(): HasMany
+    public function reservations(): HasMany
     {
-        return $this->hasMany(RoomSection::class);
+        return $this->hasMany(Reservation::class);
     }
 
     public function label(): string

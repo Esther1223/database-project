@@ -88,7 +88,7 @@ class PaymentController extends Controller
             'id' => $firstPayment->id,
             'payment_ids' => $group->pluck('id')->values()->all(),
             'amount' => $group->sum('amount'),
-            'payment_status' => $reservations->contains(fn (Reservation $reservation): bool => $reservation->payment_status === 'unpaid') ? 'unpaid' : 'paid',
+            'payment_status' => $this->paymentStatus($reservations),
             'created_at' => $group->sortBy('created_at')->first()?->created_at?->toDateTimeString(),
             'updated_at' => $group->sortByDesc('updated_at')->first()?->updated_at?->toDateTimeString(),
             'slot_count' => $reservations->count(),
@@ -156,5 +156,18 @@ class PaymentController extends Controller
         }
 
         return (string) ($statuses->first() ?? '-');
+    }
+
+    private function paymentStatus(Collection $reservations): string
+    {
+        if ($reservations->contains(fn (Reservation $reservation): bool => $reservation->payment_status === 'unpaid')) {
+            return 'unpaid';
+        }
+
+        if ($reservations->contains(fn (Reservation $reservation): bool => $reservation->payment_status === 'cancelled')) {
+            return 'cancelled';
+        }
+
+        return 'paid';
     }
 }

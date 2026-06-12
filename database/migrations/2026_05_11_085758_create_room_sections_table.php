@@ -11,14 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('room_sections', function (Blueprint $table) {
+        Schema::create('Reserve_timeslot', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('room_id')->constrained('rooms')->cascadeOnDelete();
-            $table->date('date');
-            $table->foreignId('time_slot_id')->constrained('time_slots')->cascadeOnDelete();
-            $table->enum('status', ['available', 'unavailable', 'reserved'])->default('available');
+            $table->foreignId('reservation_id')->constrained('Reservation')->cascadeOnDelete();
+            $table->foreignId('time_slot_id')->constrained('Time_slot')->cascadeOnDelete();
             $table->timestamps();
-            $table->unique(['room_id', 'date', 'time_slot_id']);
+            $table->unique(['reservation_id', 'time_slot_id']);
         });
     }
 
@@ -27,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('room_sections');
+        Schema::dropIfExists('Reserve_timeslot');
     }
 };

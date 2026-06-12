@@ -261,7 +261,7 @@ class DashboardController extends Controller
             'payment_ids' => $sorted->pluck('id')->values()->all(),
             'slot_count' => $slotCount,
             'amount' => $sorted->sum('amount'),
-            'status' => $sorted->contains(fn (Payment $payment): bool => $payment->reservation?->payment_status === 'unpaid') ? 'unpaid' : 'paid',
+            'status' => $this->paymentStatusForPayments($sorted),
             'room_name' => $first->reservation?->room?->name ?? '未知空間',
             'user_name' => $first->reservation?->user?->name ?? $first->reservation?->user?->email,
             'created_at' => $sorted->sortByDesc('created_at')->first()?->created_at?->toDateTimeString(),
@@ -337,6 +337,19 @@ class DashboardController extends Controller
             ->all();
 
         return $payments;
+    }
+
+    private function paymentStatusForPayments(Collection $payments): string
+    {
+        if ($payments->contains(fn (Payment $payment): bool => $payment->reservation?->payment_status === 'unpaid')) {
+            return 'unpaid';
+        }
+
+        if ($payments->contains(fn (Payment $payment): bool => $payment->reservation?->payment_status === 'cancelled')) {
+            return 'cancelled';
+        }
+
+        return 'paid';
     }
 
     private function upcomingReservationsList(Builder $reservationScope, Carbon $now): array

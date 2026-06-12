@@ -20,12 +20,21 @@ const props = defineProps({
         type: Array,
         required: true,
     },
+    affiliations: {
+        type: Array,
+        required: true,
+    },
 });
 
 const form = reactive({
     search: props.filters.search || '',
     type: props.filters.type || '',
     building: props.filters.building || '',
+    capacity_min: props.filters.capacity_min || '',
+    affiliation_id: props.filters.affiliation_id || '',
+    open_access: props.filters.open_access || '',
+    date: props.filters.date || '',
+    period: props.filters.period || '',
 });
 
 const pageNumbers = computed(() => {
@@ -47,6 +56,26 @@ const buildParams = () => {
 
     if (form.building !== '') {
         params.building = form.building;
+    }
+
+    if (form.capacity_min !== '') {
+        params.capacity_min = form.capacity_min;
+    }
+
+    if (form.affiliation_id !== '') {
+        params.affiliation_id = form.affiliation_id;
+    }
+
+    if (form.open_access !== '') {
+        params.open_access = form.open_access;
+    }
+
+    if (form.date !== '') {
+        params.date = form.date;
+    }
+
+    if (form.period !== '') {
+        params.period = form.period;
     }
 
     return params;
@@ -77,6 +106,11 @@ const resetFilters = () => {
     form.search = '';
     form.type = '';
     form.building = '';
+    form.capacity_min = '';
+    form.affiliation_id = '';
+    form.open_access = '';
+    form.date = '';
+    form.period = '';
     applyFilters();
 };
 
@@ -122,7 +156,7 @@ const slotPriceSummary = (room) => {
                     </a>
                 </div>
 
-                <div class="mt-5 grid gap-4 lg:grid-cols-[1fr_1fr_1fr_auto]">
+                <div class="mt-5 grid gap-4 lg:grid-cols-4">
                     <input v-model="form.search" type="text" class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900" placeholder="搜尋名稱、類型、建築或設備資訊">
                     <select v-model="form.type" class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900">
                         <option value="">全部類型</option>
@@ -131,6 +165,23 @@ const slotPriceSummary = (room) => {
                     <select v-model="form.building" class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900">
                         <option value="">全部建築</option>
                         <option v-for="building in buildings" :key="building" :value="building">{{ building }}</option>
+                    </select>
+                    <input v-model="form.capacity_min" type="number" min="1" class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900" placeholder="最低容量">
+                    <select v-model="form.affiliation_id" class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900">
+                        <option value="">全部單位</option>
+                        <option v-for="affiliation in affiliations" :key="affiliation.id" :value="affiliation.id">{{ affiliation.name }}</option>
+                    </select>
+                    <select v-model="form.open_access" class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900">
+                        <option value="">全部開放狀態</option>
+                        <option value="1">開放跨單位</option>
+                        <option value="0">僅所屬單位</option>
+                    </select>
+                    <input v-model="form.date" type="date" class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900">
+                    <select v-model="form.period" class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900">
+                        <option value="">全部時段</option>
+                        <option v-for="period in 14" :key="period + 7" :value="period + 7">
+                            {{ String(period + 7).padStart(2, '0') }}:00 - {{ String(period + 8).padStart(2, '0') }}:00
+                        </option>
                     </select>
                     <div class="flex gap-2">
                         <button type="button" class="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-700" @click="applyFilters">搜尋</button>

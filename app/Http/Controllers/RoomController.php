@@ -26,6 +26,11 @@ class RoomController extends Controller
             'search' => trim((string) $request->query('search', '')),
             'type' => trim((string) $request->query('type', '')),
             'building' => trim((string) $request->query('building', '')),
+            'capacity_min' => trim((string) $request->query('capacity_min', '')),
+            'affiliation_id' => trim((string) $request->query('affiliation_id', '')),
+            'open_access' => trim((string) $request->query('open_access', '')),
+            'date' => trim((string) $request->query('date', '')),
+            'period' => trim((string) $request->query('period', '')),
         ];
 
         $query = Room::query()->orderBy('room_name');
@@ -42,6 +47,20 @@ class RoomController extends Controller
 
         $query->when($filters['type'] !== '', fn ($builder) => $builder->where('room_type', $filters['type']));
         $query->when($filters['building'] !== '', fn ($builder) => $builder->where('building', $filters['building']));
+        $query->when($filters['capacity_min'] !== '', fn ($builder) => $builder->where('capacity', '>=', (int) $filters['capacity_min']));
+        $query->when($filters['affiliation_id'] !== '', fn ($builder) => $builder->where('affiliation_id', (int) $filters['affiliation_id']));
+        $query->when($filters['open_access'] !== '', fn ($builder) => $builder->where('is_open_access', $filters['open_access'] === '1'));
+        $query->when($filters['period'] !== '', function ($builder) use ($filters): void {
+            $period = (int) $filters['period'];
+            $builder->whereHas('timeSlots', fn ($slotQuery) => $slotQuery->where('period', $period));
+
+            if ($filters['date'] !== '') {
+                $builder->whereDoesntHave('reservations', fn ($reservationQuery) => $reservationQuery
+                    ->whereDate('reservation_date', $filters['date'])
+                    ->where('reservation_status', 'success')
+                    ->whereHas('timeSlot', fn ($slotQuery) => $slotQuery->where('period', $period)));
+            }
+        });
 
         $roomsPaginator = $query->paginate(8)->withQueryString();
 
@@ -106,11 +125,13 @@ class RoomController extends Controller
 
         $selectedDate = $request->query('date', now()->toDateString());
 
-        $reservedSections = $room->roomSections()
-            ->with('timeSlot')
-            ->where('date', $selectedDate)
-            ->get()
-            ->keyBy('time_slot_id');
+        $reservedTimeSlotIds = Reservation::query()
+            ->where('room_id', $room->id)
+            ->whereDate('reservation_date', $selectedDate)
+            ->where('reservation_status', 'success')
+            ->pluck('time_slot_id')
+            ->map(fn ($timeSlotId): int => (int) $timeSlotId)
+            ->flip();
         $pendingTimeSlotIds = Reservation::query()
             ->where('user_id', $request->user()?->id)
             ->where('room_id', $room->id)
@@ -123,21 +144,20 @@ class RoomController extends Controller
         $sections = $room->timeSlots()
             ->orderBy('period')
             ->get()
-            ->map(function (TimeSlot $timeSlot) use ($reservedSections, $pendingTimeSlotIds, $room, $selectedDate): array {
-                $reservedSection = $reservedSections->get($timeSlot->id);
+            ->map(function (TimeSlot $timeSlot) use ($reservedTimeSlotIds, $pendingTimeSlotIds, $room, $selectedDate): array {
                 $state = $this->sectionState(
-                    $reservedSection?->status,
                     $selectedDate,
                     $timeSlot,
+                    $reservedTimeSlotIds->has($timeSlot->id),
                     $pendingTimeSlotIds->has($timeSlot->id),
                 );
 
                 return [
-                    'id' => $reservedSection?->id,
+                    'id' => null,
                     'room_id' => $room->id,
                     'date' => $selectedDate,
                     'time_slot_id' => $timeSlot->id,
-                    'status' => $reservedSection?->status ?? 'available',
+                    'status' => $state === 'reserved' ? 'reserved' : 'available',
                     'state' => $state,
                     'time_label' => $timeSlot->label(),
                     'time_slot' => [
@@ -220,6 +240,7 @@ class RoomController extends Controller
             'capacity' => $room->capacity,
             'building' => $room->building,
             'affiliation_id' => $room->affiliation_id,
+            'price_label' => $this->priceLabel($room),
             'need_approval' => (bool) $room->need_approval,
             'is_open_access' => (bool) $room->is_open_access,
             'open_access_all' => (bool) $room->open_access_all,
@@ -239,6 +260,26 @@ class RoomController extends Controller
             'created_at' => $room->created_at?->toDateTimeString(),
             'updated_at' => $room->updated_at?->toDateTimeString(),
         ];
+    }
+
+    private function priceLabel(Room $room): string
+    {
+        $prices = $room->timeSlots()
+            ->pluck('price')
+            ->map(fn ($price): int => (int) $price)
+            ->unique()
+            ->sort()
+            ->values();
+
+        if ($prices->isEmpty()) {
+            return '尚未建立時段';
+        }
+
+        if ($prices->count() === 1) {
+            return '每時段 NT$ '.$prices->first();
+        }
+
+        return 'NT$ '.$prices->first().' - '.$prices->last();
     }
 
     /**
@@ -269,14 +310,10 @@ class RoomController extends Controller
         }
     }
 
-    private function sectionState(?string $sectionStatus, ?string $date = null, ?TimeSlot $timeSlot = null, bool $hasPendingReservation = false): string
+    private function sectionState(?string $date = null, ?TimeSlot $timeSlot = null, bool $hasSuccessReservation = false, bool $hasPendingReservation = false): string
     {
-        if ($sectionStatus === 'reserved') {
+        if ($hasSuccessReservation) {
             return 'reserved';
-        }
-
-        if ($sectionStatus === 'unavailable') {
-            return 'disabled';
         }
 
         if ($hasPendingReservation) {

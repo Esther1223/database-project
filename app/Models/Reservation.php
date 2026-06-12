@@ -6,11 +6,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Reservation extends Model
 {
     use HasFactory;
+
+    protected $table = 'Reservation';
 
     protected $fillable = [
         'user_id',
@@ -90,5 +93,13 @@ class Reservation extends Model
     public function payment(): HasOne
     {
         return $this->hasOne(Payment::class);
+    }
+
+    /**
+     * @return HasMany<ReserveTimeslot, $this>
+     */
+    public function reserveTimeslots(): HasMany
+    {
+        return $this->hasMany(ReserveTimeslot::class);
     }
 }
