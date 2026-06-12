@@ -91,6 +91,17 @@ const goToPage = (url) => {
         replace: true,
     });
 };
+
+const slotPriceSummary = (room) => {
+    const prices = [
+        ...new Set((room.time_slots || []).map((slot) => Number(slot.price || 0))),
+    ];
+
+    if (prices.length === 0) return "尚未建立時段";
+    if (prices.length === 1) return `NT$ ${prices[0]}`;
+
+    return `NT$ ${Math.min(...prices)} - ${Math.max(...prices)}`;
+};
 </script>
 
 <template>
@@ -164,7 +175,7 @@ const goToPage = (url) => {
                         </div>
 
                         <div class="text-sm text-slate-700">
-                            <p>費率：NT$ {{ room.rate }} / 小時</p>
+                            <p>費率：{{ slotPriceSummary(room) }}</p>
                         </div>
 
                         <div class="flex justify-start gap-2 lg:justify-end">

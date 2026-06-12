@@ -374,7 +374,7 @@ const slotPriceSummary = (room) => {
     ];
 
     if (prices.length === 0) return "尚未建立時段";
-    if (prices.length === 1) return `每時段 NT$ ${prices[0]}`;
+    if (prices.length === 1) return `NT$ ${prices[0]}`;
 
     return `NT$ ${Math.min(...prices)} - ${Math.max(...prices)}`;
 };
@@ -520,9 +520,6 @@ const slotPriceSummary = (room) => {
                             <div class="text-sm text-slate-700">
                                 <p>容量：{{ room.capacity }} 人</p>
                                 <p class="mt-1">
-                                    費率：NT$ {{ room.rate }} / 小時
-                                </p>
-                                <p class="mt-1 text-slate-500">
                                     時段價格：{{ slotPriceSummary(room) }}
                                 </p>
                             </div>
@@ -711,9 +708,6 @@ const slotPriceSummary = (room) => {
                                     <div>
                                         <p class="font-semibold text-slate-950">
                                             {{ slot.label }}
-                                        </p>
-                                        <p class="mt-1 text-xs text-slate-500">
-                                            period {{ slot.period }}
                                         </p>
                                     </div>
                                     <div>
