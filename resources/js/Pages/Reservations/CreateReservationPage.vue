@@ -54,6 +54,16 @@ const formatTimeSlot = (section) => {
     return `${pad(startHour)}:00 - ${pad(endHour)}:00`;
 };
 
+const formatSlotPrice = (section) => {
+    const price = Number(section?.time_slot?.price ?? 0);
+
+    if (price <= 0) {
+        return "免費";
+    }
+
+    return `NT$ ${new Intl.NumberFormat("zh-TW").format(price)}`;
+};
+
 const isSelectableSection = (section) => section.is_bookable;
 
 const sectionKey = (section) =>
@@ -338,6 +348,16 @@ onMounted(loadSections);
                                 <span class="min-w-0">
                                     <span class="block text-base font-semibold">
                                         {{ formatTimeSlot(section) }}
+                                    </span>
+                                    <span
+                                        class="mt-1 block text-sm font-medium"
+                                        :class="
+                                            isSelectedSection(section)
+                                                ? 'text-slate-200'
+                                                : 'text-slate-500'
+                                        "
+                                    >
+                                        {{ formatSlotPrice(section) }}
                                     </span>
                                 </span>
                                 <span
