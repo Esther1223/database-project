@@ -299,9 +299,6 @@ onMounted(loadPending);
                                 <p>
                                     {{ formatDateTime(reservation.created_at) }}
                                 </p>
-                                <p class="mt-1 text-sm text-slate-500">
-                                    狀態：{{ reservation.reservation_status }}
-                                </p>
                             </div>
 
                             <div class="flex justify-start lg:justify-center">
@@ -391,12 +388,6 @@ onMounted(loadPending);
                                 >
                                     {{ decisionLabel(approval.decision) }}
                                 </span>
-                                <p class="mt-2 text-sm text-slate-500">
-                                    狀態：{{
-                                        approval.reservation
-                                            ?.reservation_status || "-"
-                                    }}
-                                </p>
                             </div>
 
                             <div class="text-sm text-slate-700">

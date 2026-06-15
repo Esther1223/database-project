@@ -19,6 +19,7 @@ const affiliationEditingId = ref(null);
 const affiliationSubmitting = ref(false);
 const notice = ref("");
 const showFormModal = ref(false);
+const deleteConfirm = reactive({ show: false, affiliation: null });
 const reloadPageData = inject("reloadPageData", async () => {});
 
 const affiliationCount = computed(() => props.affiliations.length);
@@ -87,11 +88,16 @@ const saveAffiliation = async () => {
     }
 };
 
-const deleteAffiliation = async (affiliation) => {
-    if (!window.confirm(`確定刪除單位「${affiliation.name}」嗎？`)) {
-        return;
-    }
+const deleteAffiliation = (affiliation) => {
+    deleteConfirm.affiliation = affiliation;
+    deleteConfirm.show = true;
+};
 
+const confirmDeleteAffiliation = async () => {
+    const affiliation = deleteConfirm.affiliation;
+    if (!affiliation) return;
+
+    deleteConfirm.show = false;
     notice.value = "";
 
     try {
@@ -103,7 +109,14 @@ const deleteAffiliation = async (affiliation) => {
         await reloadPageData();
     } catch (error) {
         notice.value = error.response?.data?.message || "單位刪除失敗";
+    } finally {
+        deleteConfirm.affiliation = null;
     }
+};
+
+const cancelDeleteAffiliation = () => {
+    deleteConfirm.show = false;
+    deleteConfirm.affiliation = null;
 };
 </script>
 
@@ -205,6 +218,53 @@ const deleteAffiliation = async (affiliation) => {
                     {{ notice }}
                 </p>
             </section>
+
+            <teleport to="body">
+                <div
+                    v-if="deleteConfirm.show"
+                    class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-8"
+                    @click.self="cancelDeleteAffiliation"
+                >
+                    <div class="w-full max-w-sm rounded-[2rem] bg-white p-6 shadow-2xl">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500">
+                                    確認刪除
+                                </p>
+                                <h3 class="mt-2 text-xl font-semibold text-slate-950">
+                                    刪除單位
+                                </h3>
+                            </div>
+                            <button
+                                type="button"
+                                class="rounded-full border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                                @click="cancelDeleteAffiliation"
+                            >
+                                關閉
+                            </button>
+                        </div>
+                        <p class="mt-4 text-sm text-slate-600">
+                            確定要刪除單位「<span class="font-semibold text-slate-950">{{ deleteConfirm.affiliation?.name }}</span>」嗎？此操作無法復原。
+                        </p>
+                        <div class="mt-6 flex gap-3">
+                            <button
+                                type="button"
+                                class="flex-1 rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                                @click="cancelDeleteAffiliation"
+                            >
+                                取消
+                            </button>
+                            <button
+                                type="button"
+                                class="flex-1 rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-700"
+                                @click="confirmDeleteAffiliation"
+                            >
+                                確認刪除
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </teleport>
 
             <teleport to="body">
                 <div

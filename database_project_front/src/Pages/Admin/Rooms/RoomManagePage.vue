@@ -55,6 +55,7 @@ const busyKey = ref("");
 const notice = ref("");
 const showFormModal = ref(false);
 const priceModalRoom = ref(null);
+const deleteConfirm = reactive({ show: false, room: null });
 const slotPrices = reactive({});
 const slotPriceErrors = reactive({});
 const newSlotForm = reactive({
@@ -408,11 +409,16 @@ const syncOpenAffiliations = () => {
     }
 };
 
-const deleteRoom = async (room) => {
-    if (!window.confirm(`確定刪除空間「${room.name}」嗎？`)) {
-        return;
-    }
+const deleteRoom = (room) => {
+    deleteConfirm.room = room;
+    deleteConfirm.show = true;
+};
 
+const confirmDeleteRoom = async () => {
+    const room = deleteConfirm.room;
+    if (!room) return;
+
+    deleteConfirm.show = false;
     busyKey.value = `delete-room-${room.id}`;
     notice.value = "";
 
@@ -429,7 +435,13 @@ const deleteRoom = async (room) => {
         notice.value = error.response?.data?.message || "空間刪除失敗";
     } finally {
         busyKey.value = "";
+        deleteConfirm.room = null;
     }
+};
+
+const cancelDeleteRoom = () => {
+    deleteConfirm.show = false;
+    deleteConfirm.room = null;
 };
 
 const affiliationName = (room) => {
@@ -727,6 +739,53 @@ const slotPriceSummary = (room) => {
                     {{ notice }}
                 </p>
             </section>
+
+            <teleport to="body">
+                <div
+                    v-if="deleteConfirm.show"
+                    class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-8"
+                    @click.self="cancelDeleteRoom"
+                >
+                    <div class="w-full max-w-sm rounded-[2rem] bg-white p-6 shadow-2xl">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500">
+                                    確認刪除
+                                </p>
+                                <h3 class="mt-2 text-xl font-semibold text-slate-950">
+                                    刪除空間
+                                </h3>
+                            </div>
+                            <button
+                                type="button"
+                                class="rounded-full border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                                @click="cancelDeleteRoom"
+                            >
+                                關閉
+                            </button>
+                        </div>
+                        <p class="mt-4 text-sm text-slate-600">
+                            確定要刪除空間「<span class="font-semibold text-slate-950">{{ deleteConfirm.room?.name }}</span>」嗎？此操作無法復原。
+                        </p>
+                        <div class="mt-6 flex gap-3">
+                            <button
+                                type="button"
+                                class="flex-1 rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                                @click="cancelDeleteRoom"
+                            >
+                                取消
+                            </button>
+                            <button
+                                type="button"
+                                class="flex-1 rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-700"
+                                @click="confirmDeleteRoom"
+                            >
+                                確認刪除
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </teleport>
 
             <teleport to="body">
                 <div
