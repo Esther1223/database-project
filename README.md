@@ -1,263 +1,105 @@
-# 環境安裝及local部署步驟
+# Database Project
 
-## mac
-### 1. 安裝環境
+這個資料夾是前後端分離後的整合版。
 
-先安裝 Homebrew：
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+## 資料夾
+
+```text
+database_project_api/    Laravel API 後端
+database_project_front/  Vite + Vue 前端
+DEPLOYMENT.md            本地與外網部署指令
+start-ngrok.sh           一鍵 ngrok 外網展示
+stop-ngrok.sh            停止 ngrok 外網展示服務
+start-tunnel.sh          一鍵 Cloudflare 外網展示
+stop-tunnel.sh           停止 Cloudflare 外網展示服務
 ```
 
-安裝 PHP、Composer、Node、MySQL：
-```bash
-brew update
-brew install php composer node mysql
+根目錄的 `.env` 是舊單體專案留下的設定，現在主要使用：
+
+```text
+database_project_api/.env
+database_project_front/.env
 ```
 
-確認版本：
-```bash
-php -v        //建議8.4
-composer -V   //2.xx (2開頭就行)
-node -v       // 我是v20.19.6
-npm -v        // 我是10.8.2
-mysql --version
-```
+## 一鍵外網展示
 
-### 2. 啟動mysql
+建議先用 ngrok：
+
+第一次使用 ngrok 需要先設定 authtoken：
 
 ```bash
-brew services start mysql
-
-//登入
-mysql -u root 
-
-//建立資料庫
-CREATE DATABASE database_project CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'database_project_user'@'localhost' IDENTIFIED BY '你的密碼';
-GRANT ALL PRIVILEGES ON database_project.* TO 'database_project_user'@'localhost';
-FLUSH PRIVILEGES;
-EXIT;
-
+ngrok config add-authtoken YOUR_TOKEN
 ```
 
-## linux (Ubuntu/Debian)
+token 位置：
 
-### 1. 安裝環境
-
-先更新 apt，安裝基本工具：
-```bash
-sudo apt update
-sudo apt install -y curl unzip git software-properties-common
+```text
+https://dashboard.ngrok.com/get-started/your-authtoken
 ```
-
-安裝 PHP 8.4 和 Laravel 常用 extensions：
-```bash
-sudo add-apt-repository ppa:ondrej/php -y
-sudo apt update
-sudo apt install -y php8.4 php8.4-cli php8.4-common php8.4-mbstring php8.4-xml php8.4-curl php8.4-mysql php8.4-zip php8.4-bcmath
-```
-
-安裝 Composer：
-```bash
-curl -sS https://getcomposer.org/installer -o composer-setup.php
-sudo php composer-setup.php --install-dir=/usr/local/bin --filename=composer
-rm composer-setup.php
-```
-
-安裝 Node.js 20 和 npm：
-```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
-```
-
-安裝 MySQL：
-```bash
-sudo apt install -y mysql-server
-```
-
-確認版本：
-```bash
-php -v        //建議8.4
-composer -V   //2.xx (2開頭就行)
-node -v       // 我是v20.19.6
-npm -v        // 我是10.8.2
-mysql --version
-```
-
-### 2. 啟動mysql
 
 ```bash
-sudo systemctl start mysql
-sudo systemctl enable mysql
-
-//登入 MySQL
-sudo mysql
-
-//建立資料庫和專案用帳號
-CREATE DATABASE database_project CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'database_project_user'@'localhost' IDENTIFIED BY '你的密碼';
-GRANT ALL PRIVILEGES ON database_project.* TO 'database_project_user'@'localhost';
-FLUSH PRIVILEGES;
-EXIT;
+cd /Volumes/Eric5TB/programming/database/database-project
+./start-ngrok.sh
 ```
 
-## 共用部署步驟
+成功後會顯示：
 
-### 3. Clone 專案
-```bash
-git clone 你的GitHubRepo網址
-cd 專案資料夾
+```text
+Ready.
+Open this URL:
+  https://xxxx.ngrok-free.app
 ```
 
-### 4. 安裝 Laravel 後端套件
-```bash
-composer install
+把這個網址給其他人即可。
 
-//如果遇到token問題：
-//到 https://github.com/settings/tokens
-//新增一個token (不用設定任何權限) 然後複製
-
-composer config --global github-oauth.github.com 你的GitHubToken
-composer install
-```
-
-### 5. 設定 .env
-```bash
-cp .env.example .env
-//打開 .env
-
-//改設定
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=database_project
-DB_USERNAME=root
-DB_PASSWORD=你的密碼
-//如果是照上面建立專案用帳號：
-//DB_USERNAME=database_project_user
-//DB_PASSWORD=你的密碼
-```
-
-### 6. 產生 Laravel key
-```bash
-php artisan key:generate
-```
-
-### 7. 安裝前端套件
-```bash
-npm install
-```
-
-### 8. 建立資料表
-```bash
-php artisan migrate:fresh --seed //會重新把資料庫的資料洗掉變成預設的，但一開始用這個就行
-```
-
-### 9. 啟動專案
-```bash
-//開第一個終端機：
-php artisan serve
-
-//開第二個終端機：
-npm run dev
-
-//瀏覽器打開：
-http://127.0.0.1:8000
-```
-
-### github push & pull 使用方式??
-
-1. 每次要開始寫code前，一定記得先pull，確保更新到最新的
-2. 每次push上去前，可以先 fetch 確認沒有人 push 新的東西
-    - 如果沒有人push 就直接push上去吧
-    - 如果有：
-        ```bash
-        git stash
-        //把新的pull下來
-        git stash pop
-        //確認有沒有conflict，沒有就很幸運，有的話就會比較辛苦要解衝突，請小心不要直接覆蓋，不然就丟群組問之類的
-        ```
-3. commit message 可以好好命名，比較知道大家在幹麻，有個常用的格式 (type():message)，ex： 
-    - feat(login): 完成login功能
-    - fix(user)：解決登入bug
-
-4. 前端commit前可以先跑 prettier 避免格式問題
-```bash
-npx prettier --write .  
-// . 可以改成檔案路徑 (. 表示全部檔案都掃一次)
-```
-
-
-### laravel 大致架構
-
-#### 資料庫
-- database/migrations：資料庫的schema
-- database/seeders：初始資料
-- database/factories：生成假資料
-
-#### 後端
-- app/Model：資料庫的邏輯 (query的感覺)
-- app/Http/Controllers：後端邏輯
-
-#### 前端
-- routes/web.php：網址對應 Controller
-- resources/views：前端網頁
-
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
-
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
-
-## About Laravel
-
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
-
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
-
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+停止：
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+cd /Volumes/Eric5TB/programming/database/database-project
+./stop-ngrok.sh
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Cloudflare 版本仍可使用：
 
-## Contributing
+```bash
+cd /Volumes/Eric5TB/programming/database/database-project
+./start-tunnel.sh
+./stop-tunnel.sh
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## 本地開發
 
-## Code of Conduct
+後端：
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+cd /Volumes/Eric5TB/programming/database/database-project/database_project_api
+php artisan serve --host=127.0.0.1 --port=8000
+```
 
-## Security Vulnerabilities
+前端：
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+cd /Volumes/Eric5TB/programming/database/database-project/database_project_front
+npm run dev -- --host 127.0.0.1 --port 5173
+```
 
-## License
+打開：
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```text
+http://127.0.0.1:5173
+```
+
+更多設定請看：
+
+```text
+DEPLOYMENT.md
+```
+
+## 測試帳號
+
+```text
+admin@example.com / admin
+staff@example.com / staff
+wu@example.com / wu
+KaBuo@example.com / kabuo
+```

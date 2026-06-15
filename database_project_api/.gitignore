@@ -14,14 +14,6 @@
 /.zed
 /auth.json
 /node_modules
-/database_project_front/node_modules
-/database_project_front/dist
-/database_project_api/vendor
-/database_project_api/bootstrap/cache/*.php
-/database_project_api/storage/logs/*.log
-/database_project_api/.phpunit.result.cache
-/.tunnel-logs
-/.ngrok-logs
 /public/build
 /public/fonts-manifest.dev.json
 /public/hot
