@@ -88,6 +88,7 @@ wait_for_url() {
     local url="$1"
     local label="$2"
     local attempts="${3:-30}"
+    local log_file="${4:-}"
 
     for _ in $(seq 1 "$attempts"); do
         if curl -fsS "$url" >/dev/null 2>&1; then
@@ -97,6 +98,11 @@ wait_for_url() {
     done
 
     echo "$label did not become ready: $url"
+    if [[ -n "$log_file" && -f "$log_file" ]]; then
+        echo
+        echo "Last lines from $log_file:"
+        tail -n 80 "$log_file"
+    fi
     exit 1
 }
 
@@ -155,13 +161,13 @@ composer install --no-interaction
 php artisan config:clear
 php artisan serve --host=127.0.0.1 --port="$API_PORT" > "$API_LOG" 2>&1 &
 echo $! >> "$PID_FILE"
-wait_for_url "http://127.0.0.1:$API_PORT/" "Laravel API"
+wait_for_url "http://127.0.0.1:$API_PORT/" "Laravel API" 30 "$API_LOG"
 
 echo "Starting frontend/proxy server on 127.0.0.1:$FRONT_PORT..."
 cd "$FRONT"
 API_TARGET="http://127.0.0.1:$API_PORT" PORT="$FRONT_PORT" npm run serve:tunnel > "$FRONT_LOG" 2>&1 &
 echo $! >> "$PID_FILE"
-wait_for_url "http://127.0.0.1:$FRONT_PORT/" "Frontend server"
+wait_for_url "http://127.0.0.1:$FRONT_PORT/" "Frontend server" 30 "$FRONT_LOG"
 
 echo "Starting Cloudflare Tunnel..."
 : > "$TUNNEL_LOG"

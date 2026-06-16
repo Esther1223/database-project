@@ -87,6 +87,7 @@ wait_for_url() {
     local url="$1"
     local label="$2"
     local attempts="${3:-30}"
+    local log_file="${4:-}"
 
     for _ in $(seq 1 "$attempts"); do
         if curl -fsS "$url" >/dev/null 2>&1; then
@@ -99,6 +100,11 @@ wait_for_url() {
     echo "See logs:"
     echo "  API:      $API_LOG"
     echo "  Frontend: $FRONT_LOG"
+    if [[ -n "$log_file" && -f "$log_file" ]]; then
+        echo
+        echo "Last lines from $log_file:"
+        tail -n 80 "$log_file"
+    fi
     exit 1
 }
 
@@ -175,13 +181,13 @@ echo "Starting Laravel API on 127.0.0.1:$API_PORT..."
 cd "$API"
 php artisan serve --host=127.0.0.1 --port="$API_PORT" > "$API_LOG" 2>&1 &
 echo $! >> "$PID_FILE"
-wait_for_url "http://127.0.0.1:$API_PORT/" "Laravel API"
+wait_for_url "http://127.0.0.1:$API_PORT/" "Laravel API" 30 "$API_LOG"
 
 echo "Starting Vite frontend on 127.0.0.1:$FRONT_PORT..."
 cd "$FRONT"
 npm run dev -- --host 127.0.0.1 --port "$FRONT_PORT" > "$FRONT_LOG" 2>&1 &
 echo $! >> "$PID_FILE"
-wait_for_url "http://127.0.0.1:$FRONT_PORT/" "Vite frontend"
+wait_for_url "http://127.0.0.1:$FRONT_PORT/" "Vite frontend" 30 "$FRONT_LOG"
 
 echo
 echo "Ready."
