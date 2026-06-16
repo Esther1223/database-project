@@ -42,11 +42,11 @@ class CompleteSeeder extends Seeder
         ]);
 
         $usersData = [
-            ['role' => '管理員', 'name' => 'Admin User', 'email' => 'admin@example.com', 'password' => 'admin', 'affiliation' => '資訊中心'],
-            ['role' => '行政人員', 'name' => 'Staff User', 'email' => 'staff@example.com', 'password' => 'staff', 'affiliation' => '總務處'],
-            ['role' => '教授', 'name' => 'JhihChaing Wu', 'email' => 'wu@example.com', 'password' => 'wu', 'affiliation' => '資訊工程學系'],
-            ['role' => '學生', 'name' => 'KaBuo', 'email' => 'KaBuo@example.com', 'password' => 'kabuo', 'affiliation' => '資訊工程學系'],
-            ['role' => '學生', 'name' => 'Omuba', 'email' => 'Omuba@example.com', 'password' => 'omuba', 'affiliation' => '光電工程學系'],
+            ['role' => '管理員', 'name' => 'Admin', 'email' => 'admin@example.com', 'password' => '12345678', 'affiliation' => '資訊中心'],
+            ['role' => '行政人員', 'name' => '游助教', 'email' => 'you@example.com', 'password' => '12345678', 'affiliation' => '總務處'],
+            ['role' => '教授', 'name' => '柯教授', 'email' => 'ko@example.com', 'password' => '12345678', 'affiliation' => '資訊工程學系'],
+            ['role' => '學生', 'name' => '劉同學', 'email' => 'liu@example.com', 'password' => '12345678', 'affiliation' => '資訊工程學系'],
+            ['role' => '學生', 'name' => '歐同學', 'email' => 'oi@example.com', 'password' => '12345678', 'affiliation' => '光電工程學系'],
         ];
 
         $users = collect($usersData)->mapWithKeys(function (array $u) use ($roles, $affiliations): array {
@@ -65,9 +65,10 @@ class CompleteSeeder extends Seeder
         });
 
         $admin = $users['admin@example.com'];
-        $staff = $users['staff@example.com'];
-        $professor = $users['wu@example.com'];
-        $studentB = $users['Omuba@example.com'];
+        $staff = $users['you@example.com'];
+        $professor = $users['ko@example.com'];
+        $studentB = $users['liu@example.com'];
+        $studentC = $users['oi@example.com'];
 
         $roomPrices = [
             'A101 會議室' => 500,
