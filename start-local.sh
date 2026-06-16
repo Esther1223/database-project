@@ -123,6 +123,21 @@ ensure_env_file() {
     fi
 }
 
+install_frontend_dependencies() {
+    cd "$FRONT"
+
+    if [[ ! -f package-lock.json ]]; then
+        npm install
+        return 0
+    fi
+
+    # Use the committed lockfile so every clone installs the same dependency tree.
+    npm ci \
+        --fetch-retries=5 \
+        --fetch-retry-mintimeout=20000 \
+        --fetch-retry-maxtimeout=120000
+}
+
 require_cmd php
 require_cmd composer
 require_cmd node
@@ -173,9 +188,8 @@ fi
 
 php artisan config:clear
 
-echo "Installing frontend dependencies..."
-cd "$FRONT"
-npm install
+echo "Installing frontend dependencies from package-lock.json..."
+install_frontend_dependencies
 
 echo "Starting Laravel API on 127.0.0.1:$API_PORT..."
 cd "$API"
