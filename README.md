@@ -46,6 +46,34 @@ EXIT;
 
 ### 1. 安裝環境
 
+Ubuntu 可以直接跑一鍵 setup：
+
+```bash
+cd ~/database-project
+chmod +x setup-ubuntu.sh
+./setup-ubuntu.sh
+```
+
+這支腳本會安裝 PHP、Composer、Node.js 20、MySQL，建立 `database_project` 資料庫，並安裝後端/前端套件。
+
+預設資料庫設定：
+
+```text
+DB_DATABASE=database_project
+DB_USERNAME=database_project_user
+DB_PASSWORD=database_project_password
+```
+
+如果要改資料庫名稱或密碼，可以這樣跑：
+
+```bash
+DB_DATABASE=database_project DB_USERNAME=database_project_user DB_PASSWORD=你的密碼 ./setup-ubuntu.sh
+```
+
+不要用 `sudo ./setup-ubuntu.sh`；腳本需要系統權限時會自己呼叫 `sudo`。
+
+手動安裝也可以照下面步驟：
+
 先更新 apt，安裝基本工具：
 ```bash
 sudo apt update
@@ -169,7 +197,8 @@ php artisan migrate:fresh --seed //會重新把資料庫的資料洗掉變成預
 
 ```bash
 cd ~/database-project
-sudo chown -R "$USER:$USER" .
+sudo chown -R "$(id -un):$(id -gn)" .
+chmod -R u+rwX .
 chmod +x start-local.sh stop-local.sh start-ngrok.sh stop-ngrok.sh start-tunnel.sh stop-tunnel.sh
 ```
 
@@ -187,6 +216,7 @@ chmod +x start-local.sh stop-local.sh start-ngrok.sh stop-ngrok.sh start-tunnel.
 database_project_api/    Laravel API 後端
 database_project_front/  Vite + Vue 前端
 DEPLOYMENT.md            本地與外網部署指令
+setup-ubuntu.sh          Ubuntu 一鍵安裝系統與專案套件
 start-local.sh           一鍵本機開發
 stop-local.sh            停止本機開發服務
 start-ngrok.sh           一鍵 ngrok 外網展示
