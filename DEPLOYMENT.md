@@ -8,8 +8,8 @@
 專案路徑：
 
 ```bash
-API=/Volumes/Eric5TB/programming/database/database-project/database_project_api
-FRONT=/Volumes/Eric5TB/programming/database/database-project/database_project_front
+API= /database-project/database_project_api
+FRONT= /database-project/database_project_front
 ```
 
 ## 快速一鍵外網啟動 ngrok
@@ -29,7 +29,7 @@ https://dashboard.ngrok.com/get-started/your-authtoken
 ```
 
 ```bash
-cd /Volumes/Eric5TB/programming/database/database-project
+cd  /database-project
 ./start-ngrok.sh
 ```
 
@@ -61,21 +61,21 @@ Open this URL:
 停止全部服務：
 
 ```bash
-cd /Volumes/Eric5TB/programming/database/database-project
+cd  /database-project
 ./stop-ngrok.sh
 ```
 
 Cloudflare 備用版本：
 
 ```bash
-cd /Volumes/Eric5TB/programming/database/database-project
+cd  /database-project
 ./start-tunnel.sh
 ```
 
 停止 Cloudflare 版本：
 
 ```bash
-cd /Volumes/Eric5TB/programming/database/database-project
+cd  /database-project
 ./stop-tunnel.sh
 ```
 
@@ -103,7 +103,7 @@ kill PID
 編輯：
 
 ```bash
-cd /Volumes/Eric5TB/programming/database/database-project/database_project_api
+cd  /database-project/database_project_api
 ```
 
 `.env` 建議設定：
@@ -138,7 +138,7 @@ php artisan config:clear
 編輯：
 
 ```bash
-cd /Volumes/Eric5TB/programming/database/database-project/database_project_front
+cd  /database-project/database_project_front
 ```
 
 `.env` 設定：
@@ -152,7 +152,7 @@ VITE_API_URL=http://127.0.0.1:8000
 開一個 terminal：
 
 ```bash
-cd /Volumes/Eric5TB/programming/database/database-project/database_project_api
+cd  /database-project/database_project_api
 
 composer install
 php artisan config:clear
@@ -172,7 +172,7 @@ kill PID
 開另一個 terminal：
 
 ```bash
-cd /Volumes/Eric5TB/programming/database/database-project/database_project_front
+cd  /database-project/database_project_front
 
 npm install
 npm run dev -- --host 127.0.0.1 --port 5173
@@ -198,7 +198,7 @@ http://127.0.0.1:5173
 Terminal 1：
 
 ```bash
-cd /Volumes/Eric5TB/programming/database/database-project/database_project_api
+cd  /database-project/database_project_api
 
 php artisan config:clear
 php artisan serve --host=0.0.0.0 --port=8000
@@ -225,7 +225,7 @@ https://backend-example.trycloudflare.com
 回到：
 
 ```bash
-cd /Volumes/Eric5TB/programming/database/database-project/database_project_api
+cd  /database-project/database_project_api
 ```
 
 先設定後端網址與 cookie：
@@ -259,7 +259,7 @@ Terminal 3：
 把 `https://backend-example.trycloudflare.com` 換成你的後端 tunnel 網址。
 
 ```bash
-cd /Volumes/Eric5TB/programming/database/database-project/database_project_front
+cd  /database-project/database_project_front
 
 VITE_API_URL=https://backend-example.trycloudflare.com npm run dev -- --host 0.0.0.0 --port 5173
 ```
@@ -285,7 +285,7 @@ https://frontend-example.trycloudflare.com
 編輯：
 
 ```text
-/Volumes/Eric5TB/programming/database/database-project/database_project_front/vite.config.js
+ /database-project/database_project_front/vite.config.js
 ```
 
 把前端 tunnel host 加到 `allowedHosts`：
@@ -307,7 +307,7 @@ export default defineConfig({
 改完後重啟前端：
 
 ```bash
-cd /Volumes/Eric5TB/programming/database/database-project/database_project_front
+cd  /database-project/database_project_front
 
 VITE_API_URL=https://backend-example.trycloudflare.com npm run dev -- --host 0.0.0.0 --port 5173
 ```
@@ -317,7 +317,7 @@ VITE_API_URL=https://backend-example.trycloudflare.com npm run dev -- --host 0.0
 回到後端 `.env`：
 
 ```bash
-cd /Volumes/Eric5TB/programming/database/database-project/database_project_api
+cd  /database-project/database_project_api
 ```
 
 設定：
@@ -373,7 +373,7 @@ Quick Tunnel 每次重開都可能換網址。如果網址換了，下面指令�
 Terminal 1：
 
 ```bash
-cd /Volumes/Eric5TB/programming/database/database-project/database_project_api
+cd  /database-project/database_project_api
 
 php artisan config:clear
 php artisan serve --host=0.0.0.0 --port=8000
@@ -396,7 +396,7 @@ https://backend-example.trycloudflare.com
 Terminal 3：
 
 ```bash
-cd /Volumes/Eric5TB/programming/database/database-project/database_project_front
+cd  /database-project/database_project_front
 
 VITE_API_URL=https://backend-example.trycloudflare.com npm run build
 npx serve -s dist -l 5173
@@ -405,7 +405,7 @@ npx serve -s dist -l 5173
 實測範例：
 
 ```bash
-cd /Volumes/Eric5TB/programming/database/database-project/database_project_front
+cd  /database-project/database_project_front
 
 VITE_API_URL=https://designs-hourly-washington-pathology.trycloudflare.com npm run build
 npx serve -s dist -l 5173
@@ -444,7 +444,7 @@ SESSION_SAME_SITE=none
 然後：
 
 ```bash
-cd /Volumes/Eric5TB/programming/database/database-project/database_project_api
+cd  /database-project/database_project_api
 php artisan config:clear
 ```
 
@@ -505,7 +505,7 @@ cloudflared tunnel --protocol http2 --url http://127.0.0.1:5173
 Terminal 1：
 
 ```bash
-cd /Volumes/Eric5TB/programming/database/database-project/database_project_api
+cd  /database-project/database_project_api
 
 php artisan config:clear
 php artisan serve --host=127.0.0.1 --port=8000
@@ -516,7 +516,7 @@ php artisan serve --host=127.0.0.1 --port=8000
 Terminal 2：
 
 ```bash
-cd /Volumes/Eric5TB/programming/database/database-project/database_project_front
+cd  /database-project/database_project_front
 
 npm run build:tunnel
 npm run serve:tunnel
@@ -571,7 +571,7 @@ SESSION_SAME_SITE=none
 然後：
 
 ```bash
-cd /Volumes/Eric5TB/programming/database/database-project/database_project_api
+cd  /database-project/database_project_api
 php artisan config:clear
 ```
 
@@ -605,7 +605,7 @@ https://你的-ngrok-網址/api/...
 Terminal 1：
 
 ```bash
-cd /Volumes/Eric5TB/programming/database/database-project/database_project_api
+cd  /database-project/database_project_api
 
 php artisan config:clear
 php artisan serve --host=127.0.0.1 --port=8000
@@ -616,7 +616,7 @@ php artisan serve --host=127.0.0.1 --port=8000
 Terminal 2：
 
 ```bash
-cd /Volumes/Eric5TB/programming/database/database-project/database_project_front
+cd  /database-project/database_project_front
 
 npm run build:tunnel
 npm run serve:tunnel
@@ -651,7 +651,7 @@ SESSION_SAME_SITE=none
 然後：
 
 ```bash
-cd /Volumes/Eric5TB/programming/database/database-project/database_project_api
+cd  /database-project/database_project_api
 php artisan config:clear
 ```
 
