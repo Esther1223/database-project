@@ -210,6 +210,13 @@ chmod +x start-local.sh stop-local.sh start-ngrok.sh stop-ngrok.sh start-tunnel.
 
 前端需要 Node.js 20.19.0 以上；如果看到 `Unsupported engine` 或 `Node.js ... is too old`，先升級 Node.js。
 
+如果有裝 nvm，可以直接在專案根目錄跑：
+
+```bash
+nvm install
+nvm use
+```
+
 #### 資料夾
 
 ```text
