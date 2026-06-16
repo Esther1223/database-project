@@ -163,6 +163,24 @@ php artisan migrate:fresh --seed //會重新把資料庫的資料洗掉變成預
 
 ### 9. 啟動專案
 
+不要用 `sudo` 跑啟動腳本，直接用一般使用者執行即可。
+
+如果不用 `sudo` 會出現 `Permission denied`，先在專案根目錄修權限：
+
+```bash
+cd ~/database-project
+sudo chown -R "$USER:$USER" .
+chmod +x start-local.sh stop-local.sh start-ngrok.sh stop-ngrok.sh start-tunnel.sh stop-tunnel.sh
+```
+
+然後再跑：
+
+```bash
+./start-local.sh
+```
+
+前端需要 Node.js 20.19.0 以上；如果看到 `Unsupported engine` 或 `Node.js ... is too old`，先升級 Node.js。
+
 #### 資料夾
 
 ```text

@@ -22,6 +22,33 @@ require_cmd() {
     fi
 }
 
+require_not_root() {
+    if [[ "$(id -u)" -eq 0 ]]; then
+        echo "Do not run this script with sudo."
+        echo "Run it as your normal user:"
+        echo "  ./start-local.sh"
+        echo
+        echo "If you already ran it with sudo, fix ownership first:"
+        echo "  sudo chown -R \"$USER:$USER\" ."
+        exit 1
+    fi
+}
+
+require_node_version() {
+    local version major minor
+    version="$(node -p 'process.versions.node')"
+    IFS=. read -r major minor _ <<< "$version"
+
+    if (( major == 20 && minor >= 19 )) || (( major == 22 && minor >= 12 )) || (( major > 22 )); then
+        return 0
+    fi
+
+    echo "Node.js $version is too old for this frontend."
+    echo "Please install Node.js 20.19.0 or newer, then re-run:"
+    echo "  ./start-local.sh"
+    exit 1
+}
+
 port_in_use() {
     lsof -ti tcp:"$1" >/dev/null 2>&1
 }
@@ -92,9 +119,12 @@ ensure_env_file() {
 
 require_cmd php
 require_cmd composer
+require_cmd node
 require_cmd npm
 require_cmd curl
 require_cmd lsof
+require_not_root
+require_node_version
 
 trap cleanup EXIT INT TERM
 stop_previous
