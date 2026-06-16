@@ -331,9 +331,9 @@ DEPLOYMENT.md
 ## 測試帳號
 
 ```text
-admin@gmail.com / 12345678
-ko@gmail.com/ 12345678
-you@gmail.com / 12345678
-liu@gmail.com / 12345678
-oi@gmail.com / 12345678
+admin@example.com / 12345678
+you@example.com / 12345678
+ko@example.com / 12345678
+liu@example.com / 12345678
+oi@example.com / 12345678
 ```
