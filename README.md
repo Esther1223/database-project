@@ -169,6 +169,8 @@ php artisan migrate:fresh --seed //會重新把資料庫的資料洗掉變成預
 database_project_api/    Laravel API 後端
 database_project_front/  Vite + Vue 前端
 DEPLOYMENT.md            本地與外網部署指令
+start-local.sh           一鍵本機開發
+stop-local.sh            停止本機開發服務
 start-ngrok.sh           一鍵 ngrok 外網展示
 stop-ngrok.sh            停止 ngrok 外網展示服務
 start-tunnel.sh          一鍵 Cloudflare 外網展示
@@ -177,7 +179,29 @@ stop-tunnel.sh           停止 Cloudflare 外網展示服務
 
 #### 啟動
 
-建議先用 ngrok：
+本機開發建議用：
+
+```bash
+cd database-project
+./start-local.sh
+```
+
+成功後打開：
+
+```text
+http://127.0.0.1:5173
+```
+
+停止：
+
+```bash
+cd database-project
+./stop-local.sh
+```
+
+如果要給外部同學或老師連，再用 ngrok。
+
+外網展示可以用 ngrok：
 
 第一次使用 ngrok 需要先設定 authtoken：
 

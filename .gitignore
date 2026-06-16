@@ -22,6 +22,7 @@
 /database_project_api/.phpunit.result.cache
 /.tunnel-logs
 /.ngrok-logs
+/.local-logs
 /public/build
 /public/fonts-manifest.dev.json
 /public/hot
